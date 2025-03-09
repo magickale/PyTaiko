@@ -141,9 +141,9 @@ class TJAParser:
             elif 'DEMOSTART' in item: self.demo_start = float(item.split(':')[1])
             elif 'COURSE' in item:
                 course = str(item.split(':')[1]).lower()
-                if course == 'tower' or course == '6':
+                if course == 'dan' or course == '6':
                     self.course_data[6] = []
-                if course == 'dan' or course == '5':
+                if course == 'tower' or course == '5':
                     self.course_data[5] = []
                 elif course == 'edit' or course == '4':
                     self.course_data[4] = []
