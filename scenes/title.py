@@ -1,24 +1,34 @@
-import pyray as ray
 import os
 import random
-from global_funcs import Animation, VideoPlayer, get_current_ms, load_texture_from_zip
+
+import pyray as ray
+
+from libs.animation import Animation
+from libs.audio import audio
+from libs.utils import (
+    get_config,
+    get_current_ms,
+    load_texture_from_zip,
+)
+from libs.video import VideoPlayer
+
 
 class TitleScreen:
-    def __init__(self, width, height):
+    def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
         self.op_video_list = []
-        for root, folder, files in os.walk('Videos\\op_videos'):
-            for file in files:
-                if file.endswith('.mp4'):
-                    self.op_video_list.append(VideoPlayer(root + '\\' + file))
-        self.op_video = random.choice(self.op_video_list)
         self.attract_video_list = []
-        for root, folder, files in os.walk('Videos\\attract_videos'):
+        for root, folder, files in os.walk(f'{get_config()["paths"]["video_path"]}\\op_videos'):
             for file in files:
                 if file.endswith('.mp4'):
-                    self.attract_video_list.append(VideoPlayer(root + '\\' + file))
-        self.attract_video = random.choice(self.attract_video_list)
+                    self.op_video_list.append(root + '\\' + file)
+        for root, folder, files in os.walk(f'{get_config()["paths"]["video_path"]}\\attract_videos'):
+            for file in files:
+                if file.endswith('.mp4'):
+                    self.attract_video_list.append(root + '\\' + file)
+        self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
+        self.op_video = VideoPlayer(random.choice(self.op_video_list))
         self.scene = 'Opening Video'
         self.load_textures()
         self.warning_board = WarningBoard(get_current_ms(), self)
@@ -47,10 +57,10 @@ class TitleScreen:
         self.texture_warning_x_1 = load_texture_from_zip(zip_file, 'keikoku_img00014.png')
         self.texture_warning_x_2 = load_texture_from_zip(zip_file, 'keikoku_img00015.png')
 
-        self.sound_bachi_swipe = ray.load_sound('Sounds\\title\\SE_ATTRACT_2.ogg')
-        self.sound_bachi_hit = ray.load_sound('Sounds\\title\\SE_ATTRACT_3.ogg')
-        self.sound_warning_message = ray.load_sound('Sounds\\title\\VO_ATTRACT_3.ogg')
-        self.sound_warning_error = ray.load_sound('Sounds\\title\\SE_ATTRACT_1.ogg')
+        self.sound_bachi_swipe = audio.load_sound('Sounds\\title\\SE_ATTRACT_2.ogg')
+        self.sound_bachi_hit = audio.load_sound('Sounds\\title\\SE_ATTRACT_3.ogg')
+        self.sound_warning_message = audio.load_sound('Sounds\\title\\VO_ATTRACT_3.ogg')
+        self.sound_warning_error = audio.load_sound('Sounds\\title\\SE_ATTRACT_1.ogg')
 
         self.texture_black = load_texture_from_zip('Graphics\\lumendata\\attract\\movie.zip', 'movie_img00000.png')
 
@@ -64,12 +74,12 @@ class TitleScreen:
             self.warning_board.update(get_current_ms(), self)
             if self.warning_board.is_finished:
                 self.scene = 'Attract Video'
-                self.attract_video = random.choice(self.attract_video_list)
+                self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
         elif self.scene == 'Attract Video':
             self.attract_video.update()
             if all(self.attract_video.is_finished):
                 self.scene = 'Opening Video'
-                self.op_video = random.choice(self.op_video_list)
+                self.op_video = VideoPlayer(random.choice(self.op_video_list))
 
     def update(self):
         self.scene_manager()
@@ -184,13 +194,13 @@ class WarningBoard:
         elapsed_time = current_ms - self.start_ms
         if self.character_index(1) != 8:
             self.fade_animation_2.params['delay'] = elapsed_time + 500
-            if delay <= elapsed_time and not ray.is_sound_playing(title_screen.sound_bachi_swipe):
-                ray.play_sound(title_screen.sound_warning_message)
-                ray.play_sound(title_screen.sound_bachi_swipe)
+            if delay <= elapsed_time and not audio.is_sound_playing(title_screen.sound_bachi_swipe):
+                audio.play_sound(title_screen.sound_warning_message)
+                audio.play_sound(title_screen.sound_bachi_swipe)
         elif self.character_index(1) == 8:
             if not self.hit_played:
                 self.hit_played = True
-                ray.play_sound(title_screen.sound_bachi_hit)
+                audio.play_sound(title_screen.sound_bachi_hit)
                 self.resize_animation_3.start_ms = current_ms
                 self.fade_animation_7.start_ms = current_ms
             self.resize_animation_3.update(current_ms)
@@ -198,7 +208,7 @@ class WarningBoard:
 
         if self.error_time + 166.67 <= elapsed_time and not self.error_played:
             self.error_played = True
-            ray.play_sound(title_screen.sound_warning_error)
+            audio.play_sound(title_screen.sound_warning_error)
         if self.fade_animation_2.is_finished:
             self.is_finished = True
 

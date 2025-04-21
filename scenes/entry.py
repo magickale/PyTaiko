@@ -1,5 +1,7 @@
 import pyray as ray
-from global_funcs import load_texture_from_zip
+
+from libs.utils import load_texture_from_zip
+
 
 class EntryScreen:
     def __init__(self, width, height):
@@ -10,8 +12,7 @@ class EntryScreen:
 
     def update(self):
         if ray.is_key_pressed(ray.KeyboardKey.KEY_ENTER):
-            return "GAME"
-        return None
+            return "SONG_SELECT"
 
     def draw(self):
         ray.draw_texture(self.texture_footer, 0, self.height - 151, ray.WHITE)

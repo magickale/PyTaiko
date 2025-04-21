@@ -1,0 +1,22 @@
+[general]
+fps_counter = true
+judge_offset = 0
+
+[paths]
+tja_path = 'Songs'
+video_path = 'Videos'
+
+[keybinds]
+left_kat = 'E'
+left_don = 'F'
+right_don = 'J'
+right_kat = 'I'
+
+[audio]
+device_type = 'ASIO'
+asio_buffer = 6
+
+[video]
+fullscreen = true
+borderless = true
+vsync = true
