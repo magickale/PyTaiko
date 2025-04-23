@@ -4,7 +4,7 @@ from collections import deque
 from libs.utils import get_pixels_per_frame, strip_comments
 
 
-def calculate_base_score(play_note_list: list[dict]) -> int:
+def calculate_base_score(play_note_list: deque[dict]) -> int:
     total_notes = 0
     balloon_num = 0
     balloon_count = 0
@@ -55,7 +55,7 @@ class TJAParser:
         self.barline_display = True
         self.gogo_time = False
 
-    def file_to_data(self):
+    def _file_to_data(self):
         with open(self.file_path, 'rt', encoding='utf-8-sig') as tja_file:
             for line in tja_file:
                 line = strip_comments(line).strip()
@@ -64,7 +64,7 @@ class TJAParser:
             return self.data
 
     def get_metadata(self):
-        self.file_to_data()
+        self._file_to_data()
         diff_index = 1
         highest_diff = -1
         for item in self.data:
@@ -126,7 +126,7 @@ class TJAParser:
             self.bpm, self.wave, self.offset, self.demo_start, self.course_data]
 
     def data_to_notes(self, diff):
-        self.file_to_data()
+        self._file_to_data()
         #Get notes start and end
         note_start = -1
         note_end = -1
@@ -144,11 +144,23 @@ class TJAParser:
         bar = []
         #Check for measures and separate when comma exists
         for i in range(note_start, note_end):
-            item = self.data[i].strip(',')
-            bar.append(item)
-            if item != self.data[i]:
-                notes.append(bar)
-                bar = []
+            line = self.data[i]
+            if line.startswith("#"):
+                bar.append(line)
+            else:
+                item = line.strip(',')
+                if item == '':
+                    if bar == []:
+                        bar.append(item)
+                    else:
+                        notes.append(bar)
+                        bar = []
+                        continue
+                else:
+                    bar.append(item)
+                    if item != line:
+                        notes.append(bar)
+                        bar = []
         return notes, self.course_data[diff][1]
 
     def get_se_note(self, play_note_list, ms_per_measure, note, note_ms):

@@ -4,7 +4,7 @@ from libs.utils import load_texture_from_zip
 
 
 class EntryScreen:
-    def __init__(self, width, height):
+    def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
 

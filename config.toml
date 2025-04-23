@@ -7,16 +7,18 @@ tja_path = 'Songs'
 video_path = 'Videos'
 
 [keybinds]
-left_kat = 'E'
-left_don = 'F'
-right_don = 'J'
-right_kat = 'I'
+left_kat = ['E','R']
+left_don = ['F','K']
+right_don = ['J','D']
+right_kat = ['I','U']
 
 [audio]
 device_type = 'ASIO'
 asio_buffer = 6
 
 [video]
-fullscreen = true
-borderless = true
+screen_width = 1280
+screen_height = 720
+fullscreen = false
+borderless = false
 vsync = true

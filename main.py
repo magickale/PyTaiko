@@ -1,7 +1,7 @@
 import pyray as ray
 
 from libs.audio import audio
-from libs.utils import GlobalData, get_config
+from libs.utils import get_config, global_data
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
 from scenes.result import ResultScreen
@@ -17,8 +17,8 @@ class Screens:
     RESULT = "RESULT"
 
 def main():
-    screen_width = 1280
-    screen_height = 720
+    screen_width: int = get_config()["video"]["screen_width"]
+    screen_height: int = get_config()["video"]["screen_height"]
 
     if get_config()["video"]["vsync"]:
         ray.set_config_flags(ray.ConfigFlags.FLAG_VSYNC_HINT)
@@ -65,15 +65,16 @@ def main():
 
         if ray.is_key_pressed(ray.KeyboardKey.KEY_F11):
             ray.toggle_fullscreen()
-            ray.is_window_fullscreen()
-        elif ray.is_key_pressed(ray.KeyboardKey.KEY_F12):
-            ray.toggle_borderless_windowed()
 
         next_screen = screen.update()
         screen.draw()
         if screen == title_screen:
             ray.clear_background(ray.BLACK)
         else:
+            if not global_data.videos_cleared:
+                del title_screen.op_video
+                del title_screen.attract_video
+                global_data.videos_cleared = True
             ray.clear_background(ray.WHITE)
 
         if next_screen is not None:

@@ -1,5 +1,5 @@
 class Animation:
-    def __init__(self, current_ms, duration, type):
+    def __init__(self, current_ms: float, duration: float, type: str):
         self.type = type
         self.start_ms = current_ms
         self.attribute = 0
@@ -7,7 +7,7 @@ class Animation:
         self.params = dict()
         self.is_finished = False
 
-    def update(self, current_ms):
+    def update(self, current_ms: float):
         if self.type == 'fade':
             self.fade(current_ms,
                 self.duration,
@@ -50,8 +50,8 @@ class Animation:
                     initial_size=self.params.get('final_size', 1.0),
                     delay=self.params.get('delay', 0.0) + self.duration)
 
-    def fade(self, current_ms, duration, initial_opacity, final_opacity, delay, ease_in, ease_out):
-        def ease_out_progress(progress, ease):
+    def fade(self, current_ms: float, duration: float, initial_opacity: float, final_opacity: float, delay: float, ease_in: str | None, ease_out: str | None) -> None:
+        def _ease_out_progress(progress: float, ease: str | None) -> float:
             if ease == 'quadratic':
                 return progress * (2 - progress)
             elif ease == 'cubic':
@@ -60,7 +60,7 @@ class Animation:
                 return 1 - pow(2, -10 * progress)
             else:
                 return progress
-        def ease_in_progress(progress, ease):
+        def _ease_in_progress(progress: float, ease: str | None) -> float:
             if ease == 'quadratic':
                 return progress * progress
             elif ease == 'cubic':
@@ -79,15 +79,15 @@ class Animation:
             self.is_finished = True
 
         if ease_in is not None:
-            progress = ease_in_progress(elapsed_time / duration, ease_in)
+            progress = _ease_in_progress(elapsed_time / duration, ease_in)
         elif ease_out is not None:
-            progress = ease_out_progress(elapsed_time / duration, ease_out)
+            progress = _ease_out_progress(elapsed_time / duration, ease_out)
         else:
             progress = elapsed_time / duration
 
         current_opacity = initial_opacity + (final_opacity - initial_opacity) * progress
         self.attribute = current_opacity
-    def move(self, current_ms, duration, total_distance, start_position, delay):
+    def move(self, current_ms: float, duration: float, total_distance: float, start_position: float, delay: float) -> None:
         elapsed_time = current_ms - self.start_ms
         if elapsed_time < delay:
             self.attribute = start_position
@@ -99,7 +99,7 @@ class Animation:
         else:
             self.attribute = start_position + total_distance
             self.is_finished = True
-    def texture_change(self, current_ms, duration, textures):
+    def texture_change(self, current_ms: float, duration: float, textures: list[tuple[float, float, float]]) -> None:
         elapsed_time = current_ms - self.start_ms
         if elapsed_time <= duration:
             for start, end, index in textures:
@@ -107,7 +107,7 @@ class Animation:
                     self.attribute = index
         else:
             self.is_finished = True
-    def text_stretch(self, current_ms, duration):
+    def text_stretch(self, current_ms: float, duration: float):
         elapsed_time = current_ms - self.start_ms
         if elapsed_time <= duration:
             self.attribute = 2 + 5 * (elapsed_time // 25)
@@ -117,7 +117,7 @@ class Animation:
         else:
             self.attribute = 0
             self.is_finished = True
-    def texture_resize(self, current_ms, duration, initial_size, final_size, delay):
+    def texture_resize(self, current_ms: float, duration: float, initial_size: float, final_size: float, delay: float):
         elapsed_time = current_ms - self.start_ms
         if elapsed_time < delay:
             self.attribute = initial_size

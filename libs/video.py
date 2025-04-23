@@ -21,25 +21,26 @@ class VideoPlayer:
         audio_path = path[:-4] + '.ogg'
         self.audio = audio.load_music_stream(audio_path)
 
-    def convert_frames_background(self, index: int):
+    def _convert_frames_background(self):
         if not self.cap.isOpened():
             raise ValueError("Error: Could not open video file.")
 
         total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if len(self.frames) == total_frames:
             return 0
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, index)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_index)
 
         success, frame = self.cap.read()
 
-        timestamp = (index / self.fps * 1000)
+        timestamp = (self.frame_index / self.fps * 1000)
         frame_rgb  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         new_frame = ray.Image(frame_rgb.tobytes(), frame_rgb.shape[1], frame_rgb.shape[0], 1, ray.PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8)
 
         self.frames.append((timestamp, new_frame))
+        self.frame_index += 1
 
-    def convert_frames(self):
+    def _convert_frames(self):
         if not self.cap.isOpened():
             raise ValueError("Error: Could not open video file.")
 
@@ -61,13 +62,13 @@ class VideoPlayer:
         print(f"Extracted {len(self.frames)} frames.")
         self.start_ms = get_current_ms()
 
-    def check_for_start(self):
+    def _check_for_start(self):
         if self.frames == []:
-            self.convert_frames()
+            self._convert_frames()
         if not audio.is_music_stream_playing(self.audio):
             audio.play_music_stream(self.audio)
 
-    def audio_manager(self):
+    def _audio_manager(self):
         audio.update_music_stream(self.audio)
         time_played = audio.get_music_time_played(self.audio) / audio.get_music_time_length(self.audio)
         ending_lenience = 0.95
@@ -75,8 +76,8 @@ class VideoPlayer:
             self.is_finished[1] = True
 
     def update(self):
-        self.check_for_start()
-        self.audio_manager()
+        self._check_for_start()
+        self._audio_manager()
 
         if self.frame_index == len(self.frames)-1:
             self.is_finished[0] = True
