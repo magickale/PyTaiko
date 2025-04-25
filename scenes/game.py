@@ -156,10 +156,12 @@ class GameScreen:
         self.tja = TJAParser(song)
         self.tja.get_metadata()
         self.tja.distance = self.width - self.judge_x
+        self.start_delay = 0
+        global_data.song_title = self.tja.title
 
         self.player_1 = Player(self, 1, difficulty, get_config()["general"]["judge_offset"])
         self.song_music = audio.load_sound(self.tja.wave)
-        self.start_ms = get_current_ms() - self.tja.offset*1000
+        self.start_ms = (get_current_ms() - self.tja.offset*1000) + self.start_delay
 
         audio.play_sound(self.song_music)
 
@@ -168,6 +170,7 @@ class GameScreen:
         if global_data.start_song and not self.song_is_started:
             self.init_tja(global_data.selected_song, global_data.selected_difficulty)
             self.song_is_started = True
+
 
         self.current_ms = get_current_ms() - self.start_ms
         self.player_1.update(self)

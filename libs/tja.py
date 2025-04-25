@@ -161,6 +161,8 @@ class TJAParser:
                     if item != line:
                         notes.append(bar)
                         bar = []
+        if len(self.course_data[diff]) < 2:
+            return notes, None
         return notes, self.course_data[diff][1]
 
     def get_se_note(self, play_note_list, ms_per_measure, note, note_ms):
@@ -273,6 +275,8 @@ class TJAParser:
                     if note in {'5', '6', '8'}:
                         play_note_list[-1]['color'] = 255
                     if note == '8' and play_note_list[-2]['note'] in ('7', '9'):
+                        if balloon is None:
+                            raise Exception("Balloon note found, but no count was specified")
                         if balloon_index >= len(balloon):
                             play_note_list[-1]['balloon'] = 0
                         else:
