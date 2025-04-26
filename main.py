@@ -17,6 +17,8 @@ class Screens:
     RESULT = "RESULT"
 
 def main():
+    render_width, render_height = ray.get_render_width(), ray.get_render_height()
+    dpi_scale = ray.get_window_scale_dpi()
     screen_width: int = get_config()["video"]["screen_width"]
     screen_height: int = get_config()["video"]["screen_height"]
 
@@ -86,7 +88,15 @@ def main():
         ray.end_texture_mode()
         ray.begin_drawing()
         ray.clear_background(ray.WHITE)
-        ray.draw_texture_pro(target.texture, ray.Rectangle(0, 0, target.texture.width, -target.texture.height), ray.Rectangle(0, 0, ray.get_render_width(), ray.get_render_height()), ray.Vector2(0,0), 0, ray.WHITE)
+        #Thanks to rnoiz proper render height
+        ray.draw_texture_pro(
+             target.texture,
+             ray.Rectangle(0, 0, target.texture.width, -target.texture.height),
+             ray.Rectangle(0, 0, int(render_width/dpi_scale.x), int(render_height)/dpi_scale.y),
+             ray.Vector2(0,0),
+             0,
+             ray.WHITE
+        )
         ray.end_drawing()
     ray.close_window()
     audio.close_audio_device()
