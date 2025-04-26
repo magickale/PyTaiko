@@ -33,8 +33,8 @@ class GameScreen:
         self.screen_init = False
 
     def load_textures(self):
-        self.textures = load_all_textures_from_zip('Graphics\\lumendata\\enso_system\\common.zip')
-        zip_file = 'Graphics\\lumendata\\enso_system\\common.zip'
+        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/common.zip'))
+        zip_file = Path('Graphics/lumendata/enso_system/common.zip')
 
         image = load_image_from_zip(zip_file, 'lane_img00000.png')
         ray.image_resize(image, 948, 176)
@@ -133,11 +133,11 @@ class GameScreen:
                 filename = 'onp_renda_moji_img00001.png'
             self.texture_se_moji.append(load_texture_from_zip(zip_file, filename))
 
-        self.textures.update(load_all_textures_from_zip('Graphics\\lumendata\\enso_system\\base1p.zip'))
-        self.textures.update(load_all_textures_from_zip('Graphics\\lumendata\\enso_system\\don1p.zip'))
+        self.textures.update(load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/base1p.zip')))
+        self.textures.update(load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/don1p.zip')))
 
-        self.result_transition_1 = load_texture_from_zip('Graphics\\lumendata\\enso_result.zip', 'retry_game_img00125.png')
-        self.result_transition_2 = load_texture_from_zip('Graphics\\lumendata\\enso_result.zip', 'retry_game_img00126.png')
+        self.result_transition_1 = load_texture_from_zip(Path('Graphics/lumendata/enso_result.zip'), 'retry_game_img00125.png')
+        self.result_transition_2 = load_texture_from_zip(Path('Graphics/lumendata/enso_result.zip'), 'retry_game_img00126.png')
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")

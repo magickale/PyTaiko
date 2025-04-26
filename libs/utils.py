@@ -11,18 +11,16 @@ import tomllib
 
 #TJA Format creator is unknown. I did not create the format, but I did write the parser though.
 
-def get_zip_filenames(zip_path: str) -> list[str]:
+def get_zip_filenames(zip_path: Path) -> list[str]:
     result = []
-    new_path = Path(zip_path)
-    with zipfile.ZipFile(new_path, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         file_list = zip_ref.namelist()
         for file_name in file_list:
             result.append(file_name)
     return result
 
-def load_image_from_zip(zip_path: str, filename: str) -> ray.Image:
-    new_path = Path(zip_path)
-    with zipfile.ZipFile(new_path, 'r') as zip_ref:
+def load_image_from_zip(zip_path: Path, filename: str) -> ray.Image:
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         with zip_ref.open(filename) as image_file:
             with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
                 temp_file.write(image_file.read())
@@ -31,9 +29,8 @@ def load_image_from_zip(zip_path: str, filename: str) -> ray.Image:
         os.remove(temp_file_path)
         return image
 
-def load_texture_from_zip(zip_path: str, filename: str) -> ray.Texture:
-    new_path = Path(zip_path)
-    with zipfile.ZipFile(new_path, 'r') as zip_ref:
+def load_texture_from_zip(zip_path: Path, filename: str) -> ray.Texture:
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         with zip_ref.open(filename) as image_file:
             with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
                 temp_file.write(image_file.read())
@@ -42,10 +39,9 @@ def load_texture_from_zip(zip_path: str, filename: str) -> ray.Texture:
         os.remove(temp_file_path)
         return texture
 
-def load_all_textures_from_zip(zip_path: str) -> dict[str, list[ray.Texture]]:
+def load_all_textures_from_zip(zip_path: Path) -> dict[str, list[ray.Texture]]:
     result_dict = dict()
-    new_path = Path(zip_path)
-    with zipfile.ZipFile(new_path, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         files = zip_ref.namelist()
         for file in files:
             with zip_ref.open(file) as image_file:

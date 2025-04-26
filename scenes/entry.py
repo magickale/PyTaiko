@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pyray as ray
 
 from libs.utils import load_texture_from_zip
@@ -8,7 +10,7 @@ class EntryScreen:
         self.width = width
         self.height = height
 
-        self.texture_footer = load_texture_from_zip('Graphics\\lumendata\\entry.zip', 'entry_img00375.png')
+        self.texture_footer = load_texture_from_zip(Path('Graphics/lumendata/entry.zip'), 'entry_img00375.png')
 
         self.screen_init = False
 

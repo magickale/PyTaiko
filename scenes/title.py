@@ -34,7 +34,7 @@ class TitleScreen:
         return self.op_video, self.attract_video
 
     def load_textures(self):
-        self.textures = load_all_textures_from_zip('Graphics\\lumendata\\attract\\keikoku.zip')
+        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/attract/keikoku.zip'))
 
         sounds_dir = Path("Sounds")
         title_dir = sounds_dir / "title"
@@ -44,7 +44,7 @@ class TitleScreen:
         self.sound_warning_message = audio.load_sound(str(title_dir / "VO_ATTRACT_3.ogg"))
         self.sound_warning_error = audio.load_sound(str(title_dir / "SE_ATTRACT_1.ogg"))
 
-        self.texture_black = load_texture_from_zip('Graphics\\lumendata\\attract\\movie.zip', 'movie_img00000.png')
+        self.texture_black = load_texture_from_zip(Path('Graphics/lumendata/attract/movie.zip'), 'movie_img00000.png')
 
     def on_screen_start(self):
         if not self.screen_init:

@@ -28,7 +28,7 @@ class ResultScreen:
         self.sound_kat = audio.load_sound(str(sounds_dir / "inst_00_katsu.wav"))
         self.bgm = audio.load_sound(str(sounds_dir / "result" / "JINGLE_SEISEKI [1].ogg"))
 
-        zip_file = 'Graphics\\lumendata\\enso_result.zip'
+        zip_file = Path('Graphics/lumendata/enso_result.zip')
         self.textures = load_all_textures_from_zip(zip_file)
 
         self.song_info = FontText(global_data.song_title, 40).texture
@@ -40,7 +40,7 @@ class ResultScreen:
 
     def on_screen_start(self):
         if not self.screen_init:
-            self.textures = load_all_textures_from_zip('Graphics\\lumendata\\enso_result.zip')
+            self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/enso_result.zip'))
             self.screen_init = True
             self.song_info = FontText(global_data.song_title, 40).texture
             self.bgm_volume = 1.0
