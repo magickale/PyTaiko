@@ -1,11 +1,42 @@
 import math
 from collections import deque
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 from libs.utils import get_pixels_per_frame, strip_comments
 
 
-def calculate_base_score(play_note_list: deque[dict]) -> int:
+@dataclass
+class Note:
+    type: int = field(init=False)
+    hit_ms: float = field(init=False)
+    load_ms: float = field(init=False)
+    pixels_per_frame: float = field(init=False)
+    index: int = field(init=False)
+    moji: int = field(init=False)
+
+@dataclass
+class Drumroll(Note):
+    _source_note: Note
+    color: int = field(init=False)
+
+    def __post_init__(self):
+        for field_name in [f.name for f in fields(Note)]:
+            if hasattr(self._source_note, field_name):
+                setattr(self, field_name, getattr(self._source_note, field_name))
+
+@dataclass
+class Balloon(Note):
+    _source_note: Note
+    count: int = field(init=False)
+    popped: bool = False
+
+    def __post_init__(self):
+        for field_name in [f.name for f in fields(Note)]:
+            if hasattr(self._source_note, field_name):
+                setattr(self, field_name, getattr(self._source_note, field_name))
+
+def calculate_base_score(play_note_list: deque[Note | Drumroll | Balloon]) -> int:
     total_notes = 0
     balloon_num = 0
     balloon_count = 0
@@ -16,13 +47,13 @@ def calculate_base_score(play_note_list: deque[dict]) -> int:
             next_note = play_note_list[i+1]
         else:
             next_note = play_note_list[len(play_note_list)-1]
-        if note.get('note') in {'1','2','3','4'}:
-            total_notes += 1
-        elif note.get('note') in {'5', '6'}:
-            drumroll_sec += (next_note['ms'] - note['ms']) / 1000
-        elif note.get('note') in {'7', '9'}:
+        if isinstance(note, Drumroll):
+            drumroll_sec += (next_note.hit_ms - note.hit_ms) / 1000
+        elif isinstance(note, Balloon):
             balloon_num += 1
-            balloon_count += next_note['balloon']
+            balloon_count += note.count
+        else:
+            total_notes += 1
     total_score = (1000000 - (balloon_count * 100) - (drumroll_sec * 1692.0079999994086)) / total_notes
     return math.ceil(total_score / 10) * 10
 
@@ -135,7 +166,6 @@ class TJAParser:
                     if score_diff == '':
                         continue
                     self.course_data[current_diff].append(int(score_diff))
-
         return [self.title, self.title_ja, self.subtitle, self.subtitle_ja,
                 self.bpm, self.wave, self.offset, self.demo_start, self.course_data]
 
@@ -191,53 +221,77 @@ class TJAParser:
                     if item != line:
                         notes.append(bar)
                         bar = []
-        print(self.course_data)
         if len(self.course_data[diff]) < 2:
             return notes, None
         return notes, self.course_data[diff][1]
 
-    def get_se_note(self, play_note_list, ms_per_measure, note, note_ms):
-        #Someone please refactor this
-        se_notes = {'1': [0, 1, 2],
-            '2': [3, 4],
-            '3': 5,
-            '4': 6,
-            '5': 7,
-            '6': 14,
-            '7': 9,
-            '8': 10,
-            '9': 11}
-        if len(play_note_list) > 1:
-            prev_note = play_note_list[-2]
-            if prev_note['note'] in {'1', '2'}:
-                if note_ms - prev_note['ms'] <= (ms_per_measure/8) - 1:
-                    prev_note['se_note'] = se_notes[prev_note['note']][1]
-                else:
-                    prev_note['se_note'] = se_notes[prev_note['note']][0]
+    def get_moji(self, play_note_list: deque[Note], ms_per_measure: float) -> None:
+        se_notes = {
+            1: [0, 1, 2],  # Note '1' has three possible sound effects
+            2: [3, 4],     # Note '2' has two possible sound effects
+            3: 5,
+            4: 6,
+            5: 7,
+            6: 14,
+            7: 9,
+            8: 10,
+            9: 11
+        }
+
+        if len(play_note_list) <= 1:
+            return
+
+        current_note = play_note_list[-1]
+        if current_note.type in {1, 2}:
+            current_note.moji = se_notes[current_note.type][0]
+        else:
+            current_note.moji = se_notes[current_note.type]
+
+        prev_note = play_note_list[-2]
+
+        if prev_note.type in {1, 2}:
+            timing_threshold = ms_per_measure / 8 - 1
+            if current_note.hit_ms - prev_note.hit_ms <= timing_threshold:
+                prev_note.moji = se_notes[prev_note.type][1]
             else:
-                prev_note['se_note'] = se_notes[prev_note['note']]
-            if len(play_note_list) > 3:
-                if play_note_list[-4]['note'] == play_note_list[-3]['note'] == play_note_list[-2]['note'] == '1':
-                    if (play_note_list[-3]['ms'] - play_note_list[-4]['ms'] < (ms_per_measure/8)) and (play_note_list[-2]['ms'] - play_note_list[-3]['ms'] < (ms_per_measure/8)):
-                        if len(play_note_list) > 5:
-                            if (play_note_list[-4]['ms'] - play_note_list[-5]['ms'] >= (ms_per_measure/8)) and (play_note_list[-1]['ms'] - play_note_list[-2]['ms'] >= (ms_per_measure/8)):
-                                play_note_list[-3]['se_note'] = se_notes[play_note_list[-3]['note']][2]
-                        else:
-                            play_note_list[-3]['se_note'] = se_notes[play_note_list[-3]['note']][2]
+                prev_note.moji = se_notes[prev_note.type][0]
         else:
-            play_note_list[-1]['se_note'] = se_notes[note]
-        if play_note_list[-1]['note'] in {'1', '2'}:
-            play_note_list[-1]['se_note'] = se_notes[note][0]
-        else:
-            play_note_list[-1]['se_note'] = se_notes[note]
+            prev_note.moji = se_notes[prev_note.type]
+
+        if len(play_note_list) > 3:
+            notes_minus_4 = play_note_list[-4]
+            notes_minus_3 = play_note_list[-3]
+            notes_minus_2 = play_note_list[-2]
+
+            consecutive_ones = (
+                notes_minus_4.type == '1' and
+                notes_minus_3.type == '1' and
+                notes_minus_2.type == '1'
+            )
+
+            if consecutive_ones:
+                rapid_timing = (
+                    notes_minus_3.hit_ms - notes_minus_4.hit_ms < (ms_per_measure / 8) and
+                    notes_minus_2.hit_ms - notes_minus_3.hit_ms < (ms_per_measure / 8)
+                )
+
+                if rapid_timing:
+                    if len(play_note_list) > 5:
+                        spacing_before = play_note_list[-4].hit_ms - play_note_list[-5].hit_ms >= (ms_per_measure / 8)
+                        spacing_after = play_note_list[-1].hit_ms - play_note_list[-2].hit_ms >= (ms_per_measure / 8)
+
+                        if spacing_before and spacing_after:
+                            play_note_list[-3].moji = se_notes[play_note_list[-3].moji][2]
+                    else:
+                        play_note_list[-3].moji = se_notes[play_note_list[-3].moji][2]
 
     def notes_to_position(self, diff):
-        play_note_list = deque()
-        bar_list = deque()
-        draw_note_list = deque()
+        play_note_list: deque[Note | Drumroll | Balloon] = deque()
+        bar_list: deque[Note] = deque()
+        draw_note_list: deque[Note | Drumroll | Balloon] = deque()
         notes, balloon = self.data_to_notes(diff)
-        index = 0
         balloon_index = 0
+        index = 0
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
@@ -278,15 +332,19 @@ class TJAParser:
                 #https://gist.github.com/KatieFrogs/e000f406bbc70a12f3c34a07303eec8b#measure
                 ms_per_measure = 60000 * (self.time_signature*4) / self.bpm
 
-                #Determines how quickly the notes need to move across the screen to reach the judgment circle in time
-                pixels_per_frame = get_pixels_per_frame(self.bpm * self.time_signature * self.scroll_modifier, self.time_signature*4, self.distance)
-                pixels_per_ms = pixels_per_frame / (1000 / 60)
+                #Create note object
+                bar = Note()
 
-                bar_ms = self.current_ms
-                load_ms = bar_ms - (self.distance / pixels_per_ms)
+                #Determines how quickly the notes need to move across the screen to reach the judgment circle in time
+                bar.pixels_per_frame = get_pixels_per_frame(self.bpm * self.time_signature * self.scroll_modifier, self.time_signature*4, self.distance)
+                pixels_per_ms = bar.pixels_per_frame / (1000 / 60)
+
+                bar.hit_ms = self.current_ms
+                bar.load_ms = bar.hit_ms - (self.distance / pixels_per_ms)
+                bar.type = 0
 
                 if self.barline_display:
-                    bar_list.append({'note': 'barline', 'ms': bar_ms, 'load_ms': load_ms, 'ppf': pixels_per_frame})
+                    bar_list.append(bar)
 
                 #Empty bar is still a bar, otherwise start increment
                 if len(part) == 0:
@@ -295,30 +353,32 @@ class TJAParser:
                 else:
                     increment = ms_per_measure / bar_length
 
-                for note in part:
-                    note_ms = self.current_ms
-                    load_ms = note_ms - (self.distance / pixels_per_ms)
-                    #Do not add blank notes otherwise lag
-                    if note != '0':
-                        play_note_list.append({'note': note, 'ms': note_ms, 'load_ms': load_ms, 'ppf': pixels_per_frame, 'index': index})
-                        self.get_se_note(play_note_list, ms_per_measure, note, note_ms)
-                        index += 1
-                    if note in {'5', '6', '8'}:
-                        play_note_list[-1]['color'] = 255
-                    if note == '8' and play_note_list[-2]['note'] in ('7', '9'):
+                for item in (part):
+                    if item == '0':
+                        self.current_ms += increment
+                        continue
+                    note = Note()
+                    note.hit_ms = self.current_ms
+                    note.load_ms = note.hit_ms - (self.distance / pixels_per_ms)
+                    note.type = int(item)
+                    note.pixels_per_frame = bar.pixels_per_frame
+                    note.index = index
+                    if item in {'5', '6'}:
+                        note = Drumroll(note)
+                        note.color = 255
+                    elif item in {'7', '9'}:
                         if balloon is None:
                             raise Exception("Balloon note found, but no count was specified")
-                        if balloon_index >= len(balloon):
-                            play_note_list[-1]['balloon'] = 0
-                        else:
-                            play_note_list[-1]['balloon'] = int(balloon[balloon_index])
-                        balloon_index += 1
+                        note = Balloon(note)
+                        note.count = int(balloon[balloon_index])
                     self.current_ms += increment
-
+                    play_note_list.append(note)
+                    self.get_moji(play_note_list, ms_per_measure)
+                    index += 1
         # https://stackoverflow.com/questions/72899/how-to-sort-a-list-of-dictionaries-by-a-value-of-the-dictionary-in-python
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle
         # Bars can be sorted like this because they don't need hit detection
-        draw_note_list = deque(sorted(play_note_list, key=lambda d: d['load_ms']))
-        bar_list = deque(sorted(bar_list, key=lambda d: d['load_ms']))
+        draw_note_list = deque(sorted(play_note_list, key=lambda n: n.load_ms))
+        bar_list = deque(sorted(bar_list, key=lambda b: b.load_ms))
         return play_note_list, draw_note_list, bar_list
