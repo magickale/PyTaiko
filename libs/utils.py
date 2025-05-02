@@ -1,13 +1,13 @@
 import os
 import tempfile
 import time
+import tomllib
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pyray as ray
-import tomllib
 
 #TJA Format creator is unknown. I did not create the format, but I did write the parser though.
 
@@ -95,16 +95,33 @@ def get_config() -> dict[str, Any]:
         config_file = tomllib.load(f)
     return config_file
 
+def draw_scaled_texture(texture, x: int, y: int, scale: float, color: ray.Color) -> None:
+    width = texture.width
+    height = texture.height
+    src_rect = ray.Rectangle(0, 0, width, height)
+    dst_rect = ray.Rectangle(x, y, width*scale, height*scale)
+    ray.draw_texture_pro(texture, src_rect, dst_rect, ray.Vector2(0, 0), 0, color)
+
+@dataclass
+class SessionData:
+    selected_song: str = '' #Path
+    selected_difficulty: int = 0
+    song_title: str = ''
+    result_score: int = 0
+    result_good: int = 0
+    result_ok: int = 0
+    result_bad: int = 0
+    result_max_combo: int = 0
+    result_total_drumroll: int = 0
+    result_gauge_length: int = 0
+
+session_data = SessionData()
+
+def reset_session():
+    return SessionData()
+
 @dataclass
 class GlobalData:
-    videos_cleared = False
-    selected_song: str = '' #Path
-    selected_difficulty: int = -1
-    song_title: str = ''
-    result_good: int = -1
-    result_ok: int = -1
-    result_bad: int = -1
-    result_score: int = -1
     songs_played: int = 0
 
 global_data = GlobalData()
@@ -168,3 +185,49 @@ class OutlinedText:
 
     def unload(self):
         ray.unload_texture(self.texture)
+
+'''
+class RenderTextureStack:
+    def __init__(self):
+        """Initialize an empty stack for render textures."""
+        self.texture_stack = []
+
+    def load_render_texture(self, width, height):
+        """Create and return a render texture with the specified dimensions."""
+        return ray.load_render_texture(width, height)
+
+    def begin_texture_mode(self, target):
+        """Begin drawing to the render texture and add it to the stack."""
+        ray.begin_texture_mode(target)
+        self.texture_stack.append(target)
+        return target
+
+    def end_texture_mode(self, pop_count=1):
+        """End the texture mode for the specified number of textures in the stack."""
+        if not self.texture_stack:
+            raise IndexError("Cannot end texture mode: texture stack is empty")
+
+        # Ensure pop_count is within valid range
+        pop_count = min(pop_count, len(self.texture_stack))
+
+        # End the texture modes and pop from stack
+        for _ in range(pop_count):
+            ray.end_texture_mode()
+            self.texture_stack.pop()
+
+    def get_texture(self, target):
+        """Get the texture from the render texture."""
+        return ray.get_texture_default(target)
+
+    def draw_texture(self, texture, pos_x, pos_y, tint=ray.WHITE):
+        """Draw a texture at the specified position with the given tint."""
+        ray.draw_texture(texture, pos_x, pos_y, tint)
+
+    def get_current_target(self):
+        """Get the current active render target from the stack."""
+        if not self.texture_stack:
+            return None
+        return self.texture_stack[-1]
+
+render_stack = RenderTextureStack()
+'''

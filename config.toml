@@ -7,13 +7,13 @@ tja_path = 'Songs'
 video_path = 'Videos'
 
 [keybinds]
-left_kat = ['D']
+left_kat = ['E']
 left_don = ['F']
 right_don = ['J']
-right_kat = ['K']
+right_kat = ['I']
 
 [audio]
-device_type = 'WASAPI'
+device_type = 'ASIO'
 asio_buffer = 6
 
 [video]

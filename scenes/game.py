@@ -16,6 +16,7 @@ from libs.utils import (
     load_all_textures_from_zip,
     load_image_from_zip,
     load_texture_from_zip,
+    session_data,
 )
 
 
@@ -25,11 +26,8 @@ class GameScreen:
         self.height = height
         self.judge_x = 414
         self.current_ms = 0
-
         self.result_transition = None
-
         self.song_info = None
-
         self.screen_init = False
 
     def load_textures(self):
@@ -99,12 +97,12 @@ class GameScreen:
             self.textures['onp_fusen'][0]]
 
         self.tja = TJAParser(song)
-        self.tja.get_metadata()
+        metadata = self.tja.get_metadata()
         self.tja.distance = self.width - self.judge_x
         self.start_delay = 0
-        global_data.song_title = self.tja.title
+        session_data.song_title = self.tja.title
 
-        self.player_1 = Player(self, 1, difficulty, get_config()["general"]["judge_offset"])
+        self.player_1 = Player(self, 1, difficulty, metadata, get_config()["general"]["judge_offset"])
         self.song_music = audio.load_sound(str(Path(self.tja.wave)))
         self.start_ms = (get_current_ms() - self.tja.offset*1000) + self.start_delay
 
@@ -113,7 +111,7 @@ class GameScreen:
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
-            self.init_tja(global_data.selected_song, global_data.selected_difficulty)
+            self.init_tja(session_data.selected_song, session_data.selected_difficulty)
             self.current_ms = get_current_ms() - self.start_ms
             self.song_info = SongInfo(self.current_ms, self.tja.title, 'TEST')
             self.result_transition = None
@@ -139,7 +137,8 @@ class GameScreen:
             if self.result_transition.is_finished:
                 return self.on_screen_end()
         elif len(self.player_1.play_note_list) == 0 and (len(self.player_1.current_notes) == 0) and not audio.is_sound_playing(self.song_music):
-            global_data.result_good, global_data.result_ok, global_data.result_bad, global_data.result_score = self.player_1.get_result_score()
+            session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
+            session_data.result_gauge_length = self.player_1.gauge.gauge_length
             self.result_transition = ResultTransition(self.current_ms, self.height)
             audio.play_sound(self.sound_result_transition)
 
@@ -152,7 +151,7 @@ class GameScreen:
 
 
 class Player:
-    def __init__(self, game_screen: GameScreen, player_number: int, difficulty: int, judge_offset: int):
+    def __init__(self, game_screen: GameScreen, player_number: int, difficulty: int, metadata, judge_offset: int):
         self.timing_good = 25.0250015258789
         self.timing_ok = 75.0750045776367
         self.timing_bad = 108.441665649414
@@ -161,6 +160,8 @@ class Player:
         self.difficulty = difficulty
 
         self.play_note_list, self.draw_note_list, self.draw_bar_list = game_screen.tja.notes_to_position(self.difficulty)
+        self.total_notes = len([note for note in self.play_note_list if 0 < note.type < 5])
+        print(self.total_notes)
         self.base_score = calculate_base_score(self.play_note_list)
 
         self.judge_offset = judge_offset
@@ -201,8 +202,10 @@ class Player:
 
         self.input_log: dict[float, str] = dict()
 
+        self.gauge = Gauge(game_screen.current_ms, self.difficulty, metadata[-1][self.difficulty][0])
+
     def get_result_score(self):
-        return self.good_count, self.ok_count, self.bad_count, self.score
+        return self.score, self.good_count, self.ok_count, self.bad_count, self.total_drumroll, self.max_combo
 
     def get_position(self, game_screen: GameScreen, ms: float, pixels_per_frame: float) -> int:
         return int(game_screen.width + pixels_per_frame * 60 / 1000 * (ms - game_screen.current_ms + self.judge_offset) - 64)
@@ -398,7 +401,6 @@ class Player:
 
     def balloon_manager(self, game_screen: GameScreen):
         if self.balloon_anim is not None:
-            print(self.is_balloon)
             self.balloon_anim.update(game_screen, game_screen.current_ms, self.curr_balloon_count, not self.is_balloon)
             if self.balloon_anim.is_finished:
                 self.balloon_anim = None
@@ -451,6 +453,8 @@ class Player:
         self.score_counter.update(game_screen.current_ms, self.score)
         self.key_manager(game_screen)
 
+        self.gauge.update(game_screen.current_ms, self.good_count, self.ok_count, self.bad_count, self.total_notes)
+
     def draw_drumroll(self, game_screen: GameScreen, head: Drumroll, current_eighth: int):
         start_position = self.get_position(game_screen, head.load_ms, head.pixels_per_frame)
         tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), None)
@@ -459,6 +463,8 @@ class Player:
         is_big = int(head.type == 6) * 2
         end_position = self.get_position(game_screen, tail.load_ms, tail.pixels_per_frame)
         length = (end_position - start_position - 50)
+        if length <= 0:
+            end_position += 50
         source_rect = ray.Rectangle(0,0,game_screen.note_type_list[8].width, game_screen.note_type_list[8].height)
         dest_rect = ray.Rectangle(start_position+64, 192, length, game_screen.note_type_list[1][0].height)
         color = ray.Color(255, head.color, head.color, 255)
@@ -472,7 +478,7 @@ class Player:
         moji_texture = game_screen.texture_se_moji[head.moji]
         ray.draw_texture(moji_texture, start_position - (moji_texture.width//2) + 64, 323, ray.WHITE)
         moji_texture = game_screen.texture_se_moji[tail.moji]
-        ray.draw_texture(moji_texture, end_position - (moji_texture.width//2) + 64, 323, ray.WHITE)
+        ray.draw_texture(moji_texture, (end_position - (moji_texture.width//2)) + 32, 323, ray.WHITE)
 
     def draw_balloon(self, game_screen: GameScreen, head: Balloon, current_eighth: int):
         offset = 12
@@ -526,21 +532,19 @@ class Player:
                 ray.draw_texture(moji_texture, position - (moji_texture.width//2) + 64, 323, ray.WHITE)
             #ray.draw_text(str(i), position+64, 192, 25, ray.GREEN)
 
-    def draw_gauge(self, textures: list[ray.Texture]):
-        ray.draw_texture(textures[0], 327, 128, ray.WHITE)
-        ray.draw_texture(textures[1], 483, 124, ray.WHITE)
-        ray.draw_texture(textures[10], 483, 124, ray.fade(ray.WHITE, 0.15))
-        ray.draw_texture(textures[11], 1038, 141, ray.WHITE)
-        ray.draw_texture(textures[12], 1187, 130, ray.WHITE)
-
     def draw(self, game_screen: GameScreen):
         ray.draw_texture(game_screen.textures['lane'][0], 332, 184, ray.WHITE)
-        self.draw_gauge(game_screen.textures['gage_don_1p_hard'])
+        self.gauge.draw(game_screen.textures['gage_don_1p_hard'])
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.draw(game_screen.textures['lane_hit'])
         ray.draw_texture(game_screen.textures['lane_hit'][17], 342, 184, ray.WHITE)
         for anim in self.draw_judge_list:
             anim.draw(game_screen.textures['lane_hit'], game_screen.textures['lane_hit_effect'])
+
+        #ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][0], 350, 192, ray.WHITE)
+        #ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][22], 332, -84, ray.WHITE)
+        #ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][6], 1187 - 29, 130 - 29, ray.WHITE)
+
         self.draw_bars(game_screen)
         self.draw_notes(game_screen)
         ray.draw_texture(game_screen.textures['lane_obi'][0], 0, 184, ray.WHITE)
@@ -670,36 +674,87 @@ class DrumHitEffect:
 class NoteArc:
     def __init__(self, note_texture: ray.Texture, current_ms: float, player_number: int):
         self.texture = note_texture
-        self.arc_points = 25
+        self.arc_points = 22
         self.create_ms = current_ms
         self.player_number = player_number
-        self.x_i = 414 - 64
-        self.y_i = 168
+        curve_height = 425
+
+        self.start_x, self.start_y = 350, 192
+        self.end_x, self.end_y = 1158, 101
+
+        if self.player_number == 1:
+            # Control point influences the curve shape
+            self.control_x = (self.start_x + self.end_x) // 2
+            self.control_y = min(self.start_y, self.end_y) - curve_height  # Arc upward
+        else:
+            # For player 2 (assumed to be a downward arc)
+            self.control_x = (self.start_x + self.end_x) // 2
+            self.control_y = max(self.start_y, self.end_y) + curve_height  # Arc downward
+
+        self.x_i = self.start_x
+        self.y_i = self.start_y
+        self.is_finished = False
+
+        num_precalc_points = 100  # More points for better approximation
+        self.path_points = []
+        self.path_distances = [0.0]  # Cumulative distance at each point
+
+        prev_x, prev_y = self.start_x, self.start_y
+        total_distance = 0.0
+
+        for i in range(1, num_precalc_points + 1):
+            t = i / num_precalc_points
+            x = int((1-t)**2 * self.start_x + 2*(1-t)*t * self.control_x + t**2 * self.end_x)
+            y = int((1-t)**2 * self.start_y + 2*(1-t)*t * self.control_y + t**2 * self.end_y)
+
+            # Calculate distance from previous point
+            dx = x - prev_x
+            dy = y - prev_y
+            distance = math.sqrt(dx*dx + dy*dy)
+            total_distance += distance
+
+            self.path_points.append((x, y))
+            self.path_distances.append(total_distance)
+
+            prev_x, prev_y = x, y
+
+        self.total_path_length = total_distance
+        self.x_i = self.start_x
+        self.y_i = self.start_y
         self.is_finished = False
 
     def update(self, current_ms: float):
-        if self.x_i >= 1150:
+        if self.x_i >= self.end_x:
             self.is_finished = True
-        radius = 414
-        #Start at 180 degrees, end at 0
-        theta_start = 3.14
-        if self.player_number == 1:
-            theta_end = 2 * 3.14
-            #center of circle that does not exist
-            center_x, center_y = 785, 168
-        else:
-            theta_end = 0
-            center_x, center_y = 785, 468
+            self.x_i = self.end_x
+            self.y_i = self.end_y
+            return
 
         ms_since_call = (current_ms - self.create_ms) / 16.67
-        if ms_since_call < 0:
-            ms_since_call = 0
-        if ms_since_call > self.arc_points:
-            ms_since_call = self.arc_points
-        angle_change = (theta_end - theta_start) / self.arc_points
-        theta_i = theta_start + ms_since_call * angle_change
-        self.x_i = int(center_x + radius * math.cos(theta_i))
-        self.y_i = int(center_y + radius * 0.5 * math.sin(theta_i))
+        ms_since_call = max(0, min(ms_since_call, self.arc_points))
+
+        # Calculate desired distance along the path (constant speed)
+        target_distance = (ms_since_call / self.arc_points) * self.total_path_length
+
+        # Find the closest pre-calculated points
+        index = 0
+        while index < len(self.path_distances) - 1 and self.path_distances[index + 1] < target_distance:
+            index += 1
+
+        # Interpolate between the points
+        if index < len(self.path_distances) - 1:
+            d1 = self.path_distances[index]
+            d2 = self.path_distances[index + 1]
+            if d2 > d1:  # Avoid division by zero
+                fraction = (target_distance - d1) / (d2 - d1)
+                x1, y1 = self.path_points[index - 1] if index > 0 else (self.start_x, self.start_y)
+                x2, y2 = self.path_points[index]
+                self.x_i = int(x1 + fraction * (x2 - x1))
+                self.y_i = int(y1 + fraction * (y2 - y1))
+        else:
+            # At the end of the path
+            self.x_i = self.end_x
+            self.y_i = self.end_y
 
     def draw(self, game_screen):
         ray.draw_texture(self.texture, self.x_i, self.y_i, ray.WHITE)
@@ -1028,6 +1083,7 @@ class ResultTransition:
         self.move = Animation(current_ms, 983.33, 'move')
         self.move.params['start_position'] = 0.0
         self.move.params['total_distance'] = screen_height//2
+        self.move.params['ease_out'] = 'quadratic'
 
         self.is_finished = False
 
@@ -1048,3 +1104,127 @@ class ResultTransition:
             ray.draw_texture(texture_2, x, (0 - texture_2.height//2) - (texture_1.height//2) + int(self.move.attribute), ray.WHITE)
             ray.draw_texture(texture_2, x, (screen_height) + (texture_1.height//2) - (texture_2.height//2) - int(self.move.attribute), ray.WHITE)
             x += texture_2.width
+
+class Gauge:
+    def __init__(self, current_ms: float, difficulty: int, level: int):
+        self.gauge_length = 0
+        self.difficulty = min(3, difficulty)
+        self.clear_start = [0, 0, 68, 68]
+        self.level = min(10, level)
+        self.table = [
+            [
+                None,
+                {"clear_rate": 36.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 38.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 38.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 44.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 44.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+            ],
+            [
+                None,
+                {"clear_rate": 45.939, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 45.939, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 48.676, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
+                {"clear_rate": 49.232, "ok_multiplier": 0.75, "bad_multiplier": -0.75},
+                {"clear_rate": 52.5, "ok_multiplier": 0.75, "bad_multiplier": -1.0},
+                {"clear_rate": 52.5, "ok_multiplier": 0.75, "bad_multiplier": -1.0},
+                {"clear_rate": 52.5, "ok_multiplier": 0.75, "bad_multiplier": -1.0},
+            ],
+            [
+                None,
+                {"clear_rate": 54.325, "ok_multiplier": 0.75, "bad_multiplier": -0.75},
+                {"clear_rate": 54.325, "ok_multiplier": 0.75, "bad_multiplier": -0.75},
+                {"clear_rate": 50.774, "ok_multiplier": 0.75, "bad_multiplier": -1.0},
+                {"clear_rate": 48.410, "ok_multiplier": 0.75, "bad_multiplier": -1.17},
+                {"clear_rate": 47.246, "ok_multiplier": 0.75, "bad_multiplier": -1.25},
+                {"clear_rate": 48.120, "ok_multiplier": 0.75, "bad_multiplier": -1.25},
+                {"clear_rate": 48.120, "ok_multiplier": 0.75, "bad_multiplier": -1.25},
+                {"clear_rate": 48.120, "ok_multiplier": 0.75, "bad_multiplier": -1.25},
+            ],
+            [
+                None,
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
+                {"clear_rate": 56.0, "ok_multiplier": 0.5, "bad_multiplier": -2.0},
+                {"clear_rate": 61.428, "ok_multiplier": 0.5, "bad_multiplier": -2.0},
+                {"clear_rate": 61.428, "ok_multiplier": 0.5, "bad_multiplier": -2.0},
+            ]
+        ]
+        self.gauge_update_anim = None
+        self.rainbow_fade_in = None
+        self.rainbow_animation = None
+
+    def _create_rainbow_anim(self, current_ms):
+        anim = Animation(current_ms, (16.67*8) * 3, 'texture_change')
+        anim.params['textures'] = []
+        for i in range(8):
+            anim.params['textures'].append(((16.67* 3)*i, (16.67 * 3)*(i+1), i))
+        return anim
+
+    def _create_anim(self, current_ms: float, init: float, final: float):
+        anim = Animation(current_ms, 450, 'fade')
+        anim.params['initial_opacity'] = init
+        anim.params['final_opacity'] = final
+        return anim
+
+    def update(self, current_ms: float, good_count: int, ok_count: int, bad_count: int, total_notes: int):
+        gauge_length = int(((good_count +
+            (ok_count * self.table[self.difficulty][self.level]["ok_multiplier"] +
+            bad_count * self.table[self.difficulty][self.level]["bad_multiplier"])) / total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"])))
+        previous_length = self.gauge_length
+        self.gauge_length = min(87, gauge_length)
+        if self.gauge_length == 87 and self.rainbow_fade_in is None:
+            self.rainbow_fade_in = self._create_anim(current_ms, 0.0, 1.0)
+        if self.gauge_length > previous_length:
+            self.gauge_update_anim = self._create_anim(current_ms, 1.0, 0.0)
+
+        if self.gauge_update_anim is not None:
+            self.gauge_update_anim.update(current_ms)
+            if self.gauge_update_anim.is_finished:
+                self.gauge_update_anim = None
+
+        if self.rainbow_fade_in is not None:
+            self.rainbow_fade_in.update(current_ms)
+
+        if self.rainbow_animation is None:
+            self.rainbow_animation = self._create_rainbow_anim(current_ms)
+        else:
+            self.rainbow_animation.update(current_ms)
+            if self.rainbow_animation.is_finished or self.gauge_length < 87:
+                self.rainbow_animation = None
+
+    def draw(self, textures: list[ray.Texture]):
+        ray.draw_texture(textures[0], 327, 132, ray.WHITE)
+        ray.draw_texture(textures[1], 483, 124, ray.WHITE)
+        if self.gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
+            if 0 < self.rainbow_animation.attribute < 8:
+                ray.draw_texture(textures[1 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
+            ray.draw_texture(textures[2 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
+        if self.rainbow_fade_in is None or not self.rainbow_fade_in.is_finished:
+            for i in range(self.gauge_length):
+                if i == 68:
+                    ray.draw_texture(textures[16], 491 + (i*textures[13].width), 160 - 24, ray.WHITE)
+                elif i > 68:
+                    ray.draw_texture(textures[15], 491 + (i*textures[13].width) + 2, 160 - 22, ray.WHITE)
+                    ray.draw_texture(textures[20], 491 + (i*textures[13].width) + 2, 160, ray.WHITE)
+                else:
+                    ray.draw_texture(textures[13], 491 + (i*textures[13].width), 160, ray.WHITE)
+        if self.gauge_update_anim is not None and self.gauge_length < 88:
+            if self.gauge_length == 69:
+                ray.draw_texture(textures[17], 491 + (self.gauge_length*textures[13].width) - 13, 160 - 8 - 24, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+            elif self.gauge_length > 69:
+                ray.draw_texture(textures[21], 491 + (self.gauge_length*textures[13].width) - 13, 160 - 8 - 22, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+            else:
+                ray.draw_texture(textures[14], 491 + (self.gauge_length*textures[13].width) - 13, 160 - 8, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+        ray.draw_texture(textures[10], 483, 124, ray.fade(ray.WHITE, 0.15))
+        if self.gauge_length >= 69:
+            ray.draw_texture(textures[18], 1038, 141, ray.WHITE)
+            ray.draw_texture(textures[19], 1187, 130, ray.WHITE)
+        else:
+            ray.draw_texture(textures[11], 1038, 141, ray.WHITE)
+            ray.draw_texture(textures[12], 1187, 130, ray.WHITE)

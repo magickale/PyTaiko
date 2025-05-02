@@ -22,20 +22,13 @@ class TitleScreen:
         self.op_video_list = [str(file) for file in video_dir.glob("**/*.mp4")]
         video_dir = Path(get_config()["paths"]["video_path"]) / "attract_videos"
         self.attract_video_list = [str(file) for file in video_dir.glob("**/*.mp4")]
-        self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
-        self.op_video = VideoPlayer(random.choice(self.op_video_list))
-        self.scene = 'Opening Video'
-        self.load_textures()
-        self.warning_board = WarningScreen(get_current_ms(), self)
-
+        self.load_sounds()
         self.screen_init = False
 
     def get_videos(self):
         return self.op_video, self.attract_video
 
-    def load_textures(self):
-        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/attract/keikoku.zip'))
-
+    def load_sounds(self):
         sounds_dir = Path("Sounds")
         title_dir = sounds_dir / "title"
 
@@ -43,14 +36,28 @@ class TitleScreen:
         self.sound_bachi_hit = audio.load_sound(str(title_dir / "SE_ATTRACT_3.ogg"))
         self.sound_warning_message = audio.load_sound(str(title_dir / "VO_ATTRACT_3.ogg"))
         self.sound_warning_error = audio.load_sound(str(title_dir / "SE_ATTRACT_1.ogg"))
+        self.sounds = [self.sound_bachi_swipe, self.sound_bachi_hit, self.sound_warning_message, self.sound_warning_error]
 
+    def load_textures(self):
+        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/attract/keikoku.zip'))
         self.texture_black = load_texture_from_zip(Path('Graphics/lumendata/attract/movie.zip'), 'movie_img00000.png')
 
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
+            self.load_textures()
+            self.scene = 'Opening Video'
+            self.op_video = VideoPlayer(random.choice(self.op_video_list))
+            self.op_video._convert_frames()
+            self.warning_board = WarningScreen(get_current_ms(), self)
+            self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
 
     def on_screen_end(self) -> str:
+        self.op_video.stop()
+        self.attract_video.stop()
+        for sound in self.sounds:
+            if audio.is_sound_playing(sound):
+                audio.stop_sound(sound)
         for zip in self.textures:
             for texture in self.textures[zip]:
                 ray.unload_texture(texture)
@@ -60,19 +67,32 @@ class TitleScreen:
     def scene_manager(self):
         if self.scene == 'Opening Video':
             self.op_video.update()
-            if all(self.op_video.is_finished):
+            self.attract_video.convert_frames_background()
+            if self.op_video.is_finished():
+                self.op_video = VideoPlayer(random.choice(self.op_video_list))
+
                 self.scene = 'Warning Board'
                 self.warning_board = WarningScreen(get_current_ms(), self)
         elif self.scene == 'Warning Board':
             self.warning_board.update(get_current_ms(), self)
+            self.op_video.convert_frames_background()
+            self.attract_video.convert_frames_background()
             if self.warning_board.is_finished:
                 self.scene = 'Attract Video'
-                self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
+                self.attract_video.start_ms = get_current_ms()
         elif self.scene == 'Attract Video':
+            while not self.attract_video.all_frames_converted:
+                self.attract_video.convert_frames_background()
+                if self.attract_video.all_frames_converted:
+                    self.attract_video.start_ms = get_current_ms()
             self.attract_video.update()
-            if all(self.attract_video.is_finished):
+            self.op_video.convert_frames_background()
+            if self.attract_video.is_finished():
+                self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
+
                 self.scene = 'Opening Video'
-                self.op_video = VideoPlayer(random.choice(self.op_video_list))
+                self.op_video.start_ms = get_current_ms()
+
 
     def update(self):
         self.on_screen_start()

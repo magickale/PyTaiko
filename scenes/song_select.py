@@ -5,15 +5,13 @@ import pyray as ray
 
 from libs.audio import audio
 from libs.tja import TJAParser
-from libs.utils import get_config, global_data
+from libs.utils import get_config, session_data
 
 
 class SongSelectScreen:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        self.is_song_select = True
-        self.is_difficulty_select = False
         self.song_list: dict[str, list] = dict()
         self.selected_song = 0
         self.selected_difficulty = 0
@@ -31,15 +29,14 @@ class SongSelectScreen:
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
-
             self.is_song_select = True
             self.is_difficulty_select = False
 
     def on_screen_end(self):
         self.screen_init = False
         audio.play_sound(self.sound_don)
-        global_data.selected_song = list(self.song_list.keys())[self.selected_song]
-        global_data.selected_difficulty = self.selected_difficulty
+        session_data.selected_song = list(self.song_list.keys())[self.selected_song]
+        session_data.selected_difficulty = self.selected_difficulty
         return "GAME"
 
     def update_song_select(self):

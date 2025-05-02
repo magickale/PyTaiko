@@ -1,7 +1,7 @@
 import pyray as ray
 
 from libs.audio import audio
-from libs.utils import get_config, global_data
+from libs.utils import get_config
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
 from scenes.result import ResultScreen
@@ -78,10 +78,6 @@ def main():
         if screen == title_screen:
             ray.clear_background(ray.BLACK)
         else:
-            if not global_data.videos_cleared:
-                del title_screen.op_video
-                del title_screen.attract_video
-                global_data.videos_cleared = True
             ray.clear_background(ray.WHITE)
 
         if next_screen is not None:

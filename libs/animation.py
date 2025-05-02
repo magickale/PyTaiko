@@ -29,7 +29,9 @@ class Animation:
                 self.duration,
                 self.params['total_distance'],
                 self.params['start_position'],
-                delay=self.params.get('delay', 0.0))
+                delay=self.params.get('delay', 0.0),
+                ease_in=self.params.get('ease_in', None),
+                ease_out=self.params.get('ease_out', None))
         elif self.type == 'texture_change':
             self.texture_change(current_ms,
                 self.duration,
@@ -50,25 +52,26 @@ class Animation:
                     initial_size=self.params.get('final_size', 1.0),
                     delay=self.params.get('delay', 0.0) + self.duration)
 
+    def _ease_out_progress(self, progress: float, ease: str | None) -> float:
+        if ease == 'quadratic':
+            return progress * (2 - progress)
+        elif ease == 'cubic':
+            return 1 - pow(1 - progress, 3)
+        elif ease == 'exponential':
+            return 1 - pow(2, -10 * progress)
+        else:
+            return progress
+    def _ease_in_progress(self, progress: float, ease: str | None) -> float:
+        if ease == 'quadratic':
+            return progress * progress
+        elif ease == 'cubic':
+            return progress * progress * progress
+        elif ease == 'exponential':
+            return pow(2, 10 * (progress - 1))
+        else:
+            return progress
+
     def fade(self, current_ms: float, duration: float, initial_opacity: float, final_opacity: float, delay: float, ease_in: str | None, ease_out: str | None) -> None:
-        def _ease_out_progress(progress: float, ease: str | None) -> float:
-            if ease == 'quadratic':
-                return progress * (2 - progress)
-            elif ease == 'cubic':
-                return 1 - pow(1 - progress, 3)
-            elif ease == 'exponential':
-                return 1 - pow(2, -10 * progress)
-            else:
-                return progress
-        def _ease_in_progress(progress: float, ease: str | None) -> float:
-            if ease == 'quadratic':
-                return progress * progress
-            elif ease == 'cubic':
-                return progress * progress * progress
-            elif ease == 'exponential':
-                return pow(2, 10 * (progress - 1))
-            else:
-                return progress
         elapsed_time = current_ms - self.start_ms
         if elapsed_time < delay:
             self.attribute = initial_opacity
@@ -79,27 +82,32 @@ class Animation:
             self.is_finished = True
 
         if ease_in is not None:
-            progress = _ease_in_progress(elapsed_time / duration, ease_in)
+            progress = self._ease_in_progress(elapsed_time / duration, ease_in)
         elif ease_out is not None:
-            progress = _ease_out_progress(elapsed_time / duration, ease_out)
+            progress = self._ease_out_progress(elapsed_time / duration, ease_out)
         else:
             progress = elapsed_time / duration
 
         current_opacity = initial_opacity + (final_opacity - initial_opacity) * progress
         self.attribute = current_opacity
-    def move(self, current_ms: float, duration: float, total_distance: float, start_position: float, delay: float) -> None:
+    def move(self, current_ms: float, duration: float, total_distance: float, start_position: float, delay: float, ease_in: str | None, ease_out: str | None) -> None:
         elapsed_time = current_ms - self.start_ms
         if elapsed_time < delay:
             self.attribute = start_position
 
         elapsed_time -= delay
         if elapsed_time <= duration:
-            progress = elapsed_time / duration
+            if ease_in is not None:
+                progress = self._ease_in_progress(elapsed_time / duration, ease_in)
+            elif ease_out is not None:
+                progress = self._ease_out_progress(elapsed_time / duration, ease_out)
+            else:
+                progress = elapsed_time / duration
             self.attribute = start_position + (total_distance * progress)
         else:
             self.attribute = start_position + total_distance
             self.is_finished = True
-    def texture_change(self, current_ms: float, duration: float, textures: list[tuple[float, float, float]]) -> None:
+    def texture_change(self, current_ms: float, duration: float, textures: list[tuple[float, float, int]]) -> None:
         elapsed_time = current_ms - self.start_ms
         if elapsed_time <= duration:
             for start, end, index in textures:

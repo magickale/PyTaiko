@@ -741,3 +741,5 @@ class AudioEngineWrapper:
                 raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}' and '{type(self._module).__name__}' has no attribute '{name}'")
 
 audio = AudioEngineWrapper(get_config()["audio"]["device_type"])
+if get_config()["audio"]["device_type"] == 'ASIO':
+    audio.set_master_volume(0.75)

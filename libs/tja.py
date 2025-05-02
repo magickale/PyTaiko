@@ -371,6 +371,7 @@ class TJAParser:
                             raise Exception("Balloon note found, but no count was specified")
                         note = Balloon(note)
                         note.count = int(balloon[balloon_index])
+                        balloon_index += 1
                     self.current_ms += increment
                     play_note_list.append(note)
                     self.get_moji(play_note_list, ms_per_measure)
