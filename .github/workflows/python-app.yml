@@ -41,9 +41,7 @@ jobs:
                   script-name: PyTaiko.py
                   mode: app
                   include-module: raylib,moviepy,numpy,scipy,sounddevice
-                  enable-plugin: numpy
                   include-package: imageio_ffmpeg
-                  include-data-files: ./**/*=.
                   include-data-dir: ${pythonLocation}/lib/python*/site-packages/imageio_ffmpeg/binaries=imageio_ffmpeg/binaries
 
             - name: Upload Artifacts
