@@ -40,6 +40,7 @@ jobs:
                   nuitka-version: 2.6.7
                   script-name: PyTaiko.py
                   mode: app
+                  output-dir: /
                   include-module: raylib,moviepy,numpy,scipy,sounddevice
                   include-package: imageio_ffmpeg
 
