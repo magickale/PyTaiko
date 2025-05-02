@@ -30,6 +30,7 @@ class GameScreen:
         self.result_transition = None
         self.song_info = None
         self.screen_init = False
+        self.movie = None
 
     def load_textures(self):
         self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/common.zip'))
@@ -101,8 +102,9 @@ class GameScreen:
         self.tja = TJAParser(song)
         metadata = self.tja.get_metadata()
         if hasattr(self.tja, 'bg_movie'):
-            self.movie = VideoPlayer(str(Path(self.tja.bg_movie)))
-            self.movie.set_volume(0.0)
+            if Path(self.tja.bg_movie).exists():
+                self.movie = VideoPlayer(str(Path(self.tja.bg_movie)))
+                self.movie.set_volume(0.0)
         else:
             self.movie = None
         self.tja.distance = self.width - self.judge_x
