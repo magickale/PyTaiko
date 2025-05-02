@@ -40,13 +40,17 @@ jobs:
                   nuitka-version: main
                   script-name: main.py
                   mode: app
-                  include-module: raylib,cv2,numpy,scipy,sounddevice
+                  include-module: raylib,moviepy,numpy,scipy,sounddevice
+                  output-filename: PyTaiko
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ runner.os }} Build
+                  name: PyTaiko ${{ runner.os }} Build
                   path: |
+                      Graphics/*
+                      Sounds/*
+                      Videos/*
                       build/*.exe
                       build/*.bin
                       build/*.app/**/*

@@ -119,6 +119,8 @@ class TJAParser:
                 self.offset = float(item.split(':')[1])
             elif 'DEMOSTART' in item:
                 self.demo_start = float(item.split(':')[1])
+            elif 'BGMOVIE' in item:
+                self.bg_movie = self.folder_path / item.split(':')[1].strip()
             elif 'COURSE' in item:
                 # Determine which difficulty we're now processing
                 course = str(item.split(':')[1]).lower().strip()
@@ -149,7 +151,7 @@ class TJAParser:
             # Only process these items if we have a current difficulty
             elif current_diff is not None:
                 if 'LEVEL' in item:
-                    level = int(item.split(':')[1])
+                    level = int(float(item.split(':')[1]))
                     self.course_data[current_diff].append(level)
                 elif 'BALLOON' in item:
                     balloon_data = item.split(':')[1]
@@ -376,6 +378,9 @@ class TJAParser:
                     play_note_list.append(note)
                     self.get_moji(play_note_list, ms_per_measure)
                     index += 1
+                    if len(play_note_list) > 3:
+                        if isinstance(play_note_list[-2], Drumroll) and play_note_list[-1].type != 8:
+                            raise Exception(play_note_list[-2])
         # https://stackoverflow.com/questions/72899/how-to-sort-a-list-of-dictionaries-by-a-value-of-the-dictionary-in-python
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle

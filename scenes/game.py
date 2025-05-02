@@ -18,6 +18,7 @@ from libs.utils import (
     load_texture_from_zip,
     session_data,
 )
+from libs.video import VideoPlayer
 
 
 class GameScreen:
@@ -80,6 +81,7 @@ class GameScreen:
         self.sound_kat = audio.load_sound(str(sounds_dir / "inst_00_katsu.wav"))
         self.sound_balloon_pop = audio.load_sound(str(sounds_dir / "balloon_pop.wav"))
         self.sound_result_transition = audio.load_sound(str(sounds_dir / "result" / "VO_RESULT [1].ogg"))
+        self.sounds = [self.sound_don, self.sound_kat, self.sound_balloon_pop, self.sound_result_transition]
 
     def init_tja(self, song: str, difficulty: int):
         self.load_textures()
@@ -98,6 +100,11 @@ class GameScreen:
 
         self.tja = TJAParser(song)
         metadata = self.tja.get_metadata()
+        if hasattr(self.tja, 'bg_movie'):
+            self.movie = VideoPlayer(str(Path(self.tja.bg_movie)))
+            self.movie.set_volume(0.0)
+        else:
+            self.movie = None
         self.tja.distance = self.width - self.judge_x
         self.start_delay = 0
         session_data.song_title = self.tja.title
@@ -115,6 +122,8 @@ class GameScreen:
             self.current_ms = get_current_ms() - self.start_ms
             self.song_info = SongInfo(self.current_ms, self.tja.title, 'TEST')
             self.result_transition = None
+            if self.movie is not None:
+                self.movie.start(get_current_ms())
 
     def on_screen_end(self):
         self.screen_init = False
@@ -125,6 +134,8 @@ class GameScreen:
 
     def update(self):
         self.on_screen_start()
+        if self.movie is not None:
+            self.movie.update()
 
         self.current_ms = get_current_ms() - self.start_ms
 
@@ -143,6 +154,8 @@ class GameScreen:
             audio.play_sound(self.sound_result_transition)
 
     def draw(self):
+        if self.movie is not None:
+            self.movie.draw()
         self.player_1.draw(self)
         if self.song_info is not None:
             self.song_info.draw(self)
@@ -530,7 +543,7 @@ class Player:
                 ray.draw_texture(game_screen.note_type_list[note.type][current_eighth % 2], position, 192, ray.WHITE)
                 moji_texture = game_screen.texture_se_moji[note.moji]
                 ray.draw_texture(moji_texture, position - (moji_texture.width//2) + 64, 323, ray.WHITE)
-            #ray.draw_text(str(i), position+64, 192, 25, ray.GREEN)
+            #ray.draw_text(str(note.index), position+64, 192, 25, ray.GREEN)
 
     def draw(self, game_screen: GameScreen):
         ray.draw_texture(game_screen.textures['lane'][0], 332, 184, ray.WHITE)

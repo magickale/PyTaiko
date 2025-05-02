@@ -1,5 +1,5 @@
 [general]
-fps_counter = true
+fps_counter = false
 judge_offset = 0
 
 [paths]
@@ -7,13 +7,13 @@ tja_path = 'Songs'
 video_path = 'Videos'
 
 [keybinds]
-left_kat = ['E']
+left_kat = ['D']
 left_don = ['F']
 right_don = ['J']
-right_kat = ['I']
+right_kat = ['K']
 
 [audio]
-device_type = 'ASIO'
+device_type = 'WASAPI'
 asio_buffer = 6
 
 [video]

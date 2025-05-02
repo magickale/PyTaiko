@@ -48,9 +48,8 @@ class TitleScreen:
             self.load_textures()
             self.scene = 'Opening Video'
             self.op_video = VideoPlayer(random.choice(self.op_video_list))
-            self.op_video._convert_frames()
-            self.warning_board = WarningScreen(get_current_ms(), self)
             self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
+            self.warning_board = None
 
     def on_screen_end(self) -> str:
         self.op_video.stop()
@@ -66,32 +65,28 @@ class TitleScreen:
 
     def scene_manager(self):
         if self.scene == 'Opening Video':
+            if not self.op_video.is_started():
+                self.op_video.start(get_current_ms())
             self.op_video.update()
-            self.attract_video.convert_frames_background()
             if self.op_video.is_finished():
+                self.op_video.stop()
                 self.op_video = VideoPlayer(random.choice(self.op_video_list))
 
                 self.scene = 'Warning Board'
                 self.warning_board = WarningScreen(get_current_ms(), self)
-        elif self.scene == 'Warning Board':
+        elif self.scene == 'Warning Board' and self.warning_board is not None:
             self.warning_board.update(get_current_ms(), self)
-            self.op_video.convert_frames_background()
-            self.attract_video.convert_frames_background()
             if self.warning_board.is_finished:
                 self.scene = 'Attract Video'
-                self.attract_video.start_ms = get_current_ms()
+                self.attract_video.start(get_current_ms())
         elif self.scene == 'Attract Video':
-            while not self.attract_video.all_frames_converted:
-                self.attract_video.convert_frames_background()
-                if self.attract_video.all_frames_converted:
-                    self.attract_video.start_ms = get_current_ms()
             self.attract_video.update()
-            self.op_video.convert_frames_background()
             if self.attract_video.is_finished():
+                self.attract_video.stop()
                 self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
 
                 self.scene = 'Opening Video'
-                self.op_video.start_ms = get_current_ms()
+                self.op_video.start(get_current_ms())
 
 
     def update(self):
@@ -104,7 +99,7 @@ class TitleScreen:
     def draw(self):
         if self.scene == 'Opening Video':
             self.op_video.draw()
-        elif self.scene == 'Warning Board':
+        elif self.scene == 'Warning Board' and self.warning_board is not None:
             bg_source = ray.Rectangle(0, 0, self.textures['keikoku'][0].width, self.textures['keikoku'][0].height)
             bg_dest = ray.Rectangle(0, 0, self.width, self.height)
             ray.draw_texture_pro(self.textures['keikoku'][0], bg_source, bg_dest, ray.Vector2(0,0), 0, ray.WHITE)

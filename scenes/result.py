@@ -21,7 +21,6 @@ class ResultScreen:
         self.width = width
         self.height = height
         self.screen_init = False
-        self.load_sounds()
 
     def load_textures(self):
         zip_file = Path('Graphics/lumendata/enso_result.zip')
@@ -37,6 +36,7 @@ class ResultScreen:
     def on_screen_start(self):
         if not self.screen_init:
             self.load_textures()
+            self.load_sounds()
             self.screen_init = True
             self.song_info = FontText(session_data.song_title, 40).texture
             audio.play_sound(self.bgm)

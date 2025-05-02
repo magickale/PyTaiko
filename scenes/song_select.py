@@ -16,9 +16,6 @@ class SongSelectScreen:
         self.selected_song = 0
         self.selected_difficulty = 0
         self.selected_index = 0
-        sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(str(sounds_dir / "inst_00_don.wav"))
-        self.sound_kat = audio.load_sound(str(sounds_dir / "inst_00_katsu.wav"))
         for dirpath, dirnames, filenames in os.walk(f'{get_config()["paths"]["tja_path"]}'):
             for filename in filenames:
                 if filename.endswith(".tja"):
@@ -26,8 +23,14 @@ class SongSelectScreen:
 
         self.screen_init = False
 
+    def load_sounds(self):
+        sounds_dir = Path("Sounds")
+        self.sound_don = audio.load_sound(str(sounds_dir / "inst_00_don.wav"))
+        self.sound_kat = audio.load_sound(str(sounds_dir / "inst_00_katsu.wav"))
+
     def on_screen_start(self):
         if not self.screen_init:
+            self.load_sounds()
             self.screen_init = True
             self.is_song_select = True
             self.is_difficulty_select = False

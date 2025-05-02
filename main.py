@@ -60,6 +60,7 @@ def main():
     }
     target = ray.load_render_texture(screen_width, screen_height)
     ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
+    ray.gen_texture_mipmaps(target.texture)
     #lmaooooooooooooo
     #rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
     ray.rl_set_blend_factors_separate(0x302, 0x303, 1, 0x303, 0x8006, 0x8006)
