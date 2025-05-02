@@ -42,7 +42,6 @@ jobs:
                   mode: app
                   include-module: raylib,moviepy,numpy,scipy,sounddevice
                   include-package: imageio_ffmpeg
-                  include-data-dir: ${pythonLocation}/lib/python*/site-packages/imageio_ffmpeg/binaries=imageio_ffmpeg/binaries
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
