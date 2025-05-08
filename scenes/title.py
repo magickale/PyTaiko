@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pyray as ray
 
-from libs.animation import Animation
+from libs.animation import Animation, Animation2
 from libs.audio import audio
 from libs.utils import (
     get_config,
@@ -111,24 +111,16 @@ class TitleScreen:
 
 class WarningScreen:
     class X:
+        DELAY = 4250
         def __init__(self, current_ms: float):
-            self.delay = 4250
             self.resize = Animation(current_ms, 166.67, 'texture_resize')
             self.resize.params['initial_size'] = 1.0
             self.resize.params['final_size'] = 1.5
-            self.resize.params['delay'] = self.delay
+            self.resize.params['delay'] = self.DELAY
             self.resize.params['reverse'] = 0
 
-            self.fadein = Animation(current_ms, 166.67, 'fade')
-            self.fadein.params['delay'] = self.delay
-            self.fadein.params['initial_opacity'] = 0.0
-            self.fadein.params['final_opacity'] = 1.0
-            self.fadein.params['reverse'] = 166.67
-
-            self.fadein_2 = Animation(current_ms, 166.67, 'fade')
-            self.fadein_2.params['delay'] = self.delay + 166.67 + 166.67
-            self.fadein_2.params['initial_opacity'] = 0.0
-            self.fadein_2.params['final_opacity'] = 1.0
+            self.fadein = Animation2.create_fade(166.67, delay=self.DELAY, initial_opacity=0.0, final_opacity=1.0, reverse_delay=166.67)
+            self.fadein_2 = Animation2.create_fade(166.67, delay=self.DELAY + self.fadein.duration, initial_opacity=0.0, final_opacity=1.0)
 
             self.sound_played = False
 
@@ -138,7 +130,7 @@ class WarningScreen:
             self.fadein_2.update(current_ms)
             self.resize.update(current_ms)
 
-            if self.delay + self.fadein.duration <= elapsed_time and not self.sound_played:
+            if self.DELAY + self.fadein.duration <= elapsed_time and not self.sound_played:
                 audio.play_sound(sound)
                 self.sound_played = True
 
@@ -158,10 +150,7 @@ class WarningScreen:
             self.resize.params['initial_size'] = 0.5
             self.resize.params['final_size'] = 1.5
 
-            self.fadein = Animation(current_ms, 116.67, 'fade')
-            self.fadein.params['initial_opacity'] = 0.0
-            self.fadein.params['final_opacity'] = 1.0
-            self.fadein.params['reverse'] = 0
+            self.fadein = Animation2.create_fade(116.67, initial_opacity=0.0, final_opacity=1.0, reverse_delay=0)
 
             self.sound_played = False
 
@@ -188,9 +177,7 @@ class WarningScreen:
         def __init__(self, current_ms: float, start_ms: float):
             self.start_ms = start_ms
             self.current_ms = current_ms
-            self.shadow_fade = Animation(current_ms, 50, 'fade')
-            self.shadow_fade.params['delay'] = 16.67
-            self.shadow_fade.params['initial_opacity'] = 0.75
+            self.shadow_fade = Animation2.create_fade(50, delay=16.67, initial_opacity=0.75)
 
             self.animation_sequence = [(300.00, 5, 4), (183.33, 6, 4), (166.67, 7, 4), (166.67, 8, 9), (166.67, 11, 9), (166.67, 12, 9), (166.67, 13, 9),
                      (166.67, 5, 4), (150.00, 5, 4), (133.34, 6, 4), (133.34, 7, 4), (133.34, 8, 9), (133.34, 11, 9), (133.34, 12, 9), (133.34, 13, 9),
@@ -243,21 +230,13 @@ class WarningScreen:
     class Board:
         def __init__(self, current_ms: float, screen_width, screen_height, texture):
             #Move warning board down from top of screen
-            self.move_down = Animation(current_ms, 266.67, 'move')
-            self.move_down.params['start_position'] = -720
-            self.move_down.params['total_distance'] = screen_height + ((screen_height - texture.height)//2) + 20
+            self.move_down = Animation2.create_move(266.67, total_distance=screen_height + ((screen_height - texture.height)//2) + 20, start_position=-720)
 
             #Move warning board up a little bit
-            self.move_up = Animation(current_ms, 116.67, 'move')
-            self.move_up.params['start_position'] = 92 + 20
-            self.move_up.params['delay'] = self.move_down.duration
-            self.move_up.params['total_distance'] = -30
+            self.move_up = Animation2.create_move(116.67, start_position=92 + 20, delay=self.move_down.duration, total_distance =-30)
 
             #And finally into its correct position
-            self.move_center = Animation(current_ms, 116.67, 'move')
-            self.move_center.params['start_position'] = 82
-            self.move_center.params['delay'] = self.move_down.duration + self.move_up.duration
-            self.move_center.params['total_distance'] = 10
+            self.move_center = Animation2.create_move(116.67, start_position=82, delay=self.move_down.duration + self.move_up.duration, total_distance=10)
             self.y_pos = 0
 
         def update(self, current_ms):
@@ -278,16 +257,10 @@ class WarningScreen:
     def __init__(self, current_ms: float, title_screen: TitleScreen):
         self.start_ms = current_ms
 
-        self.fade_in = Animation(current_ms, 300, 'fade')
-        self.fade_in.params['delay'] = 266.67
-        self.fade_in.params['initial_opacity'] = 0.0
-        self.fade_in.params['final_opacity'] = 1.0
+        self.fade_in = Animation2.create_fade(300, delay=266.67, initial_opacity=0.0, final_opacity=1.0)
 
         #Fade to black
-        self.fade_out = Animation(current_ms, 500, 'fade')
-        self.fade_out.params['initial_opacity'] = 0.0
-        self.fade_out.params['final_opacity'] = 1.0
-        self.fade_out.params['delay'] = 1000
+        self.fade_out = Animation2.create_fade(500, delay=1000, initial_opacity=0.0, final_opacity=1.0)
 
         self.board = self.Board(current_ms, title_screen.width, title_screen.height, title_screen.textures['keikoku'][1])
         self.warning_x = self.X(current_ms)
@@ -311,7 +284,7 @@ class WarningScreen:
         if self.characters.is_finished:
             self.warning_bachi_hit.update(current_ms, title_screen.sound_bachi_hit)
         else:
-            self.fade_out.params['delay'] = elapsed_time + 500
+            self.fade_out.delay = elapsed_time + 500
             if delay <= elapsed_time and not audio.is_sound_playing(title_screen.sound_bachi_swipe):
                 audio.play_sound(title_screen.sound_warning_message)
                 audio.play_sound(title_screen.sound_bachi_swipe)

@@ -365,6 +365,7 @@ class TJAParser:
                     note.type = int(item)
                     note.pixels_per_frame = bar.pixels_per_frame
                     note.index = index
+                    note.moji = -1
                     if item in {'5', '6'}:
                         note = Drumroll(note)
                         note.color = 255

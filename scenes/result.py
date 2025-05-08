@@ -3,7 +3,7 @@ from pathlib import Path
 import pyray as ray
 
 from libs import utils
-from libs.animation import Animation
+from libs.animation import Animation, Animation2
 from libs.audio import audio
 from libs.utils import (
     OutlinedText,
@@ -178,10 +178,7 @@ class ResultScreen:
 
 class FadeIn:
     def __init__(self, current_ms: float):
-        self.fadein = Animation(current_ms, 450, 'fade')
-        self.fadein.params['initial_opacity'] = 1.0
-        self.fadein.params['final_opacity'] = 0.0
-        self.fadein.params['delay'] = 100
+        self.fadein = Animation2.create_fade(450, initial_opacity=1.0, final_opacity=0.0, delay=100)
         self.fade = ray.fade(ray.WHITE, self.fadein.attribute)
 
         self.is_finished = False
@@ -238,9 +235,7 @@ class Gauge:
     def __init__(self, current_ms: float, gauge_length):
         self.gauge_length = gauge_length
         self.rainbow_animation = None
-        self.gauge_fade_in = Animation(get_current_ms(), 366, 'fade')
-        self.gauge_fade_in.params['initial_opacity'] = 0.0
-        self.gauge_fade_in.params['final_opacity'] = 1.0
+        self.gauge_fade_in = Animation2.create_fade(366, initial_opacity=0.0, final_opacity=1.0)
         self.is_finished = self.gauge_fade_in.is_finished
 
     def _create_rainbow_anim(self, current_ms):
@@ -251,9 +246,7 @@ class Gauge:
         return anim
 
     def _create_anim(self, current_ms: float, init: float, final: float):
-        anim = Animation(current_ms, 450, 'fade')
-        anim.params['initial_opacity'] = init
-        anim.params['final_opacity'] = final
+        anim = Animation2.create_fade(450, initial_opacity=init, final_opacity=final)
         return anim
 
     def update(self, current_ms: float):
