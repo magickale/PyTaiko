@@ -1,7 +1,7 @@
 [general]
 fps_counter = false
 judge_offset = 0
-autoplay = false
+autoplay = true
 
 [paths]
 tja_path = 'Songs'

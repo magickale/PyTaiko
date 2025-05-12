@@ -393,6 +393,8 @@ class TJAParser:
         # Bars can be sorted like this because they don't need hit detection
         draw_note_list = deque(sorted(play_note_list, key=lambda n: n.load_ms))
         bar_list = deque(sorted(bar_list, key=lambda b: b.load_ms))
+        for note in play_note_list:
+            print(note)
         return play_note_list, draw_note_list, bar_list
 
     def hash_note_data(self, notes: list):

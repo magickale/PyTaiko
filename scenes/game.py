@@ -12,7 +12,6 @@ from libs.backgrounds import Background
 from libs.tja import Balloon, Drumroll, Note, TJAParser, calculate_base_score
 from libs.utils import (
     OutlinedText,
-    draw_scaled_texture,
     get_config,
     get_current_ms,
     global_data,
@@ -1115,7 +1114,7 @@ class SongInfo:
 
         self.font = self._load_font_for_text(song_name)
         self.song_title = OutlinedText(
-            self.font, song_name, 40, ray.WHITE, ray.BLACK, outline_thickness=5
+            self.font, song_name, 40, ray.WHITE, ray.BLACK, outline_thickness=4
         )
         self.fade_in = Animation.create_fade(self.FADE_DURATION, initial_opacity=0.0, final_opacity=1.0)
         self.fade_out = Animation.create_fade(self.FADE_DURATION, delay=self.DISPLAY_DURATION)
@@ -1157,7 +1156,9 @@ class SongInfo:
 
         text_x = 1252 - self.song_title.texture.width
         text_y = int(50 - self.song_title.texture.height / 2)
-        self.song_title.draw(text_x, text_y, self.song_name_fade)
+        src = ray.Rectangle(0, 0, self.song_title.texture.width, self.song_title.texture.height)
+        dest = ray.Rectangle(text_x, text_y, self.song_title.texture.width, self.song_title.texture.height)
+        self.song_title.draw(src, dest, ray.Vector2(0, 0), 0, self.song_name_fade)
 
 class ResultTransition:
     def __init__(self, screen_height: int):

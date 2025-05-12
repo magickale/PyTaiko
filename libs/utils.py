@@ -3,7 +3,7 @@ import tempfile
 import time
 import tomllib
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -132,100 +132,244 @@ class OutlinedText:
     text_color: ray.Color
     outline_color: ray.Color
     outline_thickness: int = 2
+    vertical: bool = False
+    line_spacing: float = 1.0  # Line spacing for vertical text
+    lowercase_spacing_factor: float = 0.85  # Adjust spacing for lowercase letters and whitespace
+    vertical_chars: set = field(default_factory=lambda: {'-', '|', '/', '\\', 'ー'})
+    no_space_chars: set = field(default_factory=lambda: {
+        'ぁ', 'ア','ぃ', 'イ','ぅ', 'ウ','ぇ', 'エ','ぉ', 'オ',
+        'ゃ', 'ャ','ゅ', 'ュ','ょ', 'ョ','っ', 'ッ','ゎ', 'ヮ',
+        'ヶ', 'ヵ','ㇰ','ㇱ','ㇲ','ㇳ','ㇴ','ㇵ','ㇶ','ㇷ','ㇸ',
+        'ㇹ','ㇺ','ㇻ','ㇼ','ㇽ','ㇾ','ㇿ'
+    })
 
     def __post_init__(self):
         self.texture = self._create_texture()
 
+    def _calculate_vertical_spacing(self, current_char, next_char=None):
+        # Check if current char is lowercase or whitespace
+        is_spacing_char = current_char.islower() or current_char.isspace() or current_char in self.no_space_chars
+
+        # Additional check for capitalization transition
+        if next_char and current_char.isupper() and next_char.islower() or next_char in self.no_space_chars:
+            is_spacing_char = True
+
+        # Apply spacing factor if it's a spacing character
+        if is_spacing_char:
+            return self.font_size * (self.line_spacing * self.lowercase_spacing_factor)
+        return self.font_size * self.line_spacing
+
+    def _draw_rotated_char(self, image, font, char, pos, font_size, color, is_outline=False):
+        # Calculate character size
+        char_size = ray.measure_text_ex(font, char, font_size, 1.0)
+
+        # Create a temporary image for the rotated character
+        temp_image = ray.gen_image_color(int(char_size.y), int(char_size.x), ray.Color(0, 0, 0, 0))
+
+        # Draw the character on the temporary image
+        ray.image_draw_text_ex(
+            temp_image,
+            font,
+            char,
+            ray.Vector2(0, 0),
+            font_size,
+            1.0,
+            color
+        )
+
+        # Rotate the temporary image 90 degrees
+        rotated_image = ray.gen_image_color(int(char_size.x), int(char_size.y), ray.Color(0, 0, 0, 0))
+        for x in range(int(char_size.y)):
+            for y in range(int(char_size.x)):
+                pixel = ray.get_image_color(temp_image, y, int(char_size.y) - x - 1)
+                ray.image_draw_pixel(
+                    rotated_image,
+                    x,
+                    y,
+                    pixel
+                )
+
+        # Unload temporary image
+        ray.unload_image(temp_image)
+
+        # Draw the rotated image
+        ray.image_draw(
+            image,
+            rotated_image,
+            ray.Rectangle(0, 0, rotated_image.width, rotated_image.height),
+            ray.Rectangle(int(pos.x), int(pos.y), rotated_image.width, rotated_image.height),
+            ray.WHITE
+        )
+
+        # Unload rotated image
+        ray.unload_image(rotated_image)
+
     def _create_texture(self):
+        # Measure text size
         text_size = ray.measure_text_ex(self.font, self.text, self.font_size, 1.0)
 
-        padding = self.outline_thickness * 2
-        width = int(text_size.x + padding * 2)
-        height = int(text_size.y + padding * 2)
+        # Determine dimensions based on orientation
+        if not self.vertical:
+            width = int(text_size.x + self.outline_thickness * 4)
+            height = int(text_size.y + self.outline_thickness * 4)
+            padding_x, padding_y = self.outline_thickness * 2, self.outline_thickness * 2
+        else:
+            # For vertical text, calculate total height and max character width
+            char_heights = [
+                self._calculate_vertical_spacing(
+                    self.text[i],
+                    self.text[i+1] if i+1 < len(self.text) else None
+                )
+                for i in range(len(self.text))
+            ]
 
+            # Calculate the maximum character width (including outline)
+            char_widths = []
+            for char in self.text:
+                if char in self.vertical_chars:
+                    # For vertically drawn characters, use font size as width
+                    char_width = self.font_size
+                else:
+                    # Normal character width
+                    char_width = ray.measure_text_ex(self.font, char, self.font_size, 1.0).x
+                char_widths.append(char_width)
+
+            max_char_width = max(char_widths) if char_widths else 0
+            total_height = sum(char_heights) if char_heights else 0
+
+            # Adjust dimensions to be tighter around the text
+            width = int(max_char_width + self.outline_thickness * 2)  # Reduced padding
+            height = int(total_height + self.outline_thickness * 2)   # Reduced padding
+            padding_x = self.outline_thickness
+            padding_y = self.outline_thickness
+
+        # Create transparent image
         image = ray.gen_image_color(width, height, ray.Color(0, 0, 0, 0))
 
-        for dx in range(-self.outline_thickness, self.outline_thickness + 1):
-            for dy in range(-self.outline_thickness, self.outline_thickness + 1):
-                if dx == 0 and dy == 0:
-                    continue
-
-                distance = (dx * dx + dy * dy) ** 0.5
-                if distance <= self.outline_thickness:
+        # Draw outline
+        if not self.vertical:
+            # Horizontal text outline
+            for dx in range(-self.outline_thickness, self.outline_thickness + 1):
+                for dy in range(-self.outline_thickness, self.outline_thickness + 1):
+                    if dx == 0 and dy == 0:
+                        continue
                     ray.image_draw_text_ex(
                         image,
                         self.font,
                         self.text,
-                        ray.Vector2(padding + dx, padding + dy),
+                        ray.Vector2(padding_x + dx, padding_y + dy),
                         self.font_size,
                         1.0,
                         self.outline_color
                     )
+        else:
+            # Vertical text outline
+            current_y = padding_y
+            for dx in range(-self.outline_thickness, self.outline_thickness + 1):
+                for dy in range(-self.outline_thickness, self.outline_thickness + 1):
+                    if dx == 0 and dy == 0:
+                        continue
 
-        ray.image_draw_text_ex(
-            image,
-            self.font,
-            self.text,
-            ray.Vector2(padding, padding),
-            self.font_size,
-            1.0,
-            self.text_color
-        )
+                    current_y = padding_y
+                    for i, char in enumerate(self.text):
+                        if char in self.vertical_chars:
+                            char_width = self.font_size
+                        else:
+                            char_width = ray.measure_text_ex(self.font, char, self.font_size, 1.0).x
 
+                        # Calculate centered position
+                        center_offset = (width - char_width) // 2
+                        char_height = self._calculate_vertical_spacing(
+                            char,
+                            self.text[i+1] if i+1 < len(self.text) else None
+                        )
+
+                        if char in self.vertical_chars:
+                            self._draw_rotated_char(
+                                image,
+                                self.font,
+                                char,
+                                ray.Vector2(
+                                    center_offset + dx,
+                                    current_y + dy
+                                ),
+                                self.font_size,
+                                self.outline_color,
+                                is_outline=True
+                            )
+                        else:
+                            ray.image_draw_text_ex(
+                                image,
+                                self.font,
+                                char,
+                                ray.Vector2(center_offset + dx, current_y + dy),
+                                self.font_size,
+                                1.0,
+                                self.outline_color
+                            )
+
+                        current_y += char_height
+
+        # Draw main text
+        if not self.vertical:
+            # Horizontal text
+            ray.image_draw_text_ex(
+                image,
+                self.font,
+                self.text,
+                ray.Vector2(padding_x, padding_y),
+                self.font_size,
+                1.0,
+                self.text_color
+            )
+        else:
+            # Vertical text
+            current_y = padding_y
+            for i, char in enumerate(self.text):
+                if char in self.vertical_chars:
+                    char_width = self.font_size
+                else:
+                    char_width = ray.measure_text_ex(self.font, char, self.font_size, 1.0).x
+
+                # Calculate centered position
+                center_offset = (width - char_width) // 2
+                char_height = self._calculate_vertical_spacing(
+                    char,
+                    self.text[i+1] if i+1 < len(self.text) else None
+                )
+
+                if char in self.vertical_chars:
+                    self._draw_rotated_char(
+                        image,
+                        self.font,
+                        char,
+                        ray.Vector2(
+                            center_offset,
+                            current_y
+                        ),
+                        self.font_size,
+                        self.text_color
+                    )
+                else:
+                    ray.image_draw_text_ex(
+                        image,
+                        self.font,
+                        char,
+                        ray.Vector2(center_offset, current_y),
+                        self.font_size,
+                        1.0,
+                        self.text_color
+                    )
+
+                current_y += char_height
+
+        # Create texture and clean up
         texture = ray.load_texture_from_image(image)
-
         ray.unload_image(image)
-
         return texture
 
-    def draw(self, x: int, y: int, color: ray.Color):
-        ray.draw_texture(self.texture, x, y, color)
+    def draw(self, src: ray.Rectangle, dest: ray.Rectangle, origin: ray.Vector2, rotation: float, color: ray.Color):
+        ray.draw_texture_pro(self.texture, src, dest, origin, rotation, color)
 
     def unload(self):
         ray.unload_texture(self.texture)
-
-'''
-class RenderTextureStack:
-    def __init__(self):
-        """Initialize an empty stack for render textures."""
-        self.texture_stack = []
-
-    def load_render_texture(self, width, height):
-        """Create and return a render texture with the specified dimensions."""
-        return ray.load_render_texture(width, height)
-
-    def begin_texture_mode(self, target):
-        """Begin drawing to the render texture and add it to the stack."""
-        ray.begin_texture_mode(target)
-        self.texture_stack.append(target)
-        return target
-
-    def end_texture_mode(self, pop_count=1):
-        """End the texture mode for the specified number of textures in the stack."""
-        if not self.texture_stack:
-            raise IndexError("Cannot end texture mode: texture stack is empty")
-
-        # Ensure pop_count is within valid range
-        pop_count = min(pop_count, len(self.texture_stack))
-
-        # End the texture modes and pop from stack
-        for _ in range(pop_count):
-            ray.end_texture_mode()
-            self.texture_stack.pop()
-
-    def get_texture(self, target):
-        """Get the texture from the render texture."""
-        return ray.get_texture_default(target)
-
-    def draw_texture(self, texture, pos_x, pos_y, tint=ray.WHITE):
-        """Draw a texture at the specified position with the given tint."""
-        ray.draw_texture(texture, pos_x, pos_y, tint)
-
-    def get_current_target(self):
-        """Get the current active render target from the stack."""
-        if not self.texture_stack:
-            return None
-        return self.texture_stack[-1]
-
-render_stack = RenderTextureStack()
-'''
