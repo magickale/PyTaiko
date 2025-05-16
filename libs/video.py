@@ -1,5 +1,5 @@
-import moviepy
 import pyray as ray
+from moviepy import VideoFileClip
 
 from libs.audio import audio
 from libs.utils import get_current_ms
@@ -12,7 +12,7 @@ class VideoPlayer:
         """
         self.is_finished_list = [False, False]
         self.video_path = path
-        self.video = moviepy.VideoFileClip(path)
+        self.video = VideoFileClip(path)
         audio_path = path[:-4] + '.ogg'
         self.audio = audio.load_music_stream(audio_path)
 

@@ -1,8 +1,8 @@
 import hashlib
 import math
+import os
 from collections import deque
 from dataclasses import dataclass, field, fields
-import os
 from pathlib import Path
 
 from libs.utils import get_pixels_per_frame, strip_comments

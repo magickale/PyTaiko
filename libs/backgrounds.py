@@ -6,63 +6,6 @@ import pyray as ray
 from libs.animation import Animation
 from libs.utils import load_all_textures_from_zip
 
-'''
-class Background:
-    class Chibi:
-        def __init__(self):
-            self.texture_index = Animation.create_texture_change(249, textures=[(0, 150, 4), (150, 183, 0), (183, 183 + 33, 1), (183 + 33, 183 + 66, 2)])
-            self.chibi_color = 5
-            self.move = Animation.create_move(1000, total_distance=1280)
-        def update(self):
-            self.chibi_color = random.choice([5, 10, 15, 20])
-            self.texture_index.update(get_current_ms())
-            self.move.update(get_current_ms())
-            if self.texture_index.is_finished:
-                self.texture_index = Animation.create_texture_change(100, textures=[(0, 150, 4), (150, 183, 0), (183, 183 + 33, 1), (183 + 33, 183 + 66, 2)])
-        def draw(self, textures):
-            ray.draw_texture(textures[self.texture_index.attribute + self.chibi_color], 200 + int(self.move.attribute), 0, ray.WHITE)
-
-    def __init__(self, width: int, height: int):
-        self.screen_width = width
-        self.screen_height = height
-        self.bg_fever_name = 'bg_fever_a_' + str(random.randint(1, 4)).zfill(2)
-        self.bg_normal_name = 'bg_nomal_a_' + str(random.randint(1, 5)).zfill(2)
-        self.chibi_name = 'chibi_a_' + str(random.randint(1, 14)).zfill(2)
-        self.dance_name = 'dance_a_' + str(random.randint(1, 22)).zfill(2)
-        self.donbg_name = 'donbg_a_' + str(random.randint(1, 6)).zfill(2)
-        self.fever_name = 'fever_a_' + str(random.randint(1, 4)).zfill(2)
-        self.renda_name = 'renda_a_' + str(random.randint(1, 3)).zfill(2)
-
-        self.textures = dict()
-
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.bg_fever_name}.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.bg_normal_name}.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.chibi_name}.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.dance_name}.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.donbg_name}_1p.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.donbg_name}_2p.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.fever_name}.zip')))
-        self.textures.update(load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.renda_name}.zip')))
-
-        self.donbg_move = Animation.create_move(2500, start_position=0, total_distance=-self.textures[self.donbg_name + '_1p'][0].width)
-
-        self.chibis = []
-
-    def update(self):
-        self.donbg_move.update(get_current_ms())
-        if self.donbg_move.is_finished:
-            self.donbg_move = Animation.create_move(2500, start_position=0, total_distance=-self.textures[self.donbg_name + '_1p'][0].width)
-        for chibi in self.chibis:
-            chibi.update()
-            if chibi.move.is_finished:
-                self.chibis.remove(chibi)
-    def draw(self):
-        ray.draw_texture(self.textures[self.bg_normal_name][0], 0, 360, ray.WHITE)
-        ray.draw_texture(self.textures[self.bg_normal_name][1], 0, 360, ray.fade(ray.WHITE, 0.25))
-
-        # for chibi in self.chibis:
-        #     chibi.draw(self.textures[self.chibi_name])
-'''
 
 class Background:
     def __init__(self, screen_width: int, screen_height: int):

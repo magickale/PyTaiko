@@ -9,11 +9,13 @@ from numpy import (
     abs as np_abs,
 )
 from numpy import (
+    arange,
     column_stack,
     float32,
     frombuffer,
     int16,
     int32,
+    interp,
     mean,
     uint8,
     zeros,
@@ -25,28 +27,42 @@ from numpy import (
 os.environ["SD_ENABLE_ASIO"] = "1"
 import sounddevice as sd
 from pydub import AudioSegment
-from scipy import signal
 
 from libs.utils import get_config, rounded
 
 
 def resample(data, orig_sr, target_sr):
+    # Return original data if no resampling needed
     ratio = target_sr / orig_sr
-
     if ratio == 1.0:
         return data
 
-    if len(data.shape) == 1:
-        resampled_data = signal.resample_poly(data, target_sr, orig_sr)
-    else:
+    # Handle both mono and multi-channel audio
+    if len(data.shape) == 1:  # Mono audio
+        return _resample_channel(data, orig_sr, target_sr)
+    else:  # Multi-channel audio
         num_channels = data.shape[1]
         resampled_channels = []
 
         for ch in range(num_channels):
             channel_data = data[:, ch]
-            resampled_channel = signal.resample_poly(channel_data, target_sr, orig_sr)
+            resampled_channel = _resample_channel(channel_data, orig_sr, target_sr)
             resampled_channels.append(resampled_channel)
-        resampled_data = column_stack(resampled_channels)
+
+        return column_stack(resampled_channels)
+
+def _resample_channel(channel_data, orig_sr, target_sr):
+    # Calculate number of samples in resampled audio
+    orig_length = len(channel_data)
+    new_length = int(orig_length * target_sr / orig_sr)
+
+    # Create time points for original and new sample rates
+    orig_time = arange(orig_length) / orig_sr
+    new_time = arange(new_length) / target_sr
+
+    # Perform linear interpolation
+    resampled_data = interp(new_time, orig_time, channel_data)
+
     return resampled_data
 
 def get_np_array(sample_width, raw_data):
@@ -643,16 +659,12 @@ class AudioEngine:
     def get_master_volume(self) -> float:
         return self.master_volume
 
-    def load_sound(self, fileName: str) -> str | None:
-        try:
-            sound = Sound(fileName, target_sample_rate=self.target_sample_rate)
-            sound_id = f"sound_{len(self.sounds)}"
-            self.sounds[sound_id] = sound
-            print(f"Loaded sound from {fileName} as {sound_id}")
-            return sound_id
-        except Exception as e:
-            print(f"Error loading sound: {e}")
-            return None
+    def load_sound(self, fileName: str) -> str:
+        sound = Sound(fileName, target_sample_rate=self.target_sample_rate)
+        sound_id = f"sound_{len(self.sounds)}"
+        self.sounds[sound_id] = sound
+        print(f"Loaded sound from {fileName} as {sound_id}")
+        return sound_id
 
     def play_sound(self, sound):
         if sound in self.sounds:
@@ -683,16 +695,12 @@ class AudioEngine:
         if sound in self.sounds:
             self.sounds[sound].pan = max(0.0, min(1.0, pan))
 
-    def load_music_stream(self, fileName: str) -> str | None:
-        try:
-            music = Music(file_path=fileName, target_sample_rate=self.target_sample_rate)
-            music_id = f"music_{len(self.music_streams)}"
-            self.music_streams[music_id] = music
-            print(f"Loaded music stream from {fileName} as {music_id}")
-            return music_id
-        except Exception as e:
-            print(f"Error loading music stream: {e}")
-            return None
+    def load_music_stream(self, fileName: str) -> str:
+        music = Music(file_path=fileName, target_sample_rate=self.target_sample_rate)
+        music_id = f"music_{len(self.music_streams)}"
+        self.music_streams[music_id] = music
+        print(f"Loaded music stream from {fileName} as {music_id}")
+        return music_id
 
     def is_music_valid(self, music: str) -> bool:
         if music in self.music_streams:
