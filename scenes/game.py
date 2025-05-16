@@ -114,7 +114,7 @@ class GameScreen:
         self.tja.distance = self.width - self.judge_x
         session_data.song_title = self.tja.title
 
-        self.player_1 = Player(self, 1, difficulty, metadata, get_config()["general"]["judge_offset"])
+        self.player_1 = Player(self, 1, difficulty, metadata)
         self.song_music = audio.load_sound(str(Path(self.tja.wave)))
         self.start_ms = (get_current_ms() - self.tja.offset*1000)
 
@@ -132,6 +132,7 @@ class GameScreen:
                 ray.unload_texture(texture)
         self.song_started = False
         self.end_ms = 0
+        self.movie = None
         return 'RESULT'
 
     def write_score(self):
@@ -159,7 +160,7 @@ class GameScreen:
     def update(self):
         self.on_screen_start()
         self.current_ms = get_current_ms() - self.start_ms
-        if (self.current_ms >= self.tja.offset*1000 + self.start_delay) and not self.song_started:
+        if (self.current_ms >= self.tja.offset*1000 + self.start_delay - get_config()["general"]["judge_offset"]) and not self.song_started:
             if self.song_music is not None:
                 if not audio.is_sound_playing(self.song_music):
                     audio.play_sound(self.song_music)
@@ -206,7 +207,7 @@ class Player:
     TIMING_OK = 75.0750045776367
     TIMING_BAD = 108.441665649414
 
-    def __init__(self, game_screen: GameScreen, player_number: int, difficulty: int, metadata, judge_offset: int):
+    def __init__(self, game_screen: GameScreen, player_number: int, difficulty: int, metadata):
 
         self.player_number = player_number
         self.difficulty = difficulty
@@ -214,8 +215,6 @@ class Player:
         self.play_notes, self.draw_note_list, self.draw_bar_list = game_screen.tja.notes_to_position(self.difficulty)
         self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
         self.base_score = calculate_base_score(self.play_notes)
-
-        self.judge_offset = judge_offset
 
         #Note management
         self.current_bars: list[Note] = []
@@ -259,7 +258,7 @@ class Player:
         return self.score, self.good_count, self.ok_count, self.bad_count, self.total_drumroll, self.max_combo
 
     def get_position(self, game_screen: GameScreen, ms: float, pixels_per_frame: float) -> int:
-        return int(game_screen.width + pixels_per_frame * 60 / 1000 * (ms - game_screen.current_ms + self.judge_offset) - 64)
+        return int(game_screen.width + pixels_per_frame * 60 / 1000 * (ms - game_screen.current_ms) - 64)
 
     def animation_manager(self, animation_list: list):
         if len(animation_list) <= 0:
@@ -420,7 +419,7 @@ class Player:
             if game_screen.current_ms > (curr_note.hit_ms + Player.TIMING_BAD):
                 return
             big = curr_note.type == 3 or curr_note.type == 4
-            if (curr_note.hit_ms - Player.TIMING_GOOD) + self.judge_offset <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_GOOD) + self.judge_offset:
+            if (curr_note.hit_ms - Player.TIMING_GOOD) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_GOOD):
                 self.draw_judge_list.append(Judgement('GOOD', big))
                 self.lane_hit_effect = LaneHitEffect('GOOD')
                 self.good_count += 1
@@ -428,14 +427,14 @@ class Player:
                 self.base_score_list.append(ScoreCounterAnimation(self.base_score))
                 self.note_correct(game_screen, curr_note)
 
-            elif (curr_note.hit_ms - Player.TIMING_OK) + self.judge_offset <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_OK) + self.judge_offset:
+            elif (curr_note.hit_ms - Player.TIMING_OK) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_OK):
                 self.draw_judge_list.append(Judgement('OK', big))
                 self.ok_count += 1
                 self.score += 10 * math.floor(self.base_score / 2 / 10)
                 self.base_score_list.append(ScoreCounterAnimation(10 * math.floor(self.base_score / 2 / 10)))
                 self.note_correct(game_screen, curr_note)
 
-            elif (curr_note.hit_ms - Player.TIMING_BAD) + self.judge_offset <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_BAD) + self.judge_offset:
+            elif (curr_note.hit_ms - Player.TIMING_BAD) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_BAD):
                 self.draw_judge_list.append(Judgement('BAD', big))
                 self.bad_count += 1
                 self.combo = 0

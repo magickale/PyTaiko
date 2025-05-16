@@ -27,7 +27,7 @@ import sounddevice as sd
 from pydub import AudioSegment
 from scipy import signal
 
-from libs.utils import get_config
+from libs.utils import get_config, rounded
 
 
 def resample(data, orig_sr, target_sr):
@@ -72,7 +72,7 @@ def get_np_array(sample_width, raw_data):
         raise ValueError(f"Unsupported sample width: {sample_width}")
 
 class Sound:
-    def __init__(self, file_path, data=None, target_sample_rate=48000):
+    def __init__(self, file_path, data=None, target_sample_rate=44100):
         self.file_path = file_path
         self.data = data
         self.channels = 0
@@ -187,7 +187,7 @@ class Sound:
         return output
 
 class Music:
-    def __init__(self, file_path, data=None, file_type=None, target_sample_rate=48000):
+    def __init__(self, file_path, data=None, file_type=None, target_sample_rate=44100):
         self.file_path = file_path
         self.file_type = file_type
         self.data = data
@@ -414,8 +414,8 @@ class Music:
 
 class AudioEngine:
     def __init__(self, type: str):
-        self.target_sample_rate = 48000
-        self.buffer_size = get_config()["audio"]["buffer_size"]
+        self.target_sample_rate = 44100
+        self.buffer_size = 10
         self.sounds = {}
         self.music_streams = {}
         self.stream = None
@@ -442,7 +442,6 @@ class AudioEngine:
                 asio_api_index = i
                 break
 
-        print(hostapis)
         if isinstance(hostapis, tuple):
             asio_api = hostapis[asio_api_index]
             if isinstance(asio_api, dict) and 'default_output_device' in asio_api:
@@ -455,6 +454,13 @@ class AudioEngine:
                 if isinstance(device_info, sd.DeviceList):
                     raise Exception("Invalid ASIO Device")
                 print(f"Using default ASIO device: {device_info['name']}")
+                print(device_info)
+                self.buffer_size = rounded(device_info['default_low_output_latency']*1000)
+                if 'buffer_size' in get_config()['audio']:
+                    self.buffer_size = get_config()['audio']['buffer_size']
+                self.target_sample_rate = device_info['default_samplerate']
+                if 'sample_rate' in get_config()['audio']:
+                    self.target_sample_rate = get_config()['audio']['sample_rate']
                 # Set output channels based on device capabilities
                 self.output_channels = device_info['max_output_channels']
                 if self.output_channels > 2:
@@ -587,16 +593,21 @@ class AudioEngine:
             self._initialize_asio()
 
             # Set up and start the stream
+            extra_settings = None
+            buffer_size = self.buffer_size
             self.stream = sd.OutputStream(
                 samplerate=self.target_sample_rate,
                 channels=self.output_channels,
                 callback=self._audio_callback,
-                blocksize=self.buffer_size,
-                device=self.device_id
+                blocksize=buffer_size,
+                device=self.device_id,
+                latency='low',
+                extra_settings=extra_settings
             )
             self.stream.start()
             self.running = True
             self.audio_device_ready = True
+            print(self.stream.samplerate, self.stream.blocksize, self.stream.latency*1000)
 
             # Start update thread for music streams
             self._start_update_thread()
@@ -634,7 +645,7 @@ class AudioEngine:
 
     def load_sound(self, fileName: str) -> str | None:
         try:
-            sound = Sound(fileName, self.target_sample_rate)
+            sound = Sound(fileName, target_sample_rate=self.target_sample_rate)
             sound_id = f"sound_{len(self.sounds)}"
             self.sounds[sound_id] = sound
             print(f"Loaded sound from {fileName} as {sound_id}")
