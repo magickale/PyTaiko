@@ -121,7 +121,7 @@ class GameScreen:
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
-            self.init_tja(session_data.selected_song, session_data.selected_difficulty)
+            self.init_tja(global_data.selected_song, session_data.selected_difficulty)
             self.song_info = SongInfo(self.tja.title, 'TEST')
             self.result_transition = None
 

@@ -304,7 +304,6 @@ class FadeOut:
         self.is_finished = False
     def update(self, current_time_ms: float):
         self.fade_out.update(current_time_ms)
-        print(self.fade_out.attribute)
         self.is_finished = self.fade_out.is_finished
     def draw(self, screen_width: int, screen_height: int):
         src = ray.Rectangle(0, 0, self.texture.width, self.texture.height)

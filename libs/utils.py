@@ -102,7 +102,6 @@ def draw_scaled_texture(texture: ray.Texture, x: int, y: int, scale: float, colo
 
 @dataclass
 class SessionData:
-    selected_song: str = '' #Path
     selected_difficulty: int = 0
     song_title: str = ''
     result_score: int = 0
@@ -120,6 +119,7 @@ def reset_session():
 
 @dataclass
 class GlobalData:
+    selected_song: str = '' #Path
     textures: dict[str, list[ray.Texture]] = field(default_factory=lambda: dict())
     songs_played: int = 0
 

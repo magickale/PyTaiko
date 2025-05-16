@@ -2,6 +2,7 @@ import hashlib
 import math
 from collections import deque
 from dataclasses import dataclass, field, fields
+import os
 from pathlib import Path
 
 from libs.utils import get_pixels_per_frame, strip_comments
@@ -63,7 +64,10 @@ class TJAParser:
         #Defined on startup
         self.folder_path = Path(path)
         self.folder_name = self.folder_path.name
-        self.file_path = self.folder_path / f"{self.folder_name}.tja"
+        for _, _, files in os.walk(self.folder_path):
+            for file in files:
+                if file.endswith('tja'):
+                    self.file_path = self.folder_path / f'{file}'
 
         #Defined on file_to_data()
         self.data = []

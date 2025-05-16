@@ -1,7 +1,5 @@
 numpy==2.2.5
 pydub==0.25.1
-pyray==0.1.0
-raylib==5.5.0.2
 raylib_dynamic==5.5.0.2
 scipy==1.15.2
 sounddevice==0.5.1
