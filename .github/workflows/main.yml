@@ -39,28 +39,16 @@ jobs:
               continue-on-error: true
             - name: Build Executable
               run: |
-                  # Create completely isolated environment
-                  mkdir -p isolated-build
-                  cp -r . isolated-build/
-                  cd isolated-build
-
-                  # Remove all Python cache
-                  find . -name "*.pyc" -delete
-                  find . -name "__pycache__" -type d -exec rm -rf {} + || true
-
-                  # Build with maximum isolation
                   uv run nuitka \
-                    --mode=app \
-                    --remove-output \
-                    --output-dir=../build-output \
-                    --no-cached-results \
-                    --disable-cache=all \
-                    --python-flag=isolated \
-                    --temp-dir=../nuitka-temp \
-                    --include-module=raylib,moviepy,numpy,sounddevice,soundfile,tomlkit \
-                    --noinclude-setuptools-mode=nofollow \
-                    --noinclude-IPython-mode=nofollow \
-                    PyTaiko.py
+                  --onefile \
+                  --remove-output \
+                  --output-dir=. \
+                  --no-cached-results \
+                  --temp-dir=./nuitka-temp-${{ github.run_number }} \
+                  --include-module=raylib,moviepy,numpy,sounddevice,soundfile,tomlkit \
+                  --noinclude-setuptools-mode=nofollow \
+                  --noinclude-IPython-mode=nofollow \
+                  PyTaiko.py
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
