@@ -29,7 +29,7 @@ jobs:
                   uv add nuitka
             - name: Build Executable
               run: |
-                  uv run nuitka --mode=app --output-dir=. --include-module=raylib,moviepy,numpy,sounddevice,tomlkit --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow PyTaiko.py
+                  uv run nuitka --mode=app --output-dir=. --include-module=raylib,moviepy,numpy,sounddevice,soundfile,tomlkit --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow PyTaiko.py
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
