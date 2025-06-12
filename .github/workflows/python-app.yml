@@ -41,7 +41,7 @@ jobs:
                   script-name: PyTaiko.py
                   mode: app
                   output-dir: .
-                  include-module: raylib,moviepy,numpy,sounddevice
+                  include-module: raylib,moviepy,numpy,sounddevice,tomlkit
                   include-package: imageio_ffmpeg
                   noinclude-setuptools-mode: nofollow
                   noinclude-IPython-mode: nofollow

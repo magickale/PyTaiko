@@ -3,12 +3,13 @@ from pathlib import Path
 
 import pyray as ray
 
-from libs import song_hash
 from libs.animation import Animation
 from libs.audio import audio
 from libs.utils import (
     get_config,
     get_current_ms,
+    is_l_don_pressed,
+    is_r_don_pressed,
     load_all_textures_from_zip,
     load_texture_from_zip,
 )
@@ -47,9 +48,6 @@ class TitleScreen:
         if not self.screen_init:
             self.screen_init = True
             self.load_textures()
-
-            song_hash.song_hashes = song_hash.build_song_hashes()
-
             self.scene = 'Opening Video'
             self.op_video = VideoPlayer(random.choice(self.op_video_list))
             self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
@@ -97,10 +95,8 @@ class TitleScreen:
         self.on_screen_start()
 
         self.scene_manager()
-        keys = get_config()["keybinds"]["left_don"] + get_config()["keybinds"]["right_don"]
-        for key in keys:
-            if ray.is_key_pressed(ord(key)):
-                return self.on_screen_end()
+        if is_l_don_pressed() or is_r_don_pressed():
+            return self.on_screen_end()
 
     def draw(self):
         if self.scene == 'Opening Video':

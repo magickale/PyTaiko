@@ -1,11 +1,24 @@
+import bisect
 import hashlib
 import math
 from collections import deque
 from dataclasses import dataclass, field, fields
+from functools import lru_cache
 from pathlib import Path
 
 from libs.utils import get_pixels_per_frame, strip_comments
 
+
+@lru_cache(maxsize=64)
+def get_ms_per_measure(bpm_val, time_sig):
+    #https://gist.github.com/KatieFrogs/e000f406bbc70a12f3c34a07303eec8b#measure
+    if bpm_val == 0:
+        return 0
+    return 60000 * (time_sig * 4) / bpm_val
+
+@lru_cache(maxsize=64)
+def get_pixels_per_ms(pixels_per_frame):
+    return pixels_per_frame / (1000 / 60)
 
 @dataclass()
 class Note:
@@ -150,6 +163,7 @@ def calculate_base_score(play_note_list: deque[Note | Drumroll | Balloon]) -> in
     return math.ceil(total_score / 10) * 10
 
 class TJAParser:
+    DIFFS = {0: "easy", 1: "normal", 2: "hard", 3: "oni", 4: "edit", 5: "tower", 6: "dan"}
     def __init__(self, path: Path, start_delay: int = 0, distance: int = 866):
         self.file_path: Path = path
 
@@ -260,59 +274,54 @@ class TJAParser:
                 self.ex_data.limited_time = True
 
     def data_to_notes(self, diff):
-        note_start = -1
-        note_end = -1
+        diff_name = self.DIFFS.get(diff, "").lower()
+
+        # Use enumerate for single iteration
+        note_start = note_end = -1
         target_found = False
-        diffs = {0: "easy", 1: "normal", 2: "hard", 3: "oni", 4: "edit", 5: "tower", 6: "dan"}
-        # Get the name corresponding to this difficulty number
-        diff_name = diffs.get(diff, "").lower()
 
-        i = 0
-        while i < len(self.data):
-            line = self.data[i]
-
-            # Check if this is the start of a difficulty section
+        # Find the section boundaries
+        for i, line in enumerate(self.data):
             if line.startswith("COURSE:"):
                 course_value = line[7:].strip().lower()
-
-                # Match either the exact number or the name
-                if (course_value.isdigit() and int(course_value) == diff) or course_value == diff_name:
-                    target_found = True
-                else:
-                    target_found = False
-
-            # If we found our target section, look for START and END markers
-            if target_found:
-                if line == "#START":
+                target_found = (course_value.isdigit() and int(course_value) == diff) or course_value == diff_name
+            elif target_found:
+                if note_start == -1 and line in ("#START", "#START P1"):
                     note_start = i + 1
                 elif line == "#END" and note_start != -1:
                     note_end = i
-                    break  # We found our complete section
+                    break
 
-            i += 1
+        if note_start == -1 or note_end == -1:
+            return []
 
+        # Process the section with minimal string operations
         notes = []
         bar = []
-        #Check for measures and separate when comma exists
-        for i in range(note_start, note_end):
-            line = self.data[i]
+        section_data = self.data[note_start:note_end]
+
+        for line in section_data:
             if line.startswith("#"):
                 bar.append(line)
+            elif line == ',':
+                if not bar or all(item.startswith('#') for item in bar):
+                    bar.append('')
+                notes.append(bar)
+                bar = []
             else:
-                if line == ',':
-                    if len(bar) == 0 or all(item.startswith('#') for item in bar):
-                        bar.append('')
+                if line.endswith(','):
+                    bar.append(line[:-1])
                     notes.append(bar)
                     bar = []
                 else:
-                    item = line.strip(',')
-                    bar.append(item)
-                    if item != line:
-                        notes.append(bar)
-                        bar = []
+                    bar.append(line)
+
+        if bar:  # Add remaining items
+            notes.append(bar)
+
         return notes
 
-    def get_moji(self, play_note_list: deque[Note], ms_per_measure: float) -> None:
+    def get_moji(self, play_note_list: list[Note], ms_per_measure: float) -> None:
         se_notes = {
             1: [0, 1, 2],  # Note '1' has three possible sound effects
             2: [3, 4],     # Note '2' has two possible sound effects
@@ -373,9 +382,9 @@ class TJAParser:
                         play_note_list[-3].moji = se_notes[play_note_list[-3].moji][2]
 
     def notes_to_position(self, diff: int):
-        play_note_list: deque[Note | Drumroll | Balloon] = deque()
-        bar_list: deque[Note] = deque()
-        draw_note_list: deque[Note | Drumroll | Balloon] = deque()
+        play_note_list: list[Note | Drumroll | Balloon] = []
+        draw_note_list: list[Note | Drumroll | Balloon] = []
+        bar_list: list[Note] = []
         notes = self.data_to_notes(diff)
         balloon = self.metadata.course_data[diff].balloon.copy()
         count = 0
@@ -431,18 +440,14 @@ class TJAParser:
                 if skip_branch:
                     continue
 
-                if bpm == 0:
-                    ms_per_measure = 0
-                else:
-                    #https://gist.github.com/KatieFrogs/e000f406bbc70a12f3c34a07303eec8b#measure
-                    ms_per_measure = 60000 * (time_signature*4) / bpm
+                ms_per_measure = get_ms_per_measure(bpm, time_signature)
 
                 #Create note object
                 bar_line = Note()
 
                 #Determines how quickly the notes need to move across the screen to reach the judgment circle in time
                 bar_line.pixels_per_frame = get_pixels_per_frame(bpm * time_signature * scroll_modifier, time_signature*4, self.distance)
-                pixels_per_ms = bar_line.pixels_per_frame / (1000 / 60)
+                pixels_per_ms = get_pixels_per_ms(bar_line.pixels_per_frame)
 
                 bar_line.hit_ms = self.current_ms
                 if pixels_per_ms == 0:
@@ -455,7 +460,7 @@ class TJAParser:
                 if barline_added:
                     bar_line.display = False
 
-                bar_list.append(bar_line)
+                bisect.insort(bar_list, bar_line, key=lambda x: x.load_ms)
                 barline_added = True
 
                 #Empty bar is still a bar, otherwise start increment
@@ -471,12 +476,11 @@ class TJAParser:
                         continue
                     note = Note()
                     note.hit_ms = self.current_ms
-                    if pixels_per_ms == 0:
-                        note.load_ms = note.hit_ms
-                    else:
-                        note.load_ms = note.hit_ms - (self.distance / pixels_per_ms)
-                    note.type = int(item)
                     note.pixels_per_frame = bar_line.pixels_per_frame
+                    pixels_per_ms = get_pixels_per_ms(note.pixels_per_frame)
+                    note.load_ms = (note.hit_ms if pixels_per_ms == 0
+                                    else note.hit_ms - (self.distance / pixels_per_ms))
+                    note.type = int(item)
                     note.index = index
                     note.bpm = bpm
                     note.gogo_time = gogo_time
@@ -489,10 +493,7 @@ class TJAParser:
                         if balloon is None:
                             raise Exception("Balloon note found, but no count was specified")
                         note = Balloon(note)
-                        if not balloon:
-                            note.count = 1
-                        else:
-                            note.count = balloon.pop(0)
+                        note.count = 1 if not balloon else balloon.pop(0)
                     elif item == '8':
                         new_pixels_per_ms = play_note_list[-1].pixels_per_frame / (1000 / 60)
                         if new_pixels_per_ms == 0:
@@ -502,6 +503,7 @@ class TJAParser:
                         note.pixels_per_frame = play_note_list[-1].pixels_per_frame
                     self.current_ms += increment
                     play_note_list.append(note)
+                    bisect.insort(draw_note_list, note, key=lambda x: x.load_ms)
                     self.get_moji(play_note_list, ms_per_measure)
                     index += 1
                     if len(play_note_list) > 3:
@@ -513,9 +515,7 @@ class TJAParser:
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle
         # Bars can be sorted like this because they don't need hit detection
-        draw_note_list = deque(sorted(play_note_list, key=lambda n: n.load_ms))
-        bar_list = deque(sorted(bar_list, key=lambda b: b.load_ms))
-        return play_note_list, draw_note_list, bar_list
+        return deque(play_note_list), deque(draw_note_list), deque(bar_list)
 
     def hash_note_data(self, play_notes: deque[Note | Drumroll | Balloon], bars: deque[Note]):
         n = hashlib.sha256()

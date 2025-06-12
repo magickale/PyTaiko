@@ -8,9 +8,10 @@ from libs.audio import audio
 from libs.utils import (
     OutlinedText,
     draw_scaled_texture,
-    get_config,
     get_current_ms,
     global_data,
+    is_l_don_pressed,
+    is_r_don_pressed,
     load_all_textures_from_zip,
     session_data,
 )
@@ -60,6 +61,7 @@ class ResultScreen:
                 ['max_combo', session_data.result_max_combo]]
             self.update_index = 0
             self.is_skipped = False
+            self.start_ms = get_current_ms()
 
     def on_screen_end(self):
         self.screen_init = False
@@ -94,6 +96,14 @@ class ResultScreen:
                         self.score_animator = ScoreAnimator(self.update_list[self.update_index][1])
                     self.score_delay += 16.67 * 3
 
+    def handle_input(self):
+        if is_r_don_pressed() or is_l_don_pressed():
+            if not self.is_skipped:
+                self.is_skipped = True
+            else:
+                if self.fade_out is None:
+                    self.fade_out = FadeOut()
+            audio.play_sound(self.sound_don)
 
     def update(self):
         self.on_screen_start()
@@ -108,16 +118,9 @@ class ResultScreen:
             if self.gauge.is_finished and self.score_delay is None:
                 self.score_delay = get_current_ms() + 1883
 
-        left_dons = get_config()["keybinds"]["left_don"]
-        right_dons = get_config()["keybinds"]["right_don"]
-        for don in left_dons + right_dons:
-            if ray.is_key_pressed(ord(don)):
-                if not self.is_skipped:
-                    self.is_skipped = True
-                else:
-                    if self.fade_out is None:
-                        self.fade_out = FadeOut()
-                audio.play_sound(self.sound_don)
+        if get_current_ms() >= self.start_ms + 5000:
+            self.handle_input()
+
         self.update_score_animation(self.is_skipped)
 
         if self.fade_out is not None:
@@ -263,12 +266,13 @@ class Gauge:
     def draw(self, textures: list[ray.Texture]):
         color = ray.fade(ray.WHITE, self.gauge_fade_in.attribute)
         draw_scaled_texture(textures[217], 554, 109, (10/11), color)
-        if self.gauge_length == 87 and self.rainbow_animation is not None:
+        gauge_length = int(self.gauge_length)
+        if gauge_length == 87 and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
                 draw_scaled_texture(textures[217 + int(self.rainbow_animation.attribute)], 554, 109, (10/11), color)
             draw_scaled_texture(textures[218 + int(self.rainbow_animation.attribute)], 554, 109, (10/11), color)
         else:
-            for i in range(self.gauge_length+1):
+            for i in range(gauge_length+1):
                 width = int(i * 7.2)
                 if i == 69:
                     draw_scaled_texture(textures[192], 562 + width, 142 - 22, (10/11), color)
@@ -285,7 +289,7 @@ class Gauge:
         draw_scaled_texture(textures[226], 554, 109, (10/11), ray.fade(ray.WHITE, min(0.15, self.gauge_fade_in.attribute)))
         draw_scaled_texture(textures[176], 1185, 116, (10/11), color)
 
-        if self.gauge_length >= 69:
+        if gauge_length >= 69:
             draw_scaled_texture(textures[194], 1058, 124, (10/11), color)
             draw_scaled_texture(textures[195], 1182, 115, (10/11), color)
         else:

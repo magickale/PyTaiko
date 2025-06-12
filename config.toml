@@ -1,12 +1,13 @@
 [general]
 fps_counter = false
 judge_offset = 0
-autoplay = true
+visual_offset = 0
+autoplay = false
 sfx = true
-language = 'ja'
+language = "ja"
 
 [paths]
-tja_path = ['E:/Taiko/ESE', 'Songs', 'E:/Taiko/VersionSort']
+tja_path = ['Songs']
 video_path = 'Videos'
 
 [keybinds]
@@ -16,9 +17,9 @@ right_don = ['J']
 right_kat = ['K']
 
 [audio]
-device_type = 'ASIO'
-buffer_size = 6
-sample_rate = 48000
+device_type = "Windows WASAPI"
+buffer_size = 22
+sample_rate = 44100
 exclusive = false
 
 [video]
@@ -26,4 +27,4 @@ screen_width = 1280
 screen_height = 720
 fullscreen = false
 borderless = false
-vsync = false
+vsync = true

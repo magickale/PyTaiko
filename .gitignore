@@ -8,3 +8,4 @@ pytaiko.build
 pytaiko.dist
 pytaiko.onefile-build
 pytaiko.exe
+full.csv

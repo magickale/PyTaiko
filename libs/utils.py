@@ -1,10 +1,12 @@
 import hashlib
+import math
 import os
 import tempfile
 import time
-import tomllib
+import tomlkit
 import zipfile
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -85,6 +87,7 @@ def strip_comments(code: str) -> str:
         index += 1
     return result
 
+@lru_cache
 def get_pixels_per_frame(bpm: float, time_signature: float, distance: float) -> float:
     if bpm == 0:
         return 0
@@ -94,9 +97,93 @@ def get_pixels_per_frame(bpm: float, time_signature: float, distance: float) -> 
     return (distance / total_frames)
 
 def get_config() -> dict[str, Any]:
-    with open('config.toml', "rb") as f:
-        config_file = tomllib.load(f)
+    with open('config.toml', "r", encoding="utf-8") as f:
+        config_file = tomlkit.load(f)
     return config_file
+
+def save_config(config: dict[str, Any]) -> None:
+    with open('config.toml', "w", encoding="utf-8") as f:
+        tomlkit.dump(config, f)
+
+def is_l_don_pressed() -> bool:
+    keys = get_config()["keybinds"]["left_don"]
+    for key in keys:
+        if ray.is_key_pressed(ord(key)):
+            return True
+
+    if ray.is_gamepad_available(0):
+        if ray.is_gamepad_button_pressed(0, 16):
+            return True
+
+    mid_x, mid_y = (1280//2, 720)
+    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
+    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
+        for i in range(min(ray.get_touch_point_count(), 10)):
+            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
+            if math.dist(tap_pos, (mid_x, mid_y)) < 300 and tap_pos[0] <= mid_x:
+                return True
+
+    return False
+
+def is_r_don_pressed() -> bool:
+    keys = get_config()["keybinds"]["right_don"]
+    for key in keys:
+        if ray.is_key_pressed(ord(key)):
+            return True
+
+    if ray.is_gamepad_available(0):
+        if ray.is_gamepad_button_pressed(0, 17):
+            return True
+
+    mid_x, mid_y = (1280//2, 720)
+    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
+    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
+        for i in range(min(ray.get_touch_point_count(), 10)):
+            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
+            if math.dist(tap_pos, (mid_x, mid_y)) < 300 and tap_pos[0] > mid_x:
+                return True
+
+    return False
+
+def is_l_kat_pressed() -> bool:
+    keys = get_config()["keybinds"]["left_kat"]
+    for key in keys:
+        if ray.is_key_pressed(ord(key)):
+            return True
+
+    if ray.is_gamepad_available(0):
+        if ray.is_gamepad_button_pressed(0, 10):
+            return True
+
+    mid_x, mid_y = (1280//2, 720)
+    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
+    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
+        for i in range(min(ray.get_touch_point_count(), 10)):
+            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
+            if math.dist(tap_pos, (mid_x, mid_y)) >= 300 and tap_pos[0] <= mid_x:
+                return True
+
+    return False
+
+def is_r_kat_pressed() -> bool:
+    keys = get_config()["keybinds"]["right_kat"]
+    for key in keys:
+        if ray.is_key_pressed(ord(key)):
+            return True
+
+    if ray.is_gamepad_available(0):
+        if ray.is_gamepad_button_pressed(0, 12):
+            return True
+
+    mid_x, mid_y = (1280//2, 720)
+    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
+    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
+        for i in range(min(ray.get_touch_point_count(), 10)):
+            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
+            if math.dist(tap_pos, (mid_x, mid_y)) >= 300 and tap_pos[0] > mid_x:
+                return True
+
+    return False
 
 def draw_scaled_texture(texture: ray.Texture, x: int, y: int, scale: float, color: ray.Color) -> None:
     src_rect = ray.Rectangle(0, 0, texture.width, texture.height)

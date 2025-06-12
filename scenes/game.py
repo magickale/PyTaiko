@@ -15,6 +15,10 @@ from libs.utils import (
     get_config,
     get_current_ms,
     global_data,
+    is_l_don_pressed,
+    is_l_kat_pressed,
+    is_r_don_pressed,
+    is_r_kat_pressed,
     load_all_textures_from_zip,
     load_image_from_zip,
     load_texture_from_zip,
@@ -38,6 +42,7 @@ class GameScreen:
         self.end_ms = 0
         self.start_delay = 1000
         self.song_started = False
+        self.prev_touch_count = 0
 
         self.background = Background(width, height)
 
@@ -150,14 +155,14 @@ class GameScreen:
             result = cursor.fetchone()
             if result is None or session_data.result_score > result[0]:
                 insert_query = '''
-                INSERT OR REPLACE INTO Scores (hash, en_name, jp_name, diff, score, good, ok, bad, drumroll, combo)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                INSERT OR REPLACE INTO Scores (hash, en_name, jp_name, diff, score, good, ok, bad, drumroll, combo, clear)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 '''
                 data = (hash, self.tja.metadata.title['en'],
-                        self.tja.metadata.title['ja'], self.player_1.difficulty,
+                        self.tja.metadata.title.get('ja', ''), self.player_1.difficulty,
                         session_data.result_score, session_data.result_good,
                         session_data.result_ok, session_data.result_bad,
-                        session_data.result_total_drumroll, session_data.result_max_combo)
+                        session_data.result_total_drumroll, session_data.result_max_combo, int(self.player_1.gauge.gauge_length > self.player_1.gauge.clear_start[min(self.player_1.difficulty, 3)]))
                 cursor.execute(insert_query, data)
                 con.commit()
 
@@ -222,6 +227,7 @@ class Player:
 
         self.player_number = player_number
         self.difficulty = difficulty
+        self.visual_offset = get_config()["general"]["visual_offset"]
 
         self.play_notes, self.draw_note_list, self.draw_bar_list = game_screen.tja.notes_to_position(self.difficulty)
         self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
@@ -259,7 +265,7 @@ class Player:
 
         self.input_log: dict[float, tuple] = dict()
 
-        self.gauge = Gauge(self.difficulty, game_screen.tja.metadata.course_data[self.difficulty].level)
+        self.gauge = Gauge(self.difficulty, game_screen.tja.metadata.course_data[self.difficulty].level, self.total_notes)
         self.gauge_hit_effect: list[GaugeHitEffect] = []
 
         self.autoplay_hit_side = 'L'
@@ -269,7 +275,7 @@ class Player:
         return self.score, self.good_count, self.ok_count, self.bad_count, self.total_drumroll, self.max_combo
 
     def get_position(self, game_screen: GameScreen, ms: float, pixels_per_frame: float) -> int:
-        return int(game_screen.width + pixels_per_frame * 60 / 1000 * (ms - game_screen.current_ms) - 64)
+        return int(game_screen.width + pixels_per_frame * 60 / 1000 * (ms - game_screen.current_ms) - 64) - self.visual_offset
 
     def animation_manager(self, animation_list: list):
         if len(animation_list) <= 0:
@@ -305,6 +311,7 @@ class Player:
             if 0 < note.type <= 4:
                 self.combo = 0
                 self.bad_count += 1
+                self.gauge.add_bad()
                 self.play_notes.popleft()
             elif note.type != 8:
                 tail = self.play_notes[1]
@@ -437,6 +444,7 @@ class Player:
                 self.score += self.base_score
                 self.base_score_list.append(ScoreCounterAnimation(self.base_score))
                 self.note_correct(game_screen, curr_note)
+                self.gauge.add_good()
 
             elif (curr_note.hit_ms - Player.TIMING_OK) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_OK):
                 self.draw_judge_list.append(Judgement('OK', big, ms_display=game_screen.current_ms - curr_note.hit_ms))
@@ -444,12 +452,14 @@ class Player:
                 self.score += 10 * math.floor(self.base_score / 2 / 10)
                 self.base_score_list.append(ScoreCounterAnimation(10 * math.floor(self.base_score / 2 / 10)))
                 self.note_correct(game_screen, curr_note)
+                self.gauge.add_ok()
 
             elif (curr_note.hit_ms - Player.TIMING_BAD) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_BAD):
                 self.draw_judge_list.append(Judgement('BAD', big, ms_display=game_screen.current_ms - curr_note.hit_ms))
                 self.bad_count += 1
                 self.combo = 0
                 self.play_notes.popleft()
+                self.gauge.add_bad()
 
     def drumroll_counter_manager(self, game_screen: GameScreen):
         if self.is_drumroll and self.curr_drumroll_count > 0 and self.drumroll_counter is None:
@@ -467,26 +477,23 @@ class Player:
             if self.balloon_anim.is_finished:
                 self.balloon_anim = None
 
-    def key_manager(self, game_screen: GameScreen):
-        key_configs = [
-                {"keys": get_config()["keybinds"]["left_don"], "type": "DON", "side": "L", "note_type": 1},
-                {"keys": get_config()["keybinds"]["right_don"], "type": "DON", "side": "R", "note_type": 1},
-                {"keys": get_config()["keybinds"]["left_kat"], "type": "KAT", "side": "L", "note_type": 2},
-                {"keys": get_config()["keybinds"]["right_kat"], "type": "KAT", "side": "R", "note_type": 2}
-            ]
-        for config in key_configs:
-            for key in config["keys"]:
-                if ray.is_key_pressed(ord(key)):
-                    hit_type = config["type"]
-                    self.lane_hit_effect = LaneHitEffect(hit_type)
-                    self.draw_drum_hit_list.append(DrumHitEffect(hit_type, config["side"]))
+    def handle_input(self, game_screen: GameScreen):
+        input_checks = [
+            (is_l_don_pressed, 'DON', 'L', game_screen.sound_don),
+            (is_r_don_pressed, 'DON', 'R', game_screen.sound_don),
+            (is_l_kat_pressed, 'KAT', 'L', game_screen.sound_kat),
+            (is_r_kat_pressed, 'KAT', 'R', game_screen.sound_kat)
+        ]
+        for check_func, note_type, side, sound in input_checks:
+            if check_func():
+                self.lane_hit_effect = LaneHitEffect(note_type)
+                self.draw_drum_hit_list.append(DrumHitEffect(note_type, side))
 
-                    sound = game_screen.sound_don if hit_type == "DON" else game_screen.sound_kat
-                    if get_config()["general"]["sfx"]:
-                        audio.play_sound(sound)
+                if get_config()["general"]["sfx"]:
+                    audio.play_sound(sound)
 
-                    self.check_note(game_screen, config["note_type"])
-                    self.input_log[game_screen.current_ms] = (hit_type, key)
+                self.check_note(game_screen, 1 if note_type == 'DON' else 2)
+                self.input_log[game_screen.current_ms] = (note_type, side)
 
     def autoplay_manager(self, game_screen: GameScreen):
         if not get_config()["general"]["autoplay"]:
@@ -558,7 +565,7 @@ class Player:
         self.animation_manager(self.base_score_list)
         self.score_counter.update(get_current_ms(), self.score)
         self.autoplay_manager(game_screen)
-        self.key_manager(game_screen)
+        self.handle_input(game_screen)
 
         self.gauge.update(get_current_ms(), self.good_count, self.ok_count, self.bad_count, self.total_notes)
 
@@ -686,6 +693,7 @@ class Player:
         self.score_counter.draw(game_screen)
         for anim in self.base_score_list:
             anim.draw(game_screen)
+        #ray.draw_circle(game_screen.width//2, game_screen.height, 300, ray.ORANGE)
 
 class Judgement:
     def __init__(self, type: str, big: bool, ms_display: Optional[float]=None):
@@ -1232,8 +1240,10 @@ class ResultTransition:
             x += texture_2.width
 
 class Gauge:
-    def __init__(self, difficulty: int, level: int):
+    def __init__(self, difficulty: int, level: int, total_notes: int):
         self.gauge_length = 0
+        self.previous_length = 0
+        self.total_notes = total_notes
         self.difficulty = min(3, difficulty)
         self.clear_start = [0, 0, 68, 68]
         self.level = min(10, level)
@@ -1285,16 +1295,29 @@ class Gauge:
         self.rainbow_fade_in = None
         self.rainbow_animation = None
 
+    def add_good(self):
+        self.gauge_update_anim = Animation.create_fade(450)
+        self.previous_length = int(self.gauge_length)
+        self.gauge_length += (1 / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
+        if self.gauge_length > 87:
+            self.gauge_length = 87
+
+    def add_ok(self):
+        self.gauge_update_anim = Animation.create_fade(450)
+        self.previous_length = int(self.gauge_length)
+        self.gauge_length += ((1 * self.table[self.difficulty][self.level]["ok_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
+        if self.gauge_length > 87:
+            self.gauge_length = 87
+
+    def add_bad(self):
+        self.previous_length = int(self.gauge_length)
+        self.gauge_length += ((1 * self.table[self.difficulty][self.level]["bad_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
+        if self.gauge_length < 0:
+            self.gauge_length = 0
+
     def update(self, current_ms: float, good_count: int, ok_count: int, bad_count: int, total_notes: int):
-        gauge_length = int(((good_count +
-            (ok_count * self.table[self.difficulty][self.level]["ok_multiplier"] +
-            bad_count * self.table[self.difficulty][self.level]["bad_multiplier"])) / total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"])))
-        previous_length = self.gauge_length
-        self.gauge_length = min(87, gauge_length)
         if self.gauge_length == 87 and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
-        if self.gauge_length > previous_length:
-            self.gauge_update_anim = Animation.create_fade(450)
 
         if self.gauge_update_anim is not None:
             self.gauge_update_anim.update(current_ms)
@@ -1314,12 +1337,13 @@ class Gauge:
     def draw(self, textures: list[ray.Texture]):
         ray.draw_texture(textures[0], 327, 132, ray.WHITE)
         ray.draw_texture(textures[1], 483, 124, ray.WHITE)
-        if self.gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
+        gauge_length = int(self.gauge_length)
+        if gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
                 ray.draw_texture(textures[1 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
             ray.draw_texture(textures[2 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
         if self.rainbow_fade_in is None or not self.rainbow_fade_in.is_finished:
-            for i in range(self.gauge_length):
+            for i in range(gauge_length):
                 if i == 68:
                     ray.draw_texture(textures[16], 491 + (i*textures[13].width), 160 - 24, ray.WHITE)
                 elif i > 68:
@@ -1327,15 +1351,15 @@ class Gauge:
                     ray.draw_texture(textures[20], 491 + (i*textures[13].width) + 2, 160, ray.WHITE)
                 else:
                     ray.draw_texture(textures[13], 491 + (i*textures[13].width), 160, ray.WHITE)
-        if self.gauge_update_anim is not None and self.gauge_length < 88:
-            if self.gauge_length == 69:
-                ray.draw_texture(textures[17], 491 + (self.gauge_length*textures[13].width) - 13, 160 - 8 - 24, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
-            elif self.gauge_length > 69:
-                ray.draw_texture(textures[21], 491 + (self.gauge_length*textures[13].width) - 13, 160 - 8 - 22, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+        if self.gauge_update_anim is not None and gauge_length < 88 and gauge_length != self.previous_length:
+            if gauge_length == 69:
+                ray.draw_texture(textures[17], 491 + (gauge_length*textures[13].width) - 13, 160 - 8 - 24, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+            elif gauge_length > 69:
+                ray.draw_texture(textures[21], 491 + (gauge_length*textures[13].width) - 13, 160 - 8 - 22, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
             else:
-                ray.draw_texture(textures[14], 491 + (self.gauge_length*textures[13].width) - 13, 160 - 8, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+                ray.draw_texture(textures[14], 491 + (gauge_length*textures[13].width) - 13, 160 - 8, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
         ray.draw_texture(textures[10], 483, 124, ray.fade(ray.WHITE, 0.15))
-        if self.gauge_length >= 69:
+        if gauge_length >= 69:
             ray.draw_texture(textures[18], 1038, 141, ray.WHITE)
             ray.draw_texture(textures[19], 1187, 130, ray.WHITE)
         else:

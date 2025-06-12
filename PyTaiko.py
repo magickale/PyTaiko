@@ -2,12 +2,20 @@ import sqlite3
 from pathlib import Path
 
 import pyray as ray
+from raylib.defines import (
+    RL_FUNC_ADD,
+    RL_ONE,
+    RL_ONE_MINUS_SRC_ALPHA,
+    RL_SRC_ALPHA,
+)
 
+from libs import song_hash
 from libs.audio import audio
 from libs.utils import get_config, global_data, load_all_textures_from_zip
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
 from scenes.result import ResultScreen
+from scenes.settings import SettingsScreen
 from scenes.song_select import SongSelectScreen
 from scenes.title import TitleScreen
 
@@ -18,6 +26,7 @@ class Screens:
     SONG_SELECT = "SONG_SELECT"
     GAME = "GAME"
     RESULT = "RESULT"
+    SETTINGS = "SETTINGS"
 
 def create_song_db():
     with sqlite3.connect('scores.db') as con:
@@ -33,7 +42,8 @@ def create_song_db():
             ok INTEGER,
             bad INTEGER,
             drumroll INTEGER,
-            combo INTEGER
+            combo INTEGER,
+            clear INTEGER
         );
         '''
         cursor.execute(create_table_query)
@@ -42,6 +52,7 @@ def create_song_db():
 
 def main():
     create_song_db()
+    song_hash.song_hashes = song_hash.build_song_hashes()
     screen_width: int = get_config()["video"]["screen_width"]
     screen_height: int = get_config()["video"]["screen_height"]
     render_width, render_height = ray.get_render_width(), ray.get_render_height()
@@ -57,12 +68,12 @@ def main():
     ray.set_config_flags(ray.ConfigFlags.FLAG_MSAA_4X_HINT)
     ray.set_trace_log_level(ray.TraceLogLevel.LOG_ERROR)
 
-    ray.set_window_max_size(screen_width, screen_height)
-    ray.set_window_min_size(screen_width, screen_height)
+    #ray.set_window_max_size(screen_width, screen_height)
+    #ray.set_window_min_size(screen_width, screen_height)
     ray.init_window(screen_width, screen_height, "PyTaiko")
     if get_config()["video"]["borderless"]:
         ray.toggle_borderless_windowed()
-    ray.clear_window_state(ray.ConfigFlags.FLAG_WINDOW_TOPMOST)
+    #ray.clear_window_state(ray.ConfigFlags.FLAG_WINDOW_TOPMOST)
     if get_config()["video"]["fullscreen"]:
         ray.maximize_window()
 
@@ -76,20 +87,20 @@ def main():
     song_select_screen = SongSelectScreen(screen_width, screen_height)
     game_screen = GameScreen(screen_width, screen_height)
     result_screen = ResultScreen(screen_width, screen_height)
+    settings_screen = SettingsScreen(screen_width, screen_height)
 
     screen_mapping = {
         Screens.ENTRY: entry_screen,
         Screens.TITLE: title_screen,
         Screens.SONG_SELECT: song_select_screen,
         Screens.GAME: game_screen,
-        Screens.RESULT: result_screen
+        Screens.RESULT: result_screen,
+        Screens.SETTINGS: settings_screen
     }
     target = ray.load_render_texture(screen_width, screen_height)
     ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     ray.gen_texture_mipmaps(target.texture)
-    #lmaooooooooooooo
-    #rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
-    ray.rl_set_blend_factors_separate(0x302, 0x303, 1, 0x303, 0x8006, 0x8006)
+    ray.rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
     ray.set_exit_key(ray.KeyboardKey.KEY_A)
     global_data.textures = load_all_textures_from_zip(Path('Graphics/lumendata/intermission.zip'))
     while not ray.window_should_close():
@@ -118,7 +129,7 @@ def main():
         ray.draw_texture_pro(
              target.texture,
              ray.Rectangle(0, 0, target.texture.width, -target.texture.height),
-             ray.Rectangle(0, 0, dpi_scale[0], dpi_scale[1]),
+             ray.Rectangle(0, 0, screen_width, screen_height),
              ray.Vector2(0,0),
              0,
              ray.WHITE
