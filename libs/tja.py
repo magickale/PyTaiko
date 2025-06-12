@@ -35,10 +35,13 @@ class Note:
     def __le__(self, other):
         return self.hit_ms <= other.hit_ms
 
+    def __eq__(self, other):
+        return self.hit_ms == other.hit_ms
+
     def _get_hash_data(self) -> bytes:
         """Get deterministic byte representation for hashing"""
         field_values = []
-        for f in sorted([f.name for f in fields(self)]):  # Sort for consistency
+        for f in sorted([f.name for f in fields(self)]):
             value = getattr(self, f, None)
             field_values.append((f, value))
         field_values.append(('__class__', self.__class__.__name__))
@@ -65,6 +68,9 @@ class Drumroll(Note):
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def __eq__(self, other):
+        return self.hit_ms == other.hit_ms
 
     def __post_init__(self):
         for field_name in [f.name for f in fields(Note)]:
@@ -93,6 +99,9 @@ class Balloon(Note):
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def __eq__(self, other):
+        return self.hit_ms == other.hit_ms
 
     def __post_init__(self):
         for field_name in [f.name for f in fields(Note)]:

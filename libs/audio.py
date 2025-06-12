@@ -475,13 +475,14 @@ class AudioEngine:
                 if isinstance(device_info, sd.DeviceList):
                     raise Exception("Invalid ASIO Device")
                 print(f"Using default ASIO device: {device_info['name']}")
-                print(device_info)
                 self.buffer_size = rounded(device_info['default_low_output_latency']*1000)
                 if 'buffer_size' in get_config()['audio']:
                     self.buffer_size = get_config()['audio']['buffer_size']
                 self.target_sample_rate = device_info['default_samplerate']
                 if 'sample_rate' in get_config()['audio']:
                     self.target_sample_rate = get_config()['audio']['sample_rate']
+                    if self.target_sample_rate == -1:
+                        self.target_sample_rate = device_info['default_samplerate']
                 # Set output channels based on device capabilities
                 self.output_channels = device_info['max_output_channels']
                 if self.output_channels > 2:

@@ -12,7 +12,6 @@ from libs.backgrounds import Background
 from libs.tja import Balloon, Drumroll, Note, TJAParser, calculate_base_score
 from libs.utils import (
     OutlinedText,
-    get_config,
     get_current_ms,
     global_data,
     is_l_don_pressed,
@@ -114,7 +113,7 @@ class GameScreen:
             self.movie.set_volume(0.0)
         else:
             self.movie = None
-        session_data.song_title = self.tja.metadata.title.get(get_config()['general']['language'].lower(), self.tja.metadata.title['en'])
+        session_data.song_title = self.tja.metadata.title.get(global_data.config['general']['language'].lower(), self.tja.metadata.title['en'])
 
         self.player_1 = Player(self, 1, difficulty)
         if not hasattr(self, 'song_music'):
@@ -144,7 +143,7 @@ class GameScreen:
         return 'RESULT'
 
     def write_score(self):
-        if get_config()['general']['autoplay']:
+        if global_data.config['general']['autoplay']:
             return
         with sqlite3.connect('scores.db') as con:
             cursor = con.cursor()
@@ -169,7 +168,7 @@ class GameScreen:
     def update(self):
         self.on_screen_start()
         self.current_ms = get_current_ms() - self.start_ms
-        if (self.current_ms >= self.tja.metadata.offset*1000 + self.start_delay - get_config()["general"]["judge_offset"]) and not self.song_started:
+        if (self.current_ms >= self.tja.metadata.offset*1000 + self.start_delay - global_data.config["general"]["judge_offset"]) and not self.song_started:
             if self.song_music is not None:
                 if not audio.is_sound_playing(self.song_music):
                     audio.play_sound(self.song_music)
@@ -227,7 +226,7 @@ class Player:
 
         self.player_number = player_number
         self.difficulty = difficulty
-        self.visual_offset = get_config()["general"]["visual_offset"]
+        self.visual_offset = global_data.config["general"]["visual_offset"]
 
         self.play_notes, self.draw_note_list, self.draw_bar_list = game_screen.tja.notes_to_position(self.difficulty)
         self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
@@ -489,14 +488,14 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(note_type)
                 self.draw_drum_hit_list.append(DrumHitEffect(note_type, side))
 
-                if get_config()["general"]["sfx"]:
+                if global_data.config["general"]["sfx"]:
                     audio.play_sound(sound)
 
                 self.check_note(game_screen, 1 if note_type == 'DON' else 2)
                 self.input_log[game_screen.current_ms] = (note_type, side)
 
     def autoplay_manager(self, game_screen: GameScreen):
-        if not get_config()["general"]["autoplay"]:
+        if not global_data.config["general"]["autoplay"]:
             return
         if len(self.play_notes) == 0:
             return
@@ -674,7 +673,7 @@ class Player:
         self.draw_notes(game_screen)
         ray.draw_texture(game_screen.textures['lane_obi'][0], 0, 184, ray.WHITE)
         ray.draw_texture(game_screen.textures['lane_obi'][14], 211, 206, ray.WHITE)
-        if get_config()["general"]["autoplay"]:
+        if global_data.config["general"]["autoplay"]:
             ray.draw_texture(game_screen.textures['lane_obi'][58], 0, 290, ray.WHITE)
         for anim in self.draw_drum_hit_list:
             anim.draw(game_screen)

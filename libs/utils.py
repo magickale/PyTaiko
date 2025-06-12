@@ -106,7 +106,7 @@ def save_config(config: dict[str, Any]) -> None:
         tomlkit.dump(config, f)
 
 def is_l_don_pressed() -> bool:
-    keys = get_config()["keybinds"]["left_don"]
+    keys = global_data.config["keybinds"]["left_don"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
             return True
@@ -126,7 +126,7 @@ def is_l_don_pressed() -> bool:
     return False
 
 def is_r_don_pressed() -> bool:
-    keys = get_config()["keybinds"]["right_don"]
+    keys = global_data.config["keybinds"]["right_don"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
             return True
@@ -146,7 +146,7 @@ def is_r_don_pressed() -> bool:
     return False
 
 def is_l_kat_pressed() -> bool:
-    keys = get_config()["keybinds"]["left_kat"]
+    keys = global_data.config["keybinds"]["left_kat"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
             return True
@@ -166,7 +166,7 @@ def is_l_kat_pressed() -> bool:
     return False
 
 def is_r_kat_pressed() -> bool:
-    keys = get_config()["keybinds"]["right_kat"]
+    keys = global_data.config["keybinds"]["right_kat"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
             return True
@@ -212,6 +212,7 @@ class GlobalData:
     selected_song: Path = Path()
     textures: dict[str, list[ray.Texture]] = field(default_factory=lambda: dict())
     songs_played: int = 0
+    config: dict = field(default_factory=lambda: dict())
 
 global_data = GlobalData()
 

@@ -6,8 +6,8 @@ import pyray as ray
 from libs.animation import Animation
 from libs.audio import audio
 from libs.utils import (
-    get_config,
     get_current_ms,
+    global_data,
     is_l_don_pressed,
     is_r_don_pressed,
     load_all_textures_from_zip,
@@ -20,9 +20,9 @@ class TitleScreen:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        video_dir = Path(get_config()["paths"]["video_path"]) / "op_videos"
+        video_dir = Path(global_data.config["paths"]["video_path"]) / "op_videos"
         self.op_video_list = [file for file in video_dir.glob("**/*.mp4")]
-        video_dir = Path(get_config()["paths"]["video_path"]) / "attract_videos"
+        video_dir = Path(global_data.config["paths"]["video_path"]) / "attract_videos"
         self.attract_video_list = [file for file in video_dir.glob("**/*.mp4")]
         self.load_sounds()
         self.screen_init = False

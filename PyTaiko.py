@@ -53,8 +53,9 @@ def create_song_db():
 def main():
     create_song_db()
     song_hash.song_hashes = song_hash.build_song_hashes()
-    screen_width: int = get_config()["video"]["screen_width"]
-    screen_height: int = get_config()["video"]["screen_height"]
+    global_data.config = get_config()
+    screen_width: int = global_data.config["video"]["screen_width"]
+    screen_height: int = global_data.config["video"]["screen_height"]
     render_width, render_height = ray.get_render_width(), ray.get_render_height()
     dpi_scale = ray.get_window_scale_dpi()
     if dpi_scale.x == 0:
@@ -63,7 +64,7 @@ def main():
     else:
         dpi_scale = int(render_width/dpi_scale.x), int(render_height/dpi_scale.y)
 
-    if get_config()["video"]["vsync"]:
+    if global_data.config["video"]["vsync"]:
         ray.set_config_flags(ray.ConfigFlags.FLAG_VSYNC_HINT)
     ray.set_config_flags(ray.ConfigFlags.FLAG_MSAA_4X_HINT)
     ray.set_trace_log_level(ray.TraceLogLevel.LOG_ERROR)
@@ -71,10 +72,10 @@ def main():
     #ray.set_window_max_size(screen_width, screen_height)
     #ray.set_window_min_size(screen_width, screen_height)
     ray.init_window(screen_width, screen_height, "PyTaiko")
-    if get_config()["video"]["borderless"]:
+    if global_data.config["video"]["borderless"]:
         ray.toggle_borderless_windowed()
     #ray.clear_window_state(ray.ConfigFlags.FLAG_WINDOW_TOPMOST)
-    if get_config()["video"]["fullscreen"]:
+    if global_data.config["video"]["fullscreen"]:
         ray.maximize_window()
 
     current_screen = Screens.TITLE
@@ -119,7 +120,7 @@ def main():
         if next_screen is not None:
             current_screen = next_screen
 
-        if get_config()["general"]["fps_counter"]:
+        if global_data.config["general"]["fps_counter"]:
             ray.draw_fps(20, 20)
         ray.end_blend_mode()
         ray.end_texture_mode()

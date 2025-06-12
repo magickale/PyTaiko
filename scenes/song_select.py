@@ -11,7 +11,6 @@ from libs.audio import audio
 from libs.tja import TJAParser
 from libs.utils import (
     OutlinedText,
-    get_config,
     get_current_ms,
     global_data,
     is_l_don_pressed,
@@ -27,7 +26,7 @@ class SongSelectScreen:
     BOX_CENTER = 444
     def __init__(self, screen_width: int, screen_height: int):
         self.screen_init = False
-        self.root_dir = get_config()["paths"]["tja_path"]
+        self.root_dir = global_data.config["paths"]["tja_path"]
         self.screen_width = screen_width
         self.screen_height = screen_height
 
@@ -386,7 +385,7 @@ class SongBox:
     def reset(self):
         if self.black_name is not None:
             if self.tja is not None:
-                subtitle = OutlinedText(self.tja.metadata.subtitle.get(get_config()['general']['language'], ''), 30, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True)
+                subtitle = OutlinedText(self.tja.metadata.subtitle.get(global_data.config['general']['language'], ''), 30, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True)
             else:
                 subtitle = None
             self.yellow_box = YellowBox(self.black_name, self.texture_index == 552, tja=self.tja, subtitle=subtitle)
@@ -457,7 +456,7 @@ class SongBox:
                 #print(f"loaded black name {self.text_name}")
             if self.tja is not None or self.texture_index == 552:
                 if self.tja is not None:
-                    subtitle = OutlinedText(self.tja.metadata.subtitle.get(get_config()['general']['language'], ''), 30, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True)
+                    subtitle = OutlinedText(self.tja.metadata.subtitle.get(global_data.config['general']['language'], ''), 30, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True)
                 else:
                     subtitle = None
                 self.yellow_box = YellowBox(self.black_name, self.texture_index == 552, tja=self.tja, subtitle=subtitle)
@@ -889,7 +888,7 @@ class SongFile(FileSystemItem):
     def __init__(self, path: Path, name: str, texture_index: int, tja=None):
         super().__init__(path, name)
         self.tja = tja or TJAParser(path)
-        title = self.tja.metadata.title.get(get_config()['general']['language'].lower(), self.tja.metadata.title['en'])
+        title = self.tja.metadata.title.get(global_data.config['general']['language'].lower(), self.tja.metadata.title['en'])
         self.box = SongBox(title, texture_index, False, tja=self.tja)
         self.box.get_scores()
 
@@ -1153,7 +1152,7 @@ class FileNavigator:
                     elif line.startswith("#TITLE:"):
                         name = line.split(":", 1)[1].strip()
                     elif line.startswith("#TITLEJA:"):
-                        if get_config()['general']['language'] == 'ja':
+                        if global_data.config['general']['language'] == 'ja':
                             name = line.split(":", 1)[1].strip()
         except Exception as e:
             print(f"Error parsing box.def in {path}: {e}")

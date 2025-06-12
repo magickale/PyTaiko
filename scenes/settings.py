@@ -2,7 +2,7 @@ import pyray as ray
 import sounddevice as sd
 
 from libs.utils import (
-    get_config,
+    global_data,
     is_l_don_pressed,
     is_l_kat_pressed,
     is_r_don_pressed,
@@ -16,7 +16,7 @@ class SettingsScreen:
         self.width = width
         self.height = height
         self.screen_init = False
-        self.config = get_config()
+        self.config = global_data.config
         self.headers = list(self.config.keys())
         self.headers.append('Exit')
         self.header_index = 0
@@ -32,6 +32,7 @@ class SettingsScreen:
     def on_screen_end(self):
         self.screen_init = False
         save_config(self.config)
+        global_data.config = self.config
         return "ENTRY"
 
     def get_current_settings(self):
@@ -68,7 +69,7 @@ class SettingsScreen:
         elif key == 'buffer_size':
             new_value = max(1, min(32, new_value))
         elif key == 'sample_rate':
-            valid_rates = [22050, 44100, 48000, 88200, 96000]
+            valid_rates = [-1, 22050, 44100, 48000, 88200, 96000]
             current_idx = valid_rates.index(current_value) if current_value in valid_rates else 2
             new_idx = max(0, min(len(valid_rates) - 1, current_idx + increment))
             new_value = valid_rates[new_idx]

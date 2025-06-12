@@ -19,7 +19,7 @@ right_kat = ['K']
 [audio]
 device_type = "Windows WASAPI"
 buffer_size = 22
-sample_rate = 44100
+sample_rate = -1
 exclusive = false
 
 [video]
