@@ -10,7 +10,7 @@ jobs:
     build:
         strategy:
             matrix:
-                os: [macos-latest, ubuntu-latest, windows-latest]
+                os: [macos-14, ubuntu-22.04, windows-2022]
         runs-on: ${{ matrix.os }}
         steps:
             - name: Check-out repository
