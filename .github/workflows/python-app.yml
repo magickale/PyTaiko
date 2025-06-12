@@ -38,6 +38,7 @@ jobs:
                       Graphics/*
                       Sounds/*
                       Videos/*
+                      Songs/*
                       config.toml
                       *.exe
                       *.bin
