@@ -1,0 +1,54 @@
+name: PyTaiko
+on:
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
+permissions:
+    contents: read
+jobs:
+    build:
+        strategy:
+            matrix:
+                os: [macos-latest, ubuntu-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Check-out repository
+              uses: actions/checkout@v4
+            - name: Install uv
+              uses: astral-sh/setup-uv@v4
+              with:
+                  enable-cache: false
+            - name: Setup Python
+              run: uv python install 3.12
+            - name: Clear UV cache
+              run: |
+                  uv cache clean
+            - name: Install Dependencies
+              run: |
+                  uv sync --locked
+            - name: Install Nuitka
+              run: |
+                  uv add nuitka
+                  - name: Clear Build Cache
+                    run: |
+                        rm -rf ~/.nuitka
+                        rm -rf PyTaiko.dist
+                        rm -rf PyTaiko.build
+                    shell: bash
+                    continue-on-error: true
+            - name: Build Executable
+              run: |
+                  uv run nuitka --mode=app --remove-output --output-dir=. --include-module=raylib,moviepy,numpy,sounddevice,soundfile,tomlkit --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow PyTaiko.py
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: PyTaiko ${{ runner.os }} Build
+                  path: |
+                      Graphics/*
+                      Sounds/*
+                      Videos/*
+                      config.toml
+                      *.exe
+                      *.bin
+                      *.app/**/*
