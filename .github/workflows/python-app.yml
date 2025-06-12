@@ -21,9 +21,12 @@ jobs:
                   enable-cache: false
             - name: Setup Python
               run: uv python install 3.12
+            - name: Clear UV cache
+              run: |
+                  uv cache clean
             - name: Install Dependencies
               run: |
-                  uv sync
+                  uv sync --locked
             - name: Install Nuitka
               run: |
                   uv add nuitka
