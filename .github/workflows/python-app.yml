@@ -25,16 +25,8 @@ jobs:
               run: |
                   uv sync
             - name: Build Executable
-              uses: Nuitka/Nuitka-Action@main
-              with:
-                  nuitka-version: 2.6.7
-                  script-name: PyTaiko.py
-                  mode: app
-                  output-dir: .
-                  include-module: raylib-sdl,moviepy,numpy,sounddevice,tomlkit
-                  #include-package: imageio_ffmpeg
-                  noinclude-setuptools-mode: nofollow
-                  noinclude-IPython-mode: nofollow
+              run: |
+                  uv run nuitka --mode=app --output-dir=. --include-module=raylib-sdl,moviepy,numpy,sounddevice,tomlkit --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow PyTaiko.py
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
