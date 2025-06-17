@@ -116,7 +116,7 @@ class MoveAnimation(BaseAnimation):
             self.attribute = self.start_position + (self.total_distance * progress)
 
 class TextureChangeAnimation(BaseAnimation):
-    def __init__(self, duration: float, textures: list[tuple[float, float, int]], delay: float):
+    def __init__(self, duration: float, textures: list[tuple[float, float, int]], delay: float = 0.0):
         super().__init__(duration)
         self.textures = textures
         self.delay = delay

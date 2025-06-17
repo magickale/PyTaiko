@@ -56,6 +56,7 @@ def main():
     global_data.config = get_config()
     screen_width: int = global_data.config["video"]["screen_width"]
     screen_height: int = global_data.config["video"]["screen_height"]
+    '''
     render_width, render_height = ray.get_render_width(), ray.get_render_height()
     dpi_scale = ray.get_window_scale_dpi()
     if dpi_scale.x == 0:
@@ -63,11 +64,13 @@ def main():
         dpi_scale = screen_width, screen_height
     else:
         dpi_scale = int(render_width/dpi_scale.x), int(render_height/dpi_scale.y)
+    '''
 
     if global_data.config["video"]["vsync"]:
         ray.set_config_flags(ray.ConfigFlags.FLAG_VSYNC_HINT)
     ray.set_config_flags(ray.ConfigFlags.FLAG_MSAA_4X_HINT)
-    ray.set_trace_log_level(ray.TraceLogLevel.LOG_ERROR)
+    ray.hide_cursor()
+    ray.set_trace_log_level(ray.TraceLogLevel.LOG_WARNING)
 
     ray.init_window(screen_width, screen_height, "PyTaiko")
     if global_data.config["video"]["borderless"]:
