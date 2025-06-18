@@ -38,18 +38,12 @@ Go to the project directory
 
 ```bash
   cd PyTaiko
-```
-
-Install dependencies
-
-```bash
-  pip install -r requirements.txt
-```
+````
 
 Start the game
 
 ```bash
-  python PyTaiko.py
+  uv run PyTaiko.py
 ```
 
 
@@ -58,7 +52,8 @@ Start the game
 
 #### Keybinds?
 
-see config.toml
+Hit F1 in entry screen to access settings menu
+Hit F1 in game to quick restart
 
 #### Why does it look like Gen 3 instead of Nijiiro?
 
