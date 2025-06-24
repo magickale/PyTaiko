@@ -33,9 +33,6 @@ class TitleScreen:
         self.screen_init = False
         self.fade_out = None
 
-    def get_videos(self):
-        return self.op_video, self.attract_video
-
     def load_sounds(self):
         sounds_dir = Path("Sounds")
         title_dir = sounds_dir / "title"
@@ -55,13 +52,15 @@ class TitleScreen:
             self.screen_init = True
             self.load_textures()
             self.state = State.OP_VIDEO
-            self.op_video = VideoPlayer(random.choice(self.op_video_list))
-            self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
+            self.op_video = None
+            self.attract_video = None
             self.warning_board = None
 
     def on_screen_end(self) -> str:
-        self.op_video.stop()
-        self.attract_video.stop()
+        if self.op_video is not None:
+            self.op_video.stop()
+        if self.attract_video is not None:
+            self.attract_video.stop()
         for sound in self.sounds:
             if audio.is_sound_playing(sound):
                 audio.stop_sound(sound)
@@ -73,28 +72,30 @@ class TitleScreen:
 
     def scene_manager(self):
         if self.state == State.OP_VIDEO:
-            if not self.op_video.is_started():
+            if self.op_video is None:
+                self.op_video = VideoPlayer(random.choice(self.op_video_list))
                 self.op_video.start(get_current_ms())
             self.op_video.update()
             if self.op_video.is_finished():
                 self.op_video.stop()
-                self.op_video = VideoPlayer(random.choice(self.op_video_list))
-
+                self.op_video = None
                 self.state = State.WARNING
+        elif self.state == State.WARNING:
+            if self.warning_board is None:
                 self.warning_board = WarningScreen(get_current_ms(), self)
-        elif self.state == State.WARNING and self.warning_board is not None:
             self.warning_board.update(get_current_ms(), self)
             if self.warning_board.is_finished:
                 self.state = State.ATTRACT_VIDEO
-                self.attract_video.start(get_current_ms())
+                self.warning_board = None
         elif self.state == State.ATTRACT_VIDEO:
+            if self.attract_video is None:
+                self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
+                self.attract_video.start(get_current_ms())
             self.attract_video.update()
             if self.attract_video.is_finished():
                 self.attract_video.stop()
-                self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
-
+                self.attract_video = None
                 self.state = State.OP_VIDEO
-                self.op_video.start(get_current_ms())
 
 
     def update(self):
@@ -111,14 +112,14 @@ class TitleScreen:
             audio.play_sound(self.sound_don)
 
     def draw(self):
-        if self.state == State.OP_VIDEO:
+        if self.state == State.OP_VIDEO and self.op_video is not None:
             self.op_video.draw()
         elif self.state == State.WARNING and self.warning_board is not None:
             bg_source = ray.Rectangle(0, 0, self.textures['keikoku'][0].width, self.textures['keikoku'][0].height)
             bg_dest = ray.Rectangle(0, 0, self.width, self.height)
             ray.draw_texture_pro(self.textures['keikoku'][0], bg_source, bg_dest, ray.Vector2(0,0), 0, ray.WHITE)
             self.warning_board.draw(self)
-        elif self.state == State.ATTRACT_VIDEO:
+        elif self.state == State.ATTRACT_VIDEO and self.attract_video is not None:
             self.attract_video.draw()
 
         if self.fade_out is not None:

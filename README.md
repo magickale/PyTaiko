@@ -25,6 +25,7 @@ https://linear.app/pytaiko
 
 ## Known Issues
 
+- Everything
 - See linear page.
 ## Run Locally
 

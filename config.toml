@@ -5,16 +5,24 @@ visual_offset = 0
 autoplay = false
 sfx = true
 language = "ja"
+send_diagnostic_data = false
+hard_judge = 108
 
 [paths]
 tja_path = ['Songs']
 video_path = 'Videos'
 
-[keybinds]
+[keys]
 left_kat = ['D']
 left_don = ['F']
 right_don = ['J']
 right_kat = ['K']
+
+[gamepad]
+left_kat = [10]
+left_don = [16]
+right_don = [17]
+right_kat = [12]
 
 [audio]
 device_type = "Windows WASAPI"

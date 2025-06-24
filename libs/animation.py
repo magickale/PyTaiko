@@ -4,7 +4,7 @@ from libs.utils import get_current_ms
 
 
 class BaseAnimation():
-    def __init__(self, duration: float, delay: float = 0.0):
+    def __init__(self, duration: float, delay: float = 0.0) -> None:
         """
         Initialize a base animation.
 
@@ -57,7 +57,7 @@ class FadeAnimation(BaseAnimation):
     def __init__(self, duration: float, initial_opacity: float = 1.0,
                      final_opacity: float = 0.0, delay: float = 0.0,
                      ease_in: Optional[str] = None, ease_out: Optional[str] = None,
-                     reverse_delay: Optional[float] = None):
+                     reverse_delay: Optional[float] = None) -> None:
         super().__init__(duration, delay)
         self.initial_opacity = initial_opacity
         self.final_opacity = final_opacity
@@ -68,13 +68,13 @@ class FadeAnimation(BaseAnimation):
         self.reverse_delay = reverse_delay
         self.reverse_delay_saved = reverse_delay
 
-    def restart(self):
+    def restart(self) -> None:
         super().restart()
         self.reverse_delay = self.reverse_delay_saved
         self.initial_opacity = self.initial_opacity_saved
         self.final_opacity = self.final_opacity_saved
 
-    def update(self, current_time_ms: float):
+    def update(self, current_time_ms: float) -> None:
         elapsed_time = current_time_ms - self.start_ms
 
         if elapsed_time <= self.delay:
@@ -100,7 +100,7 @@ class MoveAnimation(BaseAnimation):
     def __init__(self, duration: float, total_distance: int = 0,
                       start_position: int = 0, delay: float = 0.0,
                       reverse_delay: Optional[float] = None,
-                      ease_in: Optional[str] = None, ease_out: Optional[str] = None):
+                      ease_in: Optional[str] = None, ease_out: Optional[str] = None) -> None:
         super().__init__(duration, delay)
         self.reverse_delay = reverse_delay
         self.reverse_delay_saved = reverse_delay
@@ -111,13 +111,13 @@ class MoveAnimation(BaseAnimation):
         self.ease_in = ease_in
         self.ease_out = ease_out
 
-    def restart(self):
+    def restart(self) -> None:
         super().restart()
         self.reverse_delay = self.reverse_delay_saved
         self.total_distance = self.total_distance_saved
         self.start_position = self.start_position_saved
 
-    def update(self, current_time_ms: float):
+    def update(self, current_time_ms: float) -> None:
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time < self.delay:
             self.attribute = self.start_position
@@ -138,12 +138,12 @@ class MoveAnimation(BaseAnimation):
             self.attribute = self.start_position + (self.total_distance * progress)
 
 class TextureChangeAnimation(BaseAnimation):
-    def __init__(self, duration: float, textures: list[tuple[float, float, int]], delay: float = 0.0):
+    def __init__(self, duration: float, textures: list[tuple[float, float, int]], delay: float = 0.0) -> None:
         super().__init__(duration)
         self.textures = textures
         self.delay = delay
 
-    def update(self, current_time_ms: float):
+    def update(self, current_time_ms: float) -> None:
         elapsed_time = current_time_ms - self.start_ms - self.delay
         if elapsed_time <= self.duration:
             for start, end, index in self.textures:
@@ -153,9 +153,9 @@ class TextureChangeAnimation(BaseAnimation):
             self.is_finished = True
 
 class TextStretchAnimation(BaseAnimation):
-    def __init__(self, duration: float):
+    def __init__(self, duration: float) -> None:
         super().__init__(duration)
-    def update(self, current_time_ms: float):
+    def update(self, current_time_ms: float) -> None:
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time <= self.duration:
             self.attribute = 2 + 5 * (elapsed_time // 25)
@@ -169,7 +169,7 @@ class TextStretchAnimation(BaseAnimation):
 class TextureResizeAnimation(BaseAnimation):
     def __init__(self, duration: float, initial_size: float = 1.0,
                      final_size: float = 0.0, delay: float = 0.0,
-                     reverse_delay: Optional[float] = None):
+                     reverse_delay: Optional[float] = None) -> None:
         super().__init__(duration, delay)
         self.initial_size = initial_size
         self.final_size = final_size
@@ -178,14 +178,14 @@ class TextureResizeAnimation(BaseAnimation):
         self.final_size_saved = final_size
         self.reverse_delay_saved = reverse_delay
 
-    def restart(self):
+    def restart(self) -> None:
         super().restart()
         self.reverse_delay = self.reverse_delay_saved
         self.initial_size = self.initial_size_saved
         self.final_size = self.final_size_saved
 
 
-    def update(self, current_time_ms: float):
+    def update(self, current_time_ms: float) -> None:
         elapsed_time = current_time_ms - self.start_ms
 
         if elapsed_time <= self.delay:

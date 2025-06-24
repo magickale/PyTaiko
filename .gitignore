@@ -1,8 +1,8 @@
 Songs2
 __pycache__
 .venv
-.ruff_cache
 scores.db
 cache
 full.csv
 dev-config.toml
+.env

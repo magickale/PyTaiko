@@ -9,14 +9,11 @@ from libs.utils import get_current_ms
 
 class VideoPlayer:
     def __init__(self, path: Path):
-        """Initialize a video player instance. Audio must have the same name and an ogg extension.
-        Todo: extract audio from video directly
-        """
+        """Initialize a video player instance"""
         self.is_finished_list = [False, False]
-        self.video_path = path
         self.video = VideoFileClip(path)
-        audio_path = path.with_suffix('.ogg')
-        self.audio = audio.load_music_stream(audio_path)
+        if self.video.audio is not None:
+            self.audio = audio.load_music_stream_from_data(self.video.audio.to_soundarray(), sample_rate=self.video.audio.fps)
 
         self.buffer_size = 10  # Number of frames to keep in memory
         self.frame_buffer = {}  # Dictionary to store frames {timestamp: texture}
@@ -27,15 +24,18 @@ class VideoPlayer:
         self.current_frame = None
         self.fps = self.video.fps
         self.frame_duration = 1000 / self.fps
+        self.audio_played = False
 
     def _audio_manager(self):
-        if not audio.is_music_stream_playing(self.audio):
+        if self.audio is None:
+            return
+        if self.is_finished_list[1]:
+            return
+        if not audio.is_music_stream_playing(self.audio) and not self.audio_played:
             audio.play_music_stream(self.audio)
+            self.audio_played = True
         audio.update_music_stream(self.audio)
-        time_played = audio.get_music_time_played(self.audio) / audio.get_music_time_length(self.audio)
-        ending_lenience = 0.95
-        if time_played > ending_lenience:
-            self.is_finished_list[1] = True
+        self.is_finished_list[1] = not audio.is_music_stream_playing(self.audio)
 
     def _load_frame(self, index: int):
         """Load a specific frame into the buffer"""
@@ -102,7 +102,7 @@ class VideoPlayer:
         """Updates video playback, advancing frames and audio"""
         self._audio_manager()
 
-        if self.frame_index >= len(self.frame_timestamps) - 1:
+        if self.frame_index >= len(self.frame_timestamps):
             self.is_finished_list[0] = True
             return
 
@@ -130,11 +130,11 @@ class VideoPlayer:
 
     def stop(self):
         """Stops the video, audio, and clears its buffer"""
+        self.video.close()
         for timestamp, texture in self.frame_buffer.items():
             ray.unload_texture(texture)
         self.frame_buffer.clear()
 
         if audio.is_music_stream_playing(self.audio):
             audio.stop_music_stream(self.audio)
-
-        self.video.close()
+        audio.unload_music_stream(self.audio)

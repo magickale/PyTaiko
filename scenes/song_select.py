@@ -223,9 +223,7 @@ class SongSelectScreen:
             if not isinstance(song, Directory) and song.box.is_open:
                 if self.demo_song is None and get_current_ms() >= song.box.wait + (83.33*3):
                     song.box.get_scores()
-                    self.demo_song = audio.load_music_stream(song.tja.metadata.wave)
-                    audio.normalize_music_stream(self.demo_song, 0.1935)
-                    audio.seek_music_stream(self.demo_song, song.tja.metadata.demostart)
+                    self.demo_song = audio.load_music_stream(song.tja.metadata.wave, preview=song.tja.metadata.demostart, normalize=0.1935)
                     audio.play_music_stream(self.demo_song)
                     audio.stop_sound(self.sound_bgm)
             if song.box.is_open:
@@ -450,7 +448,7 @@ class SongBox:
                 direction = -1
             if abs(self.target_position - self.position) > 250:
                 direction *= -1
-            self.move = Animation.create_move(66.67, start_position=0, total_distance=100 * direction)
+            self.move = Animation.create_move(83.3, start_position=0, total_distance=100 * direction, ease_out='cubic')
             if self.is_open or self.target_position == SongSelectScreen.BOX_CENTER + 150:
                 self.move.total_distance = 250 * direction
             self.start_position = self.position
@@ -929,6 +927,7 @@ class FileNavigator:
         self.items: list[Directory | SongFile] = []
         self.selected_index = 0
         self.history = []
+        self.box_open = False
 
         # Generate all objects upfront
         self._generate_all_objects()
@@ -1257,16 +1256,23 @@ class FileNavigator:
         self.selected_index = 0 if self.items else -1
         self.calculate_box_positions()
 
-    def load_current_directory(self):
+    def load_current_directory(self, selected_item=None):
         """Load pre-generated items for the current directory"""
-        self.items = []
+        has_children = any(item.is_dir() and (item / "box.def").exists() for item in self.current_dir.iterdir())
+        if has_children:
+            self.items = []
+        else:
+            if selected_item in self.items:
+                self.items.remove(selected_item)
+            self.box_open = True
 
         dir_key = str(self.current_dir)
 
         # Add back/to_root navigation items
         if self.current_dir != self.current_root_dir:
             back_dir = Directory(self.current_dir.parent, "", 552, back=True)
-            self.items.append(back_dir)
+            if has_children:
+                self.items.append(back_dir)
         elif not self.in_root_selection:
             to_root_dir = Directory(Path(), "", 552, to_root=True)
             self.items.append(to_root_dir)
@@ -1275,7 +1281,6 @@ class FileNavigator:
         if dir_key in self.directory_contents:
             content_items = self.directory_contents[dir_key]
 
-            # Handle the every-10-songs navigation logic
             song_count = 0
             for item in content_items:
                 if isinstance(item, SongFile):
@@ -1283,13 +1288,20 @@ class FileNavigator:
                         # Add navigation item
                         if self.current_dir != self.current_root_dir:
                             back_dir = Directory(self.current_dir.parent, "", 552, back=True)
-                            self.items.append(back_dir)
+                            if not has_children:
+                                self.items.insert(self.selected_index+song_count, back_dir)
+                            else:
+                                self.items.append(back_dir)
                         elif not self.in_root_selection:
                             to_root_dir = Directory(Path(), "", 552, to_root=True)
-                            self.items.append(to_root_dir)
+                            if has_children:
+                                self.items.append(to_root_dir)
                     song_count += 1
 
-                self.items.append(item)
+                if not has_children:
+                    self.items.insert(self.selected_index+song_count, item)
+                else:
+                    self.items.append(item)
 
         # OPTIMIZED: Use cached crowns (calculated on-demand)
         for item in self.items:
@@ -1361,7 +1373,7 @@ class FileNavigator:
                     self.current_root_dir = selected_item.path
                     self.in_root_selection = False
                 self.selected_index = 0
-                self.load_current_directory()
+                self.load_current_directory(selected_item=selected_item)
 
         elif isinstance(selected_item, SongFile):
             return selected_item
@@ -1378,6 +1390,7 @@ class FileNavigator:
                 self.load_root_directories()
             else:
                 self.load_current_directory()
+                self.box_open = False
 
     def get_current_item(self):
         """Get the currently selected item"""

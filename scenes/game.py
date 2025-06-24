@@ -728,6 +728,11 @@ class Judgement:
         index = int(self.texture_animation.attribute)
         hit_color = ray.fade(ray.WHITE, self.fade_animation_1.attribute)
         color = ray.fade(ray.WHITE, self.fade_animation_2.attribute)
+        if self.curr_hit_ms is not None:
+            if float(self.curr_hit_ms) < -(global_data.config['general']['hard_judge']):
+                color = ray.fade(ray.BLUE, self.fade_animation_2.attribute)
+            elif float(self.curr_hit_ms) > (global_data.config['general']['hard_judge']):
+                color = ray.fade(ray.RED, self.fade_animation_2.attribute)
         if self.type == 'GOOD':
             if self.big:
                 ray.draw_texture(textures_1[21], 342, 184, color)
@@ -736,9 +741,6 @@ class Judgement:
                 ray.draw_texture(textures_1[19], 342, 184, color)
                 ray.draw_texture(textures_2[index+5], 304, 143, hit_color)
             ray.draw_texture(textures_2[9], 370, int(y), color)
-            if self.curr_hit_ms is not None:
-                pass
-                #ray.draw_text(self.curr_hit_ms, 370, int(y)-20, 40, ray.fade(ray.YELLOW, self.fade_animation_1.attribute))
         elif self.type == 'OK':
             if self.big:
                 ray.draw_texture(textures_1[20], 342, 184, color)
@@ -747,12 +749,8 @@ class Judgement:
                 ray.draw_texture(textures_1[18], 342, 184, color)
                 ray.draw_texture(textures_2[index], 304, 143, hit_color)
             ray.draw_texture(textures_2[4], 370, int(y), color)
-            if self.curr_hit_ms is not None:
-                ray.draw_text(self.curr_hit_ms, 370, int(y)-20, 40, ray.fade(ray.WHITE, self.fade_animation_1.attribute))
         elif self.type == 'BAD':
             ray.draw_texture(textures_2[10], 370, int(y), color)
-            if self.curr_hit_ms is not None:
-                ray.draw_text(self.curr_hit_ms, 370, int(y)-20, 40, ray.fade(ray.BLUE, self.fade_animation_1.attribute))
 
 class LaneHitEffect:
     def __init__(self, type: str):

@@ -91,7 +91,7 @@ def get_average_volume_rms(data):
     return rms
 
 class Sound:
-    def __init__(self, file_path: Path, data=None, target_sample_rate=44100):
+    def __init__(self, file_path: Path, data: Optional[ndarray]=None, target_sample_rate: int=44100):
         self.file_path = file_path
         self.data = data
         self.channels = 0
@@ -103,10 +103,10 @@ class Sound:
         self.pan = 0.5  # 0.0 = left, 0.5 = center, 1.0 = right
         self.normalize: Optional[float] = None
 
-        if file_path:
+        if file_path.exists():
             self.load()
 
-    def load(self):
+    def load(self) -> None:
         """Load and prepare the sound file data"""
         data, original_sample_rate = sf.read(str(self.file_path))
 
@@ -129,33 +129,33 @@ class Sound:
 
         self.data = data
 
-    def play(self):
+    def play(self) -> None:
         self.position = 0
         self.is_playing = True
         self.is_paused = False
 
-    def stop(self):
+    def stop(self) -> None:
         self.is_playing = False
         self.is_paused = False
         self.position = 0
 
-    def pause(self):
+    def pause(self) -> None:
         if self.is_playing:
             self.is_paused = True
             self.is_playing = False
 
-    def resume(self):
+    def resume(self) -> None:
         if self.is_paused:
             self.is_playing = True
             self.is_paused = False
 
-    def normalize_vol(self, rms: float):
+    def normalize_vol(self, rms: float) -> None:
         self.normalize = rms
         if self.data is not None:
             self.data = None
         self.load()
 
-    def get_frames(self, num_frames):
+    def get_frames(self, num_frames: int) -> Optional[ndarray]:
         """Get the next num_frames of audio data, applying volume, pitch, and pan"""
         if self.data is None:
             return
@@ -203,21 +203,22 @@ class Sound:
         return output
 
 class Music:
-    def __init__(self, file_path: Path, data=None, file_type=None, target_sample_rate=44100):
+    def __init__(self, file_path: Path, data: Optional[ndarray]=None, target_sample_rate: int=44100, sample_rate: int =44100, preview: Optional[float]=None, normalize: Optional[float]=None):
         self.file_path = file_path
-        self.file_type = file_type
         self.data = data
         self.target_sample_rate = target_sample_rate
-        self.sample_rate = target_sample_rate
+        self.sample_rate = sample_rate
         self.channels = 0
-        self.position = 0  # In frames
+        self.position = 0  # In frames (original sample rate)
         self.is_playing = False
         self.is_paused = False
         self.volume = 0.75
         self.pan = 0.5  # Center
         self.total_frames = 0
         self.valid = False
-        self.normalize = None
+        self.normalize = normalize
+        self.preview = preview  # Preview start time in seconds
+        self.is_preview_mode = preview is not None
 
         self.file_buffer_size = int(target_sample_rate * 5)  # 5 seconds buffer
         self.buffer = None
@@ -225,25 +226,97 @@ class Music:
 
         # Thread-safe updates
         self.lock = Lock()
+        self.sound_file = None
+        if self.file_path.exists():
+            self.load_from_file()
+        else:
+            self.load_from_memory()
 
-        self.load_from_file()
+    def load_from_memory(self) -> None:
+        """Load music from in-memory numpy array"""
+        try:
+            if self.data is None:
+                raise Exception("No data provided for memory loading")
 
-    def load_from_file(self):
+            # Convert to float32 if needed
+            if self.data.dtype != float32:
+                self.data = self.data.astype(float32)
+
+            if self.sample_rate != self.target_sample_rate:
+                print(f"Resampling {self.file_path} from {self.sample_rate}Hz to {self.target_sample_rate}Hz")
+                self.data = resample(self.data, self.sample_rate, self.target_sample_rate)
+
+            if self.normalize is not None:
+                current_rms = get_average_volume_rms(self.data)
+                if current_rms > 0:  # Avoid division by zero
+                    target_rms = self.normalize
+                    rms_scale_factor = target_rms / current_rms
+                    self.data *= rms_scale_factor
+
+            # Determine channels and total frames
+            if self.data.ndim == 1:
+                self.channels = 1
+                self.total_frames = len(self.data)
+                # Reshape for consistency
+                self.data = self.data.reshape(-1, 1)
+            else:
+                self.channels = self.data.shape[1]
+                self.total_frames = self.data.shape[0]
+
+            self.sample_width = 4  # float32
+            self._fill_buffer()
+            self.valid = True
+            print(f"Music loaded from memory: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames")
+
+        except Exception as e:
+            print(f"Error loading music from memory: {e}")
+            self.valid = False
+
+    def load_from_file(self) -> None:
         """Load music from file"""
         try:
-            # soundfile handles OGG, WAV, FLAC, etc. natively
             self.sound_file = sf.SoundFile(str(self.file_path))
 
             # Get file properties
             self.channels = self.sound_file.channels
             self.sample_width = 2 if self.sound_file.subtype in ['PCM_16', 'VORBIS'] else 4  # Most common
             self.sample_rate = self.sound_file.samplerate
-            self.total_frames = len(self.sound_file)
+            original_total_frames = self.sound_file.frames
 
-            # Initialize buffer with some initial data
-            self._fill_buffer()
+            if self.is_preview_mode:
+                # Calculate preview start and end frames
+                preview_start_frame = int(self.preview * self.sample_rate)
+                preview_duration_frames = original_total_frames - preview_start_frame
+                preview_end_frame = min(preview_start_frame + preview_duration_frames, original_total_frames)
+
+                # Ensure preview start is within bounds
+                if preview_start_frame >= original_total_frames:
+                    preview_start_frame = max(0, original_total_frames - preview_duration_frames)
+                    preview_end_frame = original_total_frames
+
+                # Seek to preview start position
+                self.sound_file.seek(preview_start_frame)
+
+                # Read only the preview segment
+                frames_to_read = preview_end_frame - preview_start_frame
+                self.data = self.sound_file.read(frames_to_read)
+
+                # Update total frames to reflect the preview segment
+                self.total_frames = len(self.data) if self.data.ndim == 1 else self.data.shape[0]
+
+                print(f"Preview mode: Loading {frames_to_read} frames ({frames_to_read/self.sample_rate:.2f}s) starting at {self.preview:.2f}s")
+            else:
+                # Load entire file
+                self.data = self.sound_file.read()
+                self.total_frames = original_total_frames
+
+            self.load_from_memory()
             self.valid = True
-            print(f"Music loaded: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames")
+
+            if self.is_preview_mode:
+                print(f"Music preview loaded: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames ({self.get_time_length():.2f}s)")
+            else:
+                print(f"Music loaded: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames")
 
         except Exception as e:
             print(f"Error loading music file: {e}")
@@ -252,50 +325,31 @@ class Music:
                 self.sound_file = None
             self.valid = False
 
-    def _fill_buffer(self):
-        """Fill the streaming buffer from file"""
-        if not self.sound_file:
-            return False
-
-        # Read a chunk of frames from file
+    def _fill_buffer(self) -> bool:
+        """Fill buffer from in-memory data"""
         try:
-            frames_to_read = min(self.file_buffer_size, self.total_frames - self.position)
-            if frames_to_read <= 0:
+            if self.data is None:
                 return False
 
-            # Read data directly as numpy array (float64 by default)
-            data = self.sound_file.read(frames_to_read)
+            start_frame = self.position + self.buffer_position
+            end_frame = min(start_frame + self.file_buffer_size, self.total_frames)
 
-            # Convert to float32 if needed (soundfile returns float64 by default)
-            if data.dtype != float32:
-                data = data.astype(float32)
+            if start_frame >= self.total_frames:
+                return False
 
-            # Ensure proper shape for mono audio
-            if self.channels == 1 and data.ndim == 1:
-                data = data.reshape(-1, 1)
-            elif self.channels == 1 and data.ndim == 2:
-                data = data[:, 0].reshape(-1, 1)  # Take first channel if stereo file but expecting mono
+            # Extract the chunk of data
+            data_chunk = self.data[start_frame:end_frame]
 
-            # Resample if needed
-            if self.sample_rate != self.target_sample_rate:
-                print(f"Resampling {self.file_path} from {self.sample_rate}Hz to {self.target_sample_rate}Hz")
-                data = resample(data, self.sample_rate, self.target_sample_rate)
-
-            if self.normalize is not None:
-                current_rms = get_average_volume_rms(data)
-                if current_rms > 0:  # Avoid division by zero
-                    target_rms = self.normalize
-                    rms_scale_factor = target_rms / current_rms
-                    data *= rms_scale_factor
-
-            self.buffer = data
+            self.buffer = data_chunk
+            self.position += self.buffer_position
             self.buffer_position = 0
             return True
+
         except Exception as e:
-            print(f"Error filling buffer: {e}")
+            print(f"Error filling buffer from memory: {e}")
             return False
 
-    def update(self):
+    def update(self) -> None:
         """Update music stream buffers"""
         if not self.is_playing or self.is_paused:
             return
@@ -303,25 +357,27 @@ class Music:
         with self.lock:
             # Check if we need to refill the buffer
             if self.buffer is None:
-                raise Exception("buffer is None")
-            if self.sound_file and self.buffer_position >= len(self.buffer):
-                if not self._fill_buffer():
-                    self.is_playing = False
+                return
+            if self.buffer_position >= len(self.buffer):
+                self.is_playing = self._fill_buffer()
 
-    def play(self):
+    def play(self) -> None:
         """Start playing the music stream"""
         with self.lock:
             # Reset position if at the end
-            if self.sound_file and self.position >= self.total_frames:
-                self.sound_file.seek(0)  # Reset to beginning
+            if self.position >= self.total_frames:
                 self.position = 0
                 self.buffer_position = 0
-                self._fill_buffer()
+                if self.sound_file:
+                    # For preview mode, seek to the preview start position
+                    seek_pos = int(self.preview * self.sample_rate) if self.is_preview_mode else 0
+                    self.sound_file.seek(seek_pos)
+                    self._fill_buffer()
 
             self.is_playing = True
             self.is_paused = False
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop playing the music stream"""
         with self.lock:
             self.is_playing = False
@@ -329,49 +385,62 @@ class Music:
             self.position = 0
             self.buffer_position = 0
             if self.sound_file:
-                self.sound_file.seek(0)  # Reset to beginning
+                # For preview mode, seek to the preview start position
+                seek_pos = int(self.preview * self.sample_rate) if self.is_preview_mode else 0
+                self.sound_file.seek(seek_pos)
                 self._fill_buffer()
 
-    def pause(self):
+    def pause(self) -> None:
         """Pause the music playback"""
         with self.lock:
             if self.is_playing:
                 self.is_paused = True
                 self.is_playing = False
 
-    def resume(self):
+    def resume(self) -> None:
         """Resume the music playback"""
         with self.lock:
             if self.is_paused:
                 self.is_playing = True
                 self.is_paused = False
 
-    def seek(self, position_seconds):
-        """Seek to a specific position in seconds"""
+    def seek(self, position_seconds) -> None:
+        """Seek to a specific position in seconds (relative to preview start if in preview mode)"""
         with self.lock:
             # Convert seconds to frames
-            frame_position = int(position_seconds * self.sample_rate)
+            frame_position = int(position_seconds * self.target_sample_rate)
 
             # Clamp position to valid range
             frame_position = max(0, min(frame_position, self.total_frames - 1))
 
             # Update file position if streaming from file
             if self.sound_file:
-                self.sound_file.seek(frame_position)
-                self._fill_buffer()
+                # For preview mode, add the preview offset
+                actual_file_position = frame_position
+                if self.is_preview_mode:
+                    actual_file_position += int(self.preview * self.sample_rate)
+                self.sound_file.seek(actual_file_position)
 
             self.position = frame_position
             self.buffer_position = 0
+            self._fill_buffer()
 
-    def get_time_length(self):
-        """Get the total length of the music in seconds"""
-        return self.total_frames / self.sample_rate
+    def get_time_length(self) -> float:
+        """Get the total length of the music in seconds (preview length if in preview mode)"""
+        return self.total_frames / self.target_sample_rate
 
-    def get_time_played(self):
-        """Get the current playback position in seconds"""
-        return (self.position + self.buffer_position) / self.sample_rate
+    def get_time_played(self) -> float:
+        """Get the current playback position in seconds (relative to preview start if in preview mode)"""
+        return (self.position + self.buffer_position) / self.target_sample_rate
 
-    def get_frames(self, num_frames):
+    def get_actual_time_played(self) -> float:
+        """Get the actual playback position in the original file (including preview offset)"""
+        base_time = (self.position + self.buffer_position) / self.target_sample_rate
+        if self.is_preview_mode:
+            return base_time + self.preview
+        return base_time
+
+    def get_frames(self, num_frames) -> ndarray:
         """Get the next num_frames of music data, applying volume, pitch, and pan"""
         if not self.is_playing:
             # Return silence if not playing
@@ -382,11 +451,12 @@ class Music:
 
         with self.lock:
             if self.buffer is None:
-                raise Exception("buffer is None")
+                return zeros(num_frames, dtype=float32)
+
             # Check if we need more data
             if self.buffer_position >= len(self.buffer):
-                # If no more data available and streaming from file
-                if self.sound_file and not self._fill_buffer():
+                # Try to fill buffer again
+                if not self._fill_buffer():
                     self.is_playing = False
                     if self.channels == 1:
                         return zeros(num_frames, dtype=float32)
@@ -409,7 +479,6 @@ class Music:
 
             # Update buffer position
             self.buffer_position += frames_to_get
-            self.position += frames_to_get
 
             # Apply volume
             output *= self.volume
@@ -425,7 +494,7 @@ class Music:
 
             return output
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup when the music object is deleted"""
         if hasattr(self, 'sound_file') and self.sound_file:
             try:
@@ -434,7 +503,7 @@ class Music:
                 raise Exception("unable to close music stream")
 
 class AudioEngine:
-    def __init__(self, type: str):
+    def __init__(self, type: str) -> None:
         self.target_sample_rate = 44100
         self.buffer_size = 10
         self.sounds: dict[str, Sound] = {}
@@ -453,20 +522,20 @@ class AudioEngine:
         self.update_thread_running = False
         self.type = type
 
-    def _initialize_asio(self):
-        """Set up ASIO device"""
-        # Find ASIO API and use its default device
+    def _initialize_api(self) -> bool:
+        """Set up API device"""
+        # Find API and use its default device
         hostapis = sd.query_hostapis()
-        asio_api_index = -1
+        api_index = -1
         for i, api in enumerate(hostapis):
             if isinstance(api, dict) and 'name' in api and api['name'] == self.type:
-                asio_api_index = i
+                api_index = i
                 break
 
         if isinstance(hostapis, tuple):
-            asio_api = hostapis[asio_api_index]
-            if isinstance(asio_api, dict) and 'default_output_device' in asio_api:
-                default_asio_device = asio_api['default_output_device']
+            api = hostapis[api_index]
+            if isinstance(api, dict) and 'default_output_device' in api:
+                default_asio_device = api['default_output_device']
             else:
                 raise Exception("Warning: 'default_output_device' key not found in ASIO API info.")
             if default_asio_device >= 0:
@@ -500,7 +569,7 @@ class AudioEngine:
         self.output_channels = min(2, device_info['max_output_channels'])
         return True
 
-    def _audio_callback(self, outdata, frames, time, status):
+    def _audio_callback(self, outdata: ndarray, frames: int, time: int, status: str) -> None:
         """Callback function for the sounddevice stream"""
         if status:
             print(f"Status: {status}")
@@ -589,31 +658,36 @@ class AudioEngine:
 
         outdata[:] = output
 
-    def _start_update_thread(self):
+    def _start_update_thread(self) -> None:
         """Start a thread to update music streams"""
         self.update_thread_running = True
         self.update_thread = Thread(target=self._update_music_thread)
         self.update_thread.daemon = True
         self.update_thread.start()
 
-    def _update_music_thread(self):
+    def _update_music_thread(self) -> None:
         """Thread function to update all music streams"""
         while self.update_thread_running:
-            # Update all active music streams
-            for music_name, music in self.music_streams.items():
-                if music.is_playing:
-                    music.update()
+            active_streams = [music for music in self.music_streams.values() if music.is_playing]
 
-            # Sleep to not consume too much CPU
-            time.sleep(0.1)
+            if not active_streams:
+                # Sleep longer when no streams are active
+                time.sleep(0.5)
+                continue
+
+            for music in active_streams:
+                music.update()
+
+            # Adjust sleep based on number of active streams
+            sleep_time = max(0.05, 0.1 / len(active_streams))
+            time.sleep(sleep_time)
 
     def init_audio_device(self):
         if self.audio_device_ready:
             return True
 
         try:
-            # Try to use ASIO if available
-            self._initialize_asio()
+            self._initialize_api()
 
             # Set up and start the stream
             extra_settings = None
@@ -630,7 +704,6 @@ class AudioEngine:
             self.stream.start()
             self.running = True
             self.audio_device_ready = True
-            print(self.stream.samplerate, self.stream.blocksize, self.stream.latency*1000)
 
             # Start update thread for music streams
             self._start_update_thread()
@@ -642,7 +715,7 @@ class AudioEngine:
             self.audio_device_ready = False
             return False
 
-    def close_audio_device(self):
+    def close_audio_device(self) -> None:
         self.update_thread_running = False
         if self.update_thread:
             self.update_thread.join(timeout=1.0)
@@ -673,27 +746,27 @@ class AudioEngine:
         print(f"Loaded sound from {fileName} as {sound_id}")
         return sound_id
 
-    def play_sound(self, sound):
+    def play_sound(self, sound) -> None:
         if sound in self.sounds:
             self.sound_queue.put(sound)
 
-    def stop_sound(self, sound):
+    def stop_sound(self, sound) -> None:
         if sound in self.sounds:
             self.sounds[sound].stop()
 
-    def pause_sound(self, sound: str):
+    def pause_sound(self, sound: str) -> None:
         if sound in self.sounds:
             self.sounds[sound].pause()
 
-    def resume_sound(self, sound: str):
+    def resume_sound(self, sound: str) -> None:
         if sound in self.sounds:
             self.sounds[sound].resume()
 
-    def unload_sound(self, sound: str):
+    def unload_sound(self, sound: str) -> None:
         if sound in self.sounds:
             del self.sounds[sound]
 
-    def normalize_sound(self, sound: str, rms: float):
+    def normalize_sound(self, sound: str, rms: float) -> None:
         if sound in self.sounds:
             self.sounds[sound].normalize_vol(rms)
 
@@ -705,19 +778,29 @@ class AudioEngine:
             return self.sounds[sound].is_playing
         return False
 
-    def set_sound_volume(self, sound: str, volume: float):
+    def set_sound_volume(self, sound: str, volume: float) -> None:
         if sound in self.sounds:
             self.sounds[sound].volume = max(0.0, min(1.0, volume))
 
-    def set_sound_pan(self, sound: str, pan: float):
+    def set_sound_pan(self, sound: str, pan: float) -> None:
         if sound in self.sounds:
             self.sounds[sound].pan = max(0.0, min(1.0, pan))
 
-    def load_music_stream(self, fileName: Path) -> str:
-        music = Music(file_path=fileName, target_sample_rate=self.target_sample_rate)
+    def load_music_stream(self, fileName: Path, preview: float=0, normalize: Optional[float] = None) -> str:
+        music = Music(file_path=fileName, target_sample_rate=self.target_sample_rate, preview=preview, normalize=normalize)
         music_id = f"music_{len(self.music_streams)}"
         self.music_streams[music_id] = music
         print(f"Loaded music stream from {fileName} as {music_id}")
+        return music_id
+
+    def load_music_stream_from_data(self, audio_array: ndarray, sample_rate: int=44100) -> str:
+        """Load music stream from numpy array data"""
+        # Create a dummy path since Music class expects one
+        dummy_path = Path("memory_audio")
+        music = Music(file_path=dummy_path, data=audio_array, target_sample_rate=self.target_sample_rate, sample_rate=sample_rate)
+        music_id = f"music_{len(self.music_streams)}"
+        self.music_streams[music_id] = music
+        print(f"Loaded music stream from memory data as {music_id}")
         return music_id
 
     def is_music_valid(self, music: str) -> bool:
@@ -725,11 +808,11 @@ class AudioEngine:
             return self.music_streams[music].valid
         return False
 
-    def unload_music_stream(self, music: str):
+    def unload_music_stream(self, music: str) -> None:
         if music in self.music_streams:
             del self.music_streams[music]
 
-    def play_music_stream(self, music: str):
+    def play_music_stream(self, music: str) -> None:
         if music in self.music_streams:
             self.music_queue.put((music, 'play'))
 
@@ -738,35 +821,35 @@ class AudioEngine:
             return self.music_streams[music].is_playing
         return False
 
-    def update_music_stream(self, music: str):
+    def update_music_stream(self, music: str) -> None:
         if music in self.music_streams:
             self.music_streams[music].update()
 
-    def stop_music_stream(self, music: str):
+    def stop_music_stream(self, music: str) -> None:
         if music in self.music_streams:
             self.music_queue.put((music, 'stop'))
 
-    def pause_music_stream(self, music: str):
+    def pause_music_stream(self, music: str) -> None:
         if music in self.music_streams:
             self.music_queue.put((music, 'pause'))
 
-    def resume_music_stream(self, music: str):
+    def resume_music_stream(self, music: str) -> None:
         if music in self.music_streams:
             self.music_queue.put((music, 'resume'))
 
-    def seek_music_stream(self, music: str, position: float):
+    def seek_music_stream(self, music: str, position: float) -> None:
         if music in self.music_streams:
             self.music_queue.put((music, 'seek', position))
 
-    def set_music_volume(self, music: str, volume: float):
+    def set_music_volume(self, music: str, volume: float) -> None:
         if music in self.music_streams:
             self.music_streams[music].volume = max(0.0, min(1.0, volume))
 
-    def set_music_pan(self, music: str, pan: float):
+    def set_music_pan(self, music: str, pan: float) -> None:
         if music in self.music_streams:
             self.music_streams[music].pan = max(0.0, min(1.0, pan))
 
-    def normalize_music_stream(self, music: str, rms: float):
+    def normalize_music_stream(self, music: str, rms: float) -> None:
         if music in self.music_streams:
             self.music_streams[music].normalize = rms
 
