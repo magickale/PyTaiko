@@ -370,7 +370,7 @@ class Music:
                 self.buffer_position = 0
                 if self.sound_file:
                     # For preview mode, seek to the preview start position
-                    seek_pos = int(self.preview * self.sample_rate) if self.is_preview_mode else 0
+                    seek_pos = int(self.preview * self.sample_rate) if self.preview is not None else 0
                     self.sound_file.seek(seek_pos)
                     self._fill_buffer()
 
@@ -386,7 +386,7 @@ class Music:
             self.buffer_position = 0
             if self.sound_file:
                 # For preview mode, seek to the preview start position
-                seek_pos = int(self.preview * self.sample_rate) if self.is_preview_mode else 0
+                seek_pos = int(self.preview * self.sample_rate) if self.preview is not None else 0
                 self.sound_file.seek(seek_pos)
                 self._fill_buffer()
 
@@ -417,7 +417,7 @@ class Music:
             if self.sound_file:
                 # For preview mode, add the preview offset
                 actual_file_position = frame_position
-                if self.is_preview_mode:
+                if self.is_preview_mode and self.preview is not None:
                     actual_file_position += int(self.preview * self.sample_rate)
                 self.sound_file.seek(actual_file_position)
 
@@ -436,7 +436,7 @@ class Music:
     def get_actual_time_played(self) -> float:
         """Get the actual playback position in the original file (including preview offset)"""
         base_time = (self.position + self.buffer_position) / self.target_sample_rate
-        if self.is_preview_mode:
+        if self.is_preview_mode and self.preview is not None:
             return base_time + self.preview
         return base_time
 

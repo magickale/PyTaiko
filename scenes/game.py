@@ -1270,6 +1270,7 @@ class ResultTransition:
             x += texture_2.width
 
 class Gauge:
+    GAUGE_MAX = 87
     def __init__(self, difficulty: int, level: int, total_notes: int):
         self.gauge_length = 0
         self.previous_length = 0
@@ -1368,19 +1369,18 @@ class Gauge:
         ray.draw_texture(textures[0], 327, 132, ray.WHITE)
         ray.draw_texture(textures[1], 483, 124, ray.WHITE)
         gauge_length = int(self.gauge_length)
+        for i in range(gauge_length):
+            if i == 68:
+                ray.draw_texture(textures[16], 491 + (i*textures[13].width), 160 - 24, ray.WHITE)
+            elif i > 68:
+                ray.draw_texture(textures[15], 491 + (i*textures[13].width) + 2, 160 - 22, ray.WHITE)
+                ray.draw_texture(textures[20], 491 + (i*textures[13].width) + 2, 160, ray.WHITE)
+            else:
+                ray.draw_texture(textures[13], 491 + (i*textures[13].width), 160, ray.WHITE)
         if gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
                 ray.draw_texture(textures[1 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
             ray.draw_texture(textures[2 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
-        if self.rainbow_fade_in is None or not self.rainbow_fade_in.is_finished:
-            for i in range(gauge_length):
-                if i == 68:
-                    ray.draw_texture(textures[16], 491 + (i*textures[13].width), 160 - 24, ray.WHITE)
-                elif i > 68:
-                    ray.draw_texture(textures[15], 491 + (i*textures[13].width) + 2, 160 - 22, ray.WHITE)
-                    ray.draw_texture(textures[20], 491 + (i*textures[13].width) + 2, 160, ray.WHITE)
-                else:
-                    ray.draw_texture(textures[13], 491 + (i*textures[13].width), 160, ray.WHITE)
         if self.gauge_update_anim is not None and gauge_length < 88 and gauge_length != self.previous_length:
             if gauge_length == 69:
                 ray.draw_texture(textures[17], 491 + (gauge_length*textures[13].width) - 13, 160 - 8 - 24, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
@@ -1389,7 +1389,7 @@ class Gauge:
             else:
                 ray.draw_texture(textures[14], 491 + (gauge_length*textures[13].width) - 13, 160 - 8, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
         ray.draw_texture(textures[10], 483, 124, ray.fade(ray.WHITE, 0.15))
-        if gauge_length >= 69:
+        if gauge_length >= 70:
             ray.draw_texture(textures[18], 1038, 141, ray.WHITE)
             ray.draw_texture(textures[19], 1187, 130, ray.WHITE)
         else:

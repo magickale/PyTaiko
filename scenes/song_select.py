@@ -257,6 +257,9 @@ class SongSelectScreen:
         if self.ura_switch_animation is not None:
             self.ura_switch_animation.update(get_current_ms())
 
+        if self.navigator.genre_bg is not None:
+            self.navigator.genre_bg.update()
+
         if ray.is_key_pressed(ray.KeyboardKey.KEY_ESCAPE):
             return self.on_screen_end('ENTRY')
 
@@ -281,6 +284,8 @@ class SongSelectScreen:
             else:
                 ray.draw_texture(texture, i - int(self.background_move.attribute), 0, ray.WHITE)
 
+        if self.navigator.genre_bg is not None and self.state == State.BROWSING:
+            self.navigator.genre_bg.draw(self.textures, 95)
         for item in self.navigator.items:
             box = item.box
             if -156 <= box.position <= self.screen_width + 144:
@@ -363,7 +368,8 @@ class SongBox:
         585: 519,
         615: 532,
     }
-    def __init__(self, name: str, texture_index: int, is_dir: bool, tja: Optional[TJAParser] = None, tja_count: Optional[int] = None, box_texture: Optional[ray.Texture] = None):
+    def __init__(self, name: str, texture_index: int, is_dir: bool, tja: Optional[TJAParser] = None,
+        tja_count: Optional[int] = None, box_texture: Optional[ray.Texture] = None):
         self.text_name = name
         self.texture_index = texture_index
         self.box_texture = box_texture
@@ -383,6 +389,9 @@ class SongBox:
         self.move = None
         self.wait = 0
         self.is_dir = is_dir
+        self.is_genre_start = 0
+        self.is_genre_end = False
+        self.genre_distance = 0
         self.tja_count = tja_count
         self.tja_count_text = None
         if self.tja_count is not None and self.tja_count != 0:
@@ -608,6 +617,84 @@ class SongBox:
                     self._draw_open(x, y, textures, self.open_fade.attribute)
         else:
             self._draw_closed(x, y, textures)
+
+class GenreBG:
+    BG_MAP = {
+        555: 547,
+        560: 558,
+        565: 563,
+        570: 568,
+        575: 573,
+        580: 578,
+        585: 583,
+        615: 613,
+        620: 618
+    }
+    HEADER_MAP = {
+        555: 423,
+        560: 425,
+        565: 427,
+        570: 429,
+        575: 431,
+        580: 433,
+        585: 435,
+        615: 768,
+        620: 447
+    }
+    def __init__(self, start_box: SongBox, end_box: SongBox, title: OutlinedText):
+        self.start_box = start_box
+        self.end_box = end_box
+        self.start_position = start_box.position
+        self.end_position = end_box.position
+        self.title = title
+    def update(self):
+        self.start_position = self.start_box.position
+        self.end_position = self.end_box.position
+    def draw(self, textures, y):
+        texture_index = GenreBG.BG_MAP[self.end_box.texture_index]
+
+        offset = -150 if self.start_box.is_open else 0
+        texture = textures['song_select'][texture_index]
+        src = ray.Rectangle(0, 0, -texture.width, texture.height)
+        dest = ray.Rectangle(self.start_position+offset-5, y-70, texture.width, texture.height)
+        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0,0), 0, ray.WHITE)
+
+        extra_distance = 155 if self.end_box.is_open or self.start_box.is_open else 0
+        x = self.start_position+18+offset
+        texture = textures['song_select'][texture_index+1]
+        src = ray.Rectangle(0, 0, texture.width, texture.height)
+        if self.start_position >= -56 and self.end_position < self.start_position:
+            dest = ray.Rectangle(x, y-70, self.start_position + 1280 + 56, texture.height)
+        else:
+            dest = ray.Rectangle(x, y-70, abs(self.end_position) - self.start_position + extra_distance + 57, texture.height)
+        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0,0), 0, ray.WHITE)
+
+
+        if self.end_position < self.start_position and self.end_position >= -56:
+            dest = ray.Rectangle(0, y-70, min(self.end_position+75, 1280) + extra_distance, texture.height)
+            ray.draw_texture_pro(texture, src, dest, ray.Vector2(0,0), 0, ray.WHITE)
+
+        offset = 150 if self.end_box.is_open else 0
+        ray.draw_texture(textures['song_select'][texture_index], self.end_position+75+offset, y-70, ray.WHITE)
+
+        if ((self.start_position <= 594 and self.end_position >= 594) or
+            ((self.start_position <= 594 or self.end_position >= 594) and (self.start_position > self.end_position))):
+            dest_width = min(300, self.title.texture.width)
+
+            texture = textures['song_select'][GenreBG.HEADER_MAP[self.end_box.texture_index]]
+            src = ray.Rectangle(0, 0, texture.width, texture.height)
+            dest = ray.Rectangle((1280//2) - (dest_width//2), y-68, dest_width, texture.height)
+            ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+
+            texture = textures['song_select'][GenreBG.HEADER_MAP[self.end_box.texture_index]+1]
+            src = ray.Rectangle(0, 0, -texture.width, texture.height)
+            dest = ray.Rectangle((1280//2) - (dest_width//2) - (texture.width//2), y-68, texture.width, texture.height)
+            ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+            ray.draw_texture(texture, (1280//2) + (dest_width//2) - (texture.width//2), y-68, ray.WHITE)
+
+            src = ray.Rectangle(0, 0, self.title.texture.width, self.title.texture.height)
+            dest = ray.Rectangle((1280//2) - (dest_width//2), y-68, dest_width, self.title.texture.height)
+            self.title.draw(src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
 
 class YellowBox:
     def __init__(self, name: OutlinedText, is_back: bool, tja: Optional[TJAParser] = None, subtitle: Optional[OutlinedText] = None):
@@ -928,6 +1015,7 @@ class FileNavigator:
         self.selected_index = 0
         self.history = []
         self.box_open = False
+        self.genre_bg = None
 
         # Generate all objects upfront
         self._generate_all_objects()
@@ -1256,23 +1344,25 @@ class FileNavigator:
         self.selected_index = 0 if self.items else -1
         self.calculate_box_positions()
 
-    def load_current_directory(self, selected_item=None):
+    def load_current_directory(self, selected_item: Optional[Directory]=None):
         """Load pre-generated items for the current directory"""
         has_children = any(item.is_dir() and (item / "box.def").exists() for item in self.current_dir.iterdir())
+        self.genre_bg = None
         if has_children:
             self.items = []
-        else:
-            if selected_item in self.items:
-                self.items.remove(selected_item)
-            self.box_open = True
+            if not self.box_open:
+                self.selected_index = 0
 
         dir_key = str(self.current_dir)
+        start_box = None
+        end_box = None
 
         # Add back/to_root navigation items
         if self.current_dir != self.current_root_dir:
             back_dir = Directory(self.current_dir.parent, "", 552, back=True)
-            if has_children:
-                self.items.append(back_dir)
+            if not has_children:
+                start_box = back_dir.box
+            self.items.insert(self.selected_index, back_dir)
         elif not self.in_root_selection:
             to_root_dir = Directory(Path(), "", 552, to_root=True)
             self.items.append(to_root_dir)
@@ -1281,28 +1371,25 @@ class FileNavigator:
         if dir_key in self.directory_contents:
             content_items = self.directory_contents[dir_key]
 
-            song_count = 0
+            i = 1
             for item in content_items:
                 if isinstance(item, SongFile):
-                    if song_count % 10 == 0 and song_count != 0 and song_count <= (len([x for x in content_items if isinstance(x, SongFile)]) - 10):
-                        # Add navigation item
-                        if self.current_dir != self.current_root_dir:
-                            back_dir = Directory(self.current_dir.parent, "", 552, back=True)
-                            if not has_children:
-                                self.items.insert(self.selected_index+song_count, back_dir)
-                            else:
-                                self.items.append(back_dir)
-                        elif not self.in_root_selection:
-                            to_root_dir = Directory(Path(), "", 552, to_root=True)
-                            if has_children:
-                                self.items.append(to_root_dir)
-                    song_count += 1
+                    if i % 10 == 0 and i != 0:
+                        back_dir = Directory(self.current_dir.parent, "", 552, back=True)
+                        self.items.insert(self.selected_index+i, back_dir)
+                        i += 1
 
                 if not has_children:
-                    self.items.insert(self.selected_index+song_count, item)
+                    self.items.insert(self.selected_index+i, item)
                 else:
                     self.items.append(item)
+                i += 1
 
+        if not has_children:
+            self.box_open = True
+            end_box = content_items[-1].box
+            if selected_item in self.items:
+                self.items.remove(selected_item)
         # OPTIMIZED: Use cached crowns (calculated on-demand)
         for item in self.items:
             if isinstance(item, Directory):
@@ -1314,6 +1401,10 @@ class FileNavigator:
                     item.box.crown = dict()
 
         self.calculate_box_positions()
+        if (not has_children and start_box is not None
+            and end_box is not None and selected_item is not None
+            and selected_item.box.hori_name is not None):
+            self.genre_bg = GenreBG(start_box, end_box, selected_item.box.hori_name)
 
     def mark_crowns_dirty_for_song(self, song_file: SongFile):
         """Mark directories as needing crown recalculation when a song's score changes"""
@@ -1338,21 +1429,6 @@ class FileNavigator:
             self.selected_index = (self.selected_index + 1) % len(self.items)
             self.calculate_box_positions()
 
-    def get_visible_items(self, screen_width=1280):
-        """Get only the items that would be visible on screen"""
-        if not self.items:
-            return []
-
-        visible_items = []
-        center = SongSelectScreen.BOX_CENTER
-        half_screen = screen_width // 2
-
-        for item in self.items:
-            if abs(item.box.position - center) <= half_screen:
-                visible_items.append(item)
-
-        return visible_items
-
     def select_current_item(self):
         """Select the currently highlighted item"""
         if not self.items or self.selected_index >= len(self.items):
@@ -1361,18 +1437,18 @@ class FileNavigator:
         selected_item = self.items[self.selected_index]
 
         if isinstance(selected_item, Directory):
+            if self.box_open:
+                self.go_back()
             if selected_item.to_root:
                 self.load_root_directories()
             else:
                 # Save current state to history
                 if self.current_dir is not None:
                     self.history.append((self.current_dir, self.selected_index, self.in_root_selection, self.current_root_dir))
-
                 self.current_dir = selected_item.path
                 if self.in_root_selection:
                     self.current_root_dir = selected_item.path
                     self.in_root_selection = False
-                self.selected_index = 0
                 self.load_current_directory(selected_item=selected_item)
 
         elif isinstance(selected_item, SongFile):
