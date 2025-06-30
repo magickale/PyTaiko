@@ -33,7 +33,7 @@ jobs:
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
-                  name: PyTaiko ${{ runner.os }} Build
+                  name: PyTaiko-${{ runner.os }}-$RUNNER_VERSION-${{ runner.arch }}
                   path: |
                       Graphics/*
                       Sounds/*
