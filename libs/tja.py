@@ -25,7 +25,8 @@ class Note:
     type: int = field(init=False)
     hit_ms: float = field(init=False)
     load_ms: float = field(init=False)
-    pixels_per_frame: float = field(init=False)
+    pixels_per_frame_x: float = field(init=False)
+    pixels_per_frame_y: float = field(init=False)
     display: bool = field(init=False)
     index: int = field(init=False)
     bpm: float = field(init=False)
@@ -175,6 +176,7 @@ class TJAParser:
     DIFFS = {0: "easy", 1: "normal", 2: "hard", 3: "oni", 4: "edit", 5: "tower", 6: "dan"}
     def __init__(self, path: Path, start_delay: int = 0, distance: int = 866):
         self.file_path: Path = path
+        print(self.file_path)
 
         lines = self.file_path.read_text(encoding='utf-8-sig').splitlines()
         self.data = [cleaned for line in lines
@@ -244,22 +246,22 @@ class TJAParser:
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
                         continue
-                    self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',')])
+                    self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',') if x != ''])
                 elif item.startswith('BALLOONEXP'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
                         continue
-                    self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',')])
+                    self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',') if x != ''])
                 elif item.startswith('BALLOONMAS'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
                         continue
-                    self.metadata.course_data[current_diff].balloon = ([int(x) for x in balloon_data.split(',')])
+                    self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('BALLOON'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
                         continue
-                    self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',')]
+                    self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('SCOREINIT'):
                     score_init = item.split(':')[1]
                     if score_init == '':
@@ -282,7 +284,7 @@ class TJAParser:
             elif '限定' in self.metadata.title[region_code]:
                 self.ex_data.limited_time = True
 
-    def data_to_notes(self, diff):
+    def data_to_notes(self, diff) -> list[list[str]]:
         diff_name = self.DIFFS.get(diff, "").lower()
 
         # Use enumerate for single iteration
@@ -400,7 +402,8 @@ class TJAParser:
         index = 0
         time_signature = 4/4
         bpm = self.metadata.bpm
-        scroll_modifier = 1
+        x_scroll_modifier = 1
+        y_scroll_modifier = 0
         barline_display = True
         gogo_time = False
         skip_branch = False
@@ -409,6 +412,8 @@ class TJAParser:
             bar_length = sum(len(part) for part in bar if '#' not in part)
             barline_added = False
             for part in bar:
+                if '#LYRIC' in part:
+                    continue
                 if part.startswith('#BRANCHSTART'):
                     skip_branch = True
                     continue
@@ -421,7 +426,74 @@ class TJAParser:
                     time_signature = float(part[9:divisor]) / float(part[divisor+1:])
                     continue
                 elif '#SCROLL' in part:
-                    scroll_modifier = float(part[7:])
+                    # Extract the value after '#SCROLL '
+                    scroll_value = part[7:].strip()  # Remove '#SCROLL' and whitespace
+
+                    # Initialize default values
+                    x_scroll_modifier = 0
+                    y_scroll_modifier = 0
+
+                    # Handle empty value
+                    if not scroll_value:
+                        continue
+
+                    # Check if it's a complex number (contains 'i')
+                    if 'i' in scroll_value:
+                        # Handle different imaginary number formats
+                        if scroll_value == 'i':
+                            x_scroll_modifier = 0
+                            y_scroll_modifier = 1
+                        elif scroll_value == '-i':
+                            x_scroll_modifier = 0
+                            y_scroll_modifier = -1
+                        elif scroll_value.endswith('i') or scroll_value.endswith('.i'):
+                            # Remove the 'i' or '.i' suffix
+                            if scroll_value.endswith('.i'):
+                                complex_part = scroll_value[:-2]
+                            else:
+                                complex_part = scroll_value[:-1]
+
+                            # Look for + or - that separates real and imaginary parts
+                            # Find the rightmost + or - (excluding position 0 for negative numbers)
+                            plus_pos = complex_part.rfind('+')
+                            minus_pos = complex_part.rfind('-')
+
+                            separator_pos = -1
+                            if plus_pos > 0:  # Ignore + at position 0
+                                separator_pos = plus_pos
+                            if minus_pos > 0 and minus_pos > separator_pos:  # Ignore - at position 0
+                                separator_pos = minus_pos
+
+                            if separator_pos > 0:
+                                # Complex number like '1+i', '3+4i', '2-5i', '-1+2i', etc.
+                                real_part = complex_part[:separator_pos]
+                                imag_part = complex_part[separator_pos:]
+
+                                x_scroll_modifier = float(real_part) if real_part else 0
+
+                                # Handle imaginary part
+                                if imag_part == '+' or imag_part == '':
+                                    y_scroll_modifier = 1
+                                elif imag_part == '-':
+                                    y_scroll_modifier = -1
+                                else:
+                                    y_scroll_modifier = float(imag_part)
+                            else:
+                                # Pure imaginary like '5i', '-3i', '2.5i'
+                                if complex_part == '' or complex_part == '+':
+                                    y_scroll_modifier = 1
+                                elif complex_part == '-':
+                                    y_scroll_modifier = -1
+                                else:
+                                    y_scroll_modifier = float(complex_part)
+                                x_scroll_modifier = 0
+                        else:
+                            # 'i' is somewhere in the middle - invalid format
+                            continue
+                    else:
+                        # Pure real number
+                        x_scroll_modifier = float(scroll_value)
+                        y_scroll_modifier = 0
                     continue
                 elif '#BPMCHANGE' in part:
                     bpm = float(part[11:])
@@ -438,8 +510,6 @@ class TJAParser:
                 elif '#GOGOEND' in part:
                     gogo_time = False
                     continue
-                elif '#LYRIC' in part:
-                    continue
                 elif part.startswith('#M'):
                     skip_branch = False
                     continue
@@ -455,8 +525,9 @@ class TJAParser:
                 bar_line = Note()
 
                 #Determines how quickly the notes need to move across the screen to reach the judgment circle in time
-                bar_line.pixels_per_frame = get_pixels_per_frame(bpm * time_signature * scroll_modifier, time_signature*4, self.distance)
-                pixels_per_ms = get_pixels_per_ms(bar_line.pixels_per_frame)
+                bar_line.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
+                bar_line.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
+                pixels_per_ms = get_pixels_per_ms(bar_line.pixels_per_frame_x)
 
                 bar_line.hit_ms = self.current_ms
                 if pixels_per_ms == 0:
@@ -480,13 +551,16 @@ class TJAParser:
                     increment = ms_per_measure / bar_length
 
                 for item in part:
-                    if item == '0':
+                    if item == '.':
+                        continue
+                    if item == '0' or (not item.isdigit()):
                         self.current_ms += increment
                         continue
                     note = Note()
                     note.hit_ms = self.current_ms
-                    note.pixels_per_frame = bar_line.pixels_per_frame
-                    pixels_per_ms = get_pixels_per_ms(note.pixels_per_frame)
+                    note.pixels_per_frame_x = bar_line.pixels_per_frame_x
+                    note.pixels_per_frame_y = bar_line.pixels_per_frame_y
+                    pixels_per_ms = get_pixels_per_ms(note.pixels_per_frame_x)
                     note.load_ms = (note.hit_ms if pixels_per_ms == 0
                                     else note.hit_ms - (self.distance / pixels_per_ms))
                     note.type = int(item)
@@ -504,12 +578,12 @@ class TJAParser:
                         note = Balloon(note)
                         note.count = 1 if not balloon else balloon.pop(0)
                     elif item == '8':
-                        new_pixels_per_ms = play_note_list[-1].pixels_per_frame / (1000 / 60)
+                        new_pixels_per_ms = play_note_list[-1].pixels_per_frame_x / (1000 / 60)
                         if new_pixels_per_ms == 0:
                             note.load_ms = note.hit_ms
                         else:
                             note.load_ms = note.hit_ms - (self.distance / new_pixels_per_ms)
-                        note.pixels_per_frame = play_note_list[-1].pixels_per_frame
+                        note.pixels_per_frame_x = play_note_list[-1].pixels_per_frame_x
                     self.current_ms += increment
                     play_note_list.append(note)
                     bisect.insort(draw_note_list, note, key=lambda x: x.load_ms)
@@ -519,6 +593,7 @@ class TJAParser:
                         if isinstance(play_note_list[-2], Drumroll) and play_note_list[-1].type != 8:
                             print(self.file_path, diff)
                             print(bar)
+                            continue
                             raise Exception(f"{play_note_list[-2]}")
         # https://stackoverflow.com/questions/72899/how-to-sort-a-list-of-dictionaries-by-a-value-of-the-dictionary-in-python
         # Sorting by load_ms is necessary for drawing, as some notes appear on the

@@ -113,8 +113,11 @@ class GameScreen:
 
         self.player_1 = Player(self, 1, difficulty)
         if not hasattr(self, 'song_music'):
-            self.song_music = audio.load_sound(self.tja.metadata.wave)
-            audio.normalize_sound(self.song_music, 0.1935)
+            if self.tja.metadata.wave.exists() and self.tja.metadata.wave.is_file():
+                self.song_music = audio.load_sound(self.tja.metadata.wave)
+                audio.normalize_sound(self.song_music, 0.1935)
+            else:
+                self.song_music = None
         self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
 
     def on_screen_start(self):
@@ -279,8 +282,11 @@ class Player:
     def get_result_score(self):
         return self.score, self.good_count, self.ok_count, self.bad_count, self.total_drumroll, self.max_combo
 
-    def get_position(self, game_screen: GameScreen, ms: float, pixels_per_frame: float) -> int:
-        return int(game_screen.width + pixels_per_frame * 60 / 1000 * (ms - game_screen.current_ms) - 64) - self.visual_offset
+    def get_position_x(self, width: int, current_ms: float, load_ms: float, pixels_per_frame: float) -> int:
+        return int(width + pixels_per_frame * (60 / 1000) * (load_ms - current_ms) - 64) - self.visual_offset
+
+    def get_position_y(self, current_ms: float, load_ms: float, pixels_per_frame: float, pixels_per_frame_x) -> int:
+        return int((pixels_per_frame * (60 / 1000) * (load_ms - current_ms)) + (((1280 - GameScreen.JUDGE_X) * pixels_per_frame) / pixels_per_frame_x))
 
     def animation_manager(self, animation_list: list):
         if len(animation_list) <= 0:
@@ -303,7 +309,7 @@ class Player:
 
         for i in range(len(self.current_bars)-1, -1, -1):
             bar = self.current_bars[i]
-            position = self.get_position(game_screen, bar.hit_ms, bar.pixels_per_frame)
+            position = self.get_position_x(game_screen.width, game_screen.current_ms, bar.hit_ms, bar.pixels_per_frame_x)
             if position < GameScreen.JUDGE_X + 650:
                 self.current_bars.pop(i)
 
@@ -357,7 +363,7 @@ class Player:
         note = self.current_notes_draw[0]
         if note.type in {5, 6, 7} and len(self.current_notes_draw) > 1:
             note = self.current_notes_draw[1]
-        position = self.get_position(game_screen, note.hit_ms, note.pixels_per_frame)
+        position = self.get_position_x(game_screen.width, game_screen.current_ms, note.hit_ms, note.pixels_per_frame_x)
         if position < GameScreen.JUDGE_X + 650:
             self.current_notes_draw.pop(0)
 
@@ -575,12 +581,12 @@ class Player:
         self.gauge.update(get_current_ms(), self.good_count, self.ok_count, self.bad_count, self.total_notes)
 
     def draw_drumroll(self, game_screen: GameScreen, head: Drumroll, current_eighth: int):
-        start_position = self.get_position(game_screen, head.load_ms, head.pixels_per_frame)
+        start_position = self.get_position_x(game_screen.width, game_screen.current_ms, head.load_ms, head.pixels_per_frame_x)
         tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), None)
         if tail is None:
             raise Exception("Tail for Balloon not found")
         is_big = int(head.type == 6) * 2
-        end_position = self.get_position(game_screen, tail.load_ms, tail.pixels_per_frame)
+        end_position = self.get_position_x(game_screen.width, game_screen.current_ms, tail.load_ms, tail.pixels_per_frame_x)
         length = (end_position - start_position - 50)
         if length <= 0:
             end_position += 50
@@ -601,11 +607,11 @@ class Player:
 
     def draw_balloon(self, game_screen: GameScreen, head: Balloon, current_eighth: int):
         offset = 12
-        start_position = self.get_position(game_screen, head.load_ms, head.pixels_per_frame)
+        start_position = self.get_position_x(game_screen.width, game_screen.current_ms, head.load_ms, head.pixels_per_frame_x)
         tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), None)
         if tail is None:
             raise Exception("Tail for Balloon not found")
-        end_position = self.get_position(game_screen, tail.load_ms, tail.pixels_per_frame)
+        end_position = self.get_position_x(game_screen.width, game_screen.current_ms, tail.load_ms, tail.pixels_per_frame_x)
         pause_position = 349
         if game_screen.current_ms >= tail.hit_ms:
             position = end_position
@@ -623,8 +629,9 @@ class Player:
         for bar in reversed(self.current_bars):
             if not bar.display:
                 continue
-            position = self.get_position(game_screen, bar.load_ms, bar.pixels_per_frame)
-            ray.draw_texture(game_screen.note_type_list[bar.type], position+60, 190, ray.WHITE)
+            x_position = self.get_position_x(game_screen.width, game_screen.current_ms, bar.load_ms, bar.pixels_per_frame_x)
+            y_position = self.get_position_y(game_screen.current_ms, bar.load_ms, bar.pixels_per_frame_y, bar.pixels_per_frame_x)
+            ray.draw_texture(game_screen.note_type_list[bar.type], x_position + 60, y_position + 190, ray.WHITE)
 
     def draw_notes(self, game_screen: GameScreen):
         if len(self.current_notes_draw) <= 0:
@@ -649,17 +656,18 @@ class Player:
                 continue
             if note.type == 8:
                 continue
-            position = self.get_position(game_screen, note.load_ms, note.pixels_per_frame)
+            x_position = self.get_position_x(game_screen.width, game_screen.current_ms, note.load_ms, note.pixels_per_frame_x)
+            y_position = self.get_position_y(game_screen.current_ms, note.load_ms, note.pixels_per_frame_y, note.pixels_per_frame_x)
             if isinstance(note, Drumroll):
                 self.draw_drumroll(game_screen, note, current_eighth)
             elif isinstance(note, Balloon):
                 self.draw_balloon(game_screen, note, current_eighth)
                 moji_texture = game_screen.texture_se_moji[note.moji]
-                ray.draw_texture(moji_texture, position - (moji_texture.width//2) + 64, 323, ray.WHITE)
+                ray.draw_texture(moji_texture, x_position - (moji_texture.width//2) + 64, 323 + y_position, ray.WHITE)
             else:
-                ray.draw_texture(game_screen.note_type_list[note.type][current_eighth % 2], position, 192, ray.WHITE)
+                ray.draw_texture(game_screen.note_type_list[note.type][current_eighth % 2], x_position, y_position + 192, ray.WHITE)
                 moji_texture = game_screen.texture_se_moji[note.moji]
-                ray.draw_texture(moji_texture, position - (moji_texture.width//2) + 64, 323, ray.WHITE)
+                ray.draw_texture(moji_texture, x_position - (moji_texture.width//2) + 64, 323 + y_position, ray.WHITE)
             #ray.draw_text(str(note.index), position+64, 192, 25, ray.GREEN)
 
     def draw(self, game_screen: GameScreen):

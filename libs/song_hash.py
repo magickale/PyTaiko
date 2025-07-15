@@ -18,6 +18,8 @@ def process_tja_file(tja_file):
         all_notes.extend(
             TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
         )
+    if all_notes == []:
+        return ''
     hash = tja.hash_note_data(all_notes[0], all_notes[2])
     return hash
 
@@ -71,6 +73,8 @@ def build_song_hashes(output_file="cache/song_hashes.json"):
                 all_notes.extend(
                     TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
                 )
+            if all_notes == []:
+                continue
             hash_val = tja.hash_note_data(all_notes[0], all_notes[2])
             song_hashes[hash_val] = {
                 "file_path": str(tja_file),
