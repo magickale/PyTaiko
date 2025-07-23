@@ -506,13 +506,6 @@ class SongBox:
         if self.open_fade is not None:
             self.open_fade.update(get_current_ms())
 
-        '''
-        if self.black_name is None:
-            self.black_name = OutlinedText(self.text_name, 40, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True)
-        if self.name is None:
-            self.name = OutlinedText(self.text_name, 40, ray.Color(255, 255, 255, 255), SongBox.OUTLINE_MAP.get(self.texture_index, ray.Color(101, 0, 82, 255)), outline_thickness=5, vertical=True)
-        '''
-
         if self.name is None and -56 <= self.position <= 1280:
             self.name = OutlinedText(self.text_name, 40, ray.Color(255, 255, 255, 255), SongBox.OUTLINE_MAP.get(self.name_texture_index, ray.Color(101, 0, 82, 255)), outline_thickness=5, vertical=True)
             #print(f"loaded {self.text_name}")
@@ -579,7 +572,7 @@ class SongBox:
 
                 src = ray.Rectangle(0, 0, self.hori_name.texture.width, self.hori_name.texture.height)
                 dest_width = min(300, self.hori_name.texture.width)
-                dest = ray.Rectangle((x + 48) - (dest_width//2), y-52 + 150 - int(self.open_anim.attribute), dest_width, self.hori_name.texture.height)
+                dest = ray.Rectangle((x + 48) - (dest_width//2), y-45 + 150 - int(self.open_anim.attribute), dest_width, self.hori_name.texture.height)
                 self.hori_name.draw(src, dest, ray.Vector2(0, 0), 0, color)
 
 
@@ -608,7 +601,7 @@ class SongBox:
                 ray.draw_texture(textures['song_select'][494], 600, 125, color)
                 src = ray.Rectangle(0, 0, self.tja_count_text.texture.width, self.tja_count_text.texture.height)
                 dest_width = min(124, self.tja_count_text.texture.width)
-                dest = ray.Rectangle(560 - (dest_width//2), 118, dest_width, self.tja_count_text.texture.height)
+                dest = ray.Rectangle(560 - (dest_width//2), 126, dest_width, self.tja_count_text.texture.height)
                 self.tja_count_text.draw(src, dest, ray.Vector2(0, 0), 0, color)
             if self.texture_index in SongBox.GENRE_CHAR_MAP:
                 ray.draw_texture(textures['song_select'][SongBox.GENRE_CHAR_MAP[self.texture_index]+1], 650, 125, color)
@@ -704,7 +697,7 @@ class GenreBG:
             ray.draw_texture(texture, (1280//2) + (dest_width//2) - (texture.width//2), y-68, color)
 
             src = ray.Rectangle(0, 0, self.title.texture.width, self.title.texture.height)
-            dest = ray.Rectangle((1280//2) - (dest_width//2), y-68, dest_width, self.title.texture.height)
+            dest = ray.Rectangle((1280//2) - (dest_width//2), y-60, dest_width, self.title.texture.height)
             self.title.draw(src, dest, ray.Vector2(0, 0), 0, color)
 
 class YellowBox:
