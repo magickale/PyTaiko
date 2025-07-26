@@ -169,7 +169,8 @@ class TextStretchAnimation(BaseAnimation):
 class TextureResizeAnimation(BaseAnimation):
     def __init__(self, duration: float, initial_size: float = 1.0,
                      final_size: float = 0.0, delay: float = 0.0,
-                     reverse_delay: Optional[float] = None) -> None:
+                     reverse_delay: Optional[float] = None,
+                     ease_in: Optional[str] = None, ease_out: Optional[str] = None) -> None:
         super().__init__(duration, delay)
         self.initial_size = initial_size
         self.final_size = final_size
@@ -177,6 +178,8 @@ class TextureResizeAnimation(BaseAnimation):
         self.initial_size_saved = initial_size
         self.final_size_saved = final_size
         self.reverse_delay_saved = reverse_delay
+        self.ease_in = ease_in
+        self.ease_out = ease_out
 
     def restart(self) -> None:
         super().restart()
@@ -203,6 +206,7 @@ class TextureResizeAnimation(BaseAnimation):
         else:
             animation_time = elapsed_time - self.delay
             progress = animation_time / self.duration
+            progress = self._apply_easing(progress, self.ease_in, self.ease_out)
             self.attribute = self.initial_size + ((self.final_size - self.initial_size) * progress)
 
 

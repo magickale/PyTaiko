@@ -281,62 +281,151 @@ class OutlinedText:
     def _create_text_vertical(self, text: str, font_size: int, color: ray.Color, bg_color: ray.Color, font: Optional[ray.Font]=None, padding: int=10):
         rotate_chars = {'-', '‐', '|', '/', '\\', 'ー', '～', '~', '（', '）', '(', ')',
                         '「', '」', '[', ']', '［', '］', '【', '】', '…', '→', '→', ':', '：'}
+        side_punctuation = {'.', ',', '。', '、', "'", '"', '´', '`'}
+        horizontal_punct = {'?', '!', '？', '！', '†'}  # Characters that should be drawn horizontally when repeated
+        lowercase_kana = {
+                'ぁ', 'ア','ぃ', 'イ','ぅ', 'ウ','ぇ', 'エ','ぉ', 'オ',
+                'ゃ', 'ャ','ゅ', 'ュ','ょ', 'ョ','っ', 'ッ','ゎ', 'ヮ',
+                'ヶ', 'ヵ','ㇰ','ㇱ','ㇲ','ㇳ','ㇴ','ㇵ','ㇶ','ㇷ','ㇸ',
+                'ㇹ','ㇺ','ㇻ','ㇼ','ㇽ','ㇾ','ㇿ'
+            }
+
+        # Group consecutive horizontal punctuation marks
+        def group_horizontal_sequences(text):
+            groups = []
+            i = 0
+            while i < len(text):
+                if text[i] in horizontal_punct:
+                    # Start of a horizontal sequence
+                    sequence = text[i]
+                    j = i + 1
+                    # Continue collecting consecutive horizontal punctuation
+                    while j < len(text) and text[j] in horizontal_punct:
+                        sequence += text[j]
+                        j += 1
+
+                    # Only treat as horizontal if there are 2 or more characters
+                    if len(sequence) >= 2:
+                        groups.append(('horizontal', sequence))
+                    else:
+                        groups.append(('single', sequence))
+                    i = j
+                else:
+                    groups.append(('single', text[i]))
+                    i += 1
+            return groups
+
+        # Helper function to calculate adjusted character height
+        def get_char_height(char):
+            if char in side_punctuation:
+                return font_size // 4
+            elif char.islower() or char in lowercase_kana:
+                return font_size * 0.88
+            elif char.isspace():
+                return font_size * 0.6
+            else:
+                return font_size
+
+        grouped_text = group_horizontal_sequences(text)
+
+        # Calculate dimensions with proper height adjustments
         max_char_width = 0
         total_height = padding * 2
 
-        for char in text:
-            if font:
-                char_size = ray.measure_text_ex(font, char, font_size, 0)
+        for group_type, content in grouped_text:
+            if group_type == 'horizontal':
+                # For horizontal sequences, measure the combined width
+                if font:
+                    seq_size = ray.measure_text_ex(font, content, font_size, 0)
+                else:
+                    seq_width = ray.measure_text(content, font_size)
+                    seq_size = ray.Vector2(seq_width, font_size)
+                max_char_width = max(max_char_width, seq_size.x)
+                total_height += font_size  # Horizontal sequences use full font_size
             else:
-                char_width = ray.measure_text(char, font_size)
-                char_size = ray.Vector2(char_width, font_size)
+                # Single character
+                char = content
+                if font:
+                    char_size = ray.measure_text_ex(font, char, font_size, 0)
+                else:
+                    char_width = ray.measure_text(char, font_size)
+                    char_size = ray.Vector2(char_width, font_size)
 
-            if char in rotate_chars:
-                effective_width = char_size.y
-            else:
-                effective_width = char_size.x
+                if char in rotate_chars:
+                    effective_width = char_size.y
+                else:
+                    effective_width = char_size.x
+                max_char_width = max(max_char_width, effective_width)
 
-            max_char_width = max(max_char_width, effective_width)
+                # Use the adjusted height instead of fixed font_size
+                total_height += get_char_height(char)
 
-        total_height += len(text) * font_size
         width = int(max_char_width + (padding * 2))
-        height = total_height
+        height = int(total_height)  # Make sure it's an integer
         image = ray.gen_image_color(width, height, bg_color)
 
-        for i, char in enumerate(text):
-            char_y = i * font_size + padding
+        curr_char_y = padding - font_size
 
-            if font:
-                char_size = ray.measure_text_ex(font, char, font_size, 0)
-                char_image = ray.image_text_ex(font, char, font_size, 0, color)
+        for group_type, content in grouped_text:
+            if group_type == 'horizontal':
+                # Handle horizontal punctuation sequence
+                char_y = font_size
+                curr_char_y += char_y
+
+                if font:
+                    seq_size = ray.measure_text_ex(font, content, font_size, 0)
+                    seq_image = ray.image_text_ex(font, content, font_size, 0, color)
+                else:
+                    seq_width = ray.measure_text(content, font_size)
+                    seq_size = ray.Vector2(seq_width, font_size)
+                    seq_image = ray.image_text(content, font_size, color)
+
+                # Center the horizontal sequence
+                char_x = width // 2 - seq_size.x // 2
+
+                ray.image_draw(image, seq_image,
+                            ray.Rectangle(0, 0, seq_image.width, seq_image.height),
+                            ray.Rectangle(char_x, curr_char_y, seq_image.width, seq_image.height),
+                            ray.WHITE)
+                ray.unload_image(seq_image)
+
             else:
-                char_width = ray.measure_text(char, font_size)
-                char_size = ray.Vector2(char_width, font_size)
-                char_image = ray.image_text(char, font_size, color)
+                # Handle single character (existing logic)
+                char = content
+                char_y = get_char_height(char)  # Use the helper function
+                curr_char_y += char_y
 
-            if char in rotate_chars:
-                rotated_image = ray.gen_image_color(char_image.height, char_image.width, ray.BLANK)
+                if font:
+                    char_size = ray.measure_text_ex(font, char, font_size, 0)
+                    char_image = ray.image_text_ex(font, char, font_size, 0, color)
+                else:
+                    char_width = ray.measure_text(char, font_size)
+                    char_size = ray.Vector2(char_width, font_size)
+                    char_image = ray.image_text(char, font_size, color)
 
-                for y in range(char_image.height):
-                    for x in range(char_image.width):
-                        src_color = ray.get_image_color(char_image, x, y)
-                        new_x = char_image.height - 1 - y
-                        new_y = x
-                        ray.image_draw_pixel(rotated_image, new_x, new_y, src_color)
+                if char in rotate_chars:
+                    rotated_image = ray.gen_image_color(char_image.height, char_image.width, ray.BLANK)
+                    for y in range(char_image.height):
+                        for x in range(char_image.width):
+                            src_color = ray.get_image_color(char_image, x, y)
+                            new_x = char_image.height - 1 - y
+                            new_y = x
+                            ray.image_draw_pixel(rotated_image, new_x, new_y, src_color)
+                    ray.unload_image(char_image)
+                    char_image = rotated_image
+                    effective_width = char_size.y
+                else:
+                    effective_width = char_size.x
 
+                char_x = width // 2 - effective_width // 2
+                if char in side_punctuation:
+                    char_x += font_size//3
+
+                ray.image_draw(image, char_image,
+                            ray.Rectangle(0, 0, char_image.width, char_image.height),
+                            ray.Rectangle(char_x, curr_char_y, char_image.width, char_image.height),
+                            ray.WHITE)
                 ray.unload_image(char_image)
-                char_image = rotated_image
-                effective_width = char_size.y
-            else:
-                effective_width = char_size.x
-
-            char_x = width // 2 - effective_width // 2
-
-            ray.image_draw(image, char_image,
-                        ray.Rectangle(0, 0, char_image.width, char_image.height),
-                        ray.Rectangle(char_x, char_y, char_image.width, char_image.height),
-                        ray.WHITE)
-            ray.unload_image(char_image)
 
         texture = ray.load_texture_from_image(image)
         ray.unload_image(image)

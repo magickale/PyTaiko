@@ -1,9 +1,11 @@
 import threading
+from pathlib import Path
 
 import pyray as ray
 
+from libs.animation import Animation
 from libs.song_hash import build_song_hashes
-from libs.utils import global_data
+from libs.utils import get_current_ms, global_data, load_all_textures_from_zip
 from scenes.song_select import SongSelectScreen
 
 
@@ -18,14 +20,18 @@ class LoadScreen:
         self.song_select_screen = song_select_screen
 
         # Progress bar settings
-        self.progress_bar_width = width * 0.6
-        self.progress_bar_height = 20
+        self.progress_bar_width = width * 0.43
+        self.progress_bar_height = 50
         self.progress_bar_x = (width - self.progress_bar_width) // 2
-        self.progress_bar_y = height * 0.7
+        self.progress_bar_y = height * 0.85
 
         # Thread references
         self.loading_thread = None
         self.navigator_thread = None
+
+        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/attract/kidou.zip'))
+
+        self.fade_in = None
 
     def _load_song_hashes(self):
         """Background thread function to load song hashes"""
@@ -71,11 +77,17 @@ class LoadScreen:
             self.navigator_thread.start()
             self.navigator_started = True
 
-        if self.loading_complete:
-            return self.on_screen_end('TITLE')
+        if self.loading_complete and self.fade_in is None:
+            self.fade_in = Animation.create_fade(1000, initial_opacity=0.0, final_opacity=1.0, ease_in='cubic')
+
+        if self.fade_in is not None:
+            self.fade_in.update(get_current_ms())
+            if self.fade_in.is_finished:
+                return self.on_screen_end('TITLE')
 
     def draw(self):
         ray.draw_rectangle(0, 0, self.width, self.height, ray.BLACK)
+        ray.draw_texture(self.textures['kidou'][1], self.width//2 - self.textures['kidou'][1].width//2, 50, ray.WHITE)
 
         # Draw progress bar background
         ray.draw_rectangle(
@@ -83,7 +95,7 @@ class LoadScreen:
             int(self.progress_bar_y),
             int(self.progress_bar_width),
             int(self.progress_bar_height),
-            ray.DARKGRAY
+            ray.Color(101, 0, 0, 255)
         )
 
         # Draw progress bar fill
@@ -98,11 +110,5 @@ class LoadScreen:
                 ray.RED
             )
 
-        # Draw border
-        ray.draw_rectangle_lines(
-            int(self.progress_bar_x),
-            int(self.progress_bar_y),
-            int(self.progress_bar_width),
-            int(self.progress_bar_height),
-            ray.WHITE
-        )
+        if self.fade_in is not None:
+            ray.draw_rectangle(0, 0, self.width, self.height, ray.fade(ray.WHITE, self.fade_in.attribute))
