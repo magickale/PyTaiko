@@ -36,7 +36,7 @@ jobs:
             - name: Create Release Directory
               run: |
                   mkdir -p release
-                  cp -r Graphics Sounds Videos Songs config.toml release/
+                  cp -r Graphics Sounds Videos Songs config.toml shader model release/
                   # Copy executable based on OS
                   if [ "${{ runner.os }}" == "Windows" ]; then
                     cp *.exe release/ 2>/dev/null || true
@@ -65,8 +65,8 @@ jobs:
               if: github.ref == 'refs/heads/main' && github.event_name == 'push'
               with:
                   files: PyTaiko-${{ runner.os }}-${{ runner.arch }}.zip
-                  name: "PyTaiko [Latest Commit]"
-                  tag_name: "LatestCommit"
-                  prerelease: true
+                  name: "PyTaiko [Rolling Release]"
+                  tag_name: "latest"
+                  make_latest: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
