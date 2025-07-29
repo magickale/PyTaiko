@@ -24,6 +24,8 @@ class DiffHashesDecoder(json.JSONDecoder):
         super().__init__(object_hook=diff_hashes_object_hook, *args, **kwargs)
 
 def build_song_hashes(output_dir=Path("cache")):
+    if not output_dir.exists():
+        output_dir.mkdir()
     song_hashes: dict[str, list[dict]] = dict()
     path_to_hash: dict[str, str] = dict()  # New index for O(1) path lookups
 
