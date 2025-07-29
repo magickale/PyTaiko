@@ -16,8 +16,8 @@ class VideoPlayer:
             self.audio = audio.load_music_stream_from_data(self.video.audio.to_soundarray(), sample_rate=self.video.audio.fps)
 
         self.buffer_size = 10  # Number of frames to keep in memory
-        self.frame_buffer = {}  # Dictionary to store frames {timestamp: texture}
-        self.frame_timestamps = [(i * 1000) / self.video.fps for i in range(int(self.video.duration * self.video.fps) + 1)]
+        self.frame_buffer: dict[float, ray.Texture] = dict()  # Dictionary to store frames {timestamp: texture}
+        self.frame_timestamps: list[float] = [(i * 1000) / self.video.fps for i in range(int(self.video.duration * self.video.fps) + 1)]
 
         self.start_ms = None
         self.frame_index = 0

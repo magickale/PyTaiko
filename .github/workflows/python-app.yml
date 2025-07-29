@@ -32,7 +32,7 @@ jobs:
                   uv add nuitka
             - name: Build Executable
               run: |
-                  uv run nuitka --mode=app --include-module=raylib,moviepy,numpy,sounddevice,soundfile,tomlkit --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow --assume-yes-for-downloads PyTaiko.py
+                  uv run nuitka --mode=app --include-module=raylib,moviepy,numpy,sounddevice,soundfile,gitpython,tomlkit --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow --assume-yes-for-downloads PyTaiko.py
             - name: Create Release Directory
               run: |
                   mkdir -p release

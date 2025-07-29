@@ -26,10 +26,10 @@ class EntryScreen:
         self.width = width
         self.height = height
         self.screen_init = False
-        self.box_titles: list[tuple[OutlinedText, OutlinedText]] = [(OutlinedText('演奏ゲーム', 50, ray.Color(255, 255, 255, 255), ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
-        OutlinedText('演奏ゲーム', 50, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True)),
-        (OutlinedText('ゲーム設定', 50, ray.Color(255, 255, 255, 255), ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
-        OutlinedText('ゲーム設定', 50, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5, vertical=True))]
+        self.box_titles: list[tuple[OutlinedText, OutlinedText]] = [(OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
+        OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)),
+        (OutlinedText('ゲーム設定', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
+        OutlinedText('ゲーム設定', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True))]
 
     def load_textures(self):
         self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/entry.zip'))
