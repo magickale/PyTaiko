@@ -11,6 +11,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.backgrounds import Background
 from libs.tja import Balloon, Drumroll, Note, TJAParser, calculate_base_score
+from libs.transition import Transition
 from libs.utils import (
     OutlinedText,
     get_current_ms,
@@ -138,7 +139,9 @@ class GameScreen:
                 subtitle = self.tja.metadata.subtitle.get(global_data.config['general']['language'].lower(), '')
             else:
                 subtitle = ''
-            self.transition = Transition(self.height, session_data.song_title, subtitle)
+            self.transition = Transition(session_data.song_title, subtitle)
+            self.transition.is_second = True
+            self.transition.start()
 
     def on_screen_end(self, next_screen):
         self.screen_init = False
@@ -236,7 +239,7 @@ class GameScreen:
         if self.song_info is not None:
             self.song_info.draw(self)
         if self.transition is not None:
-            self.transition.draw(self.height)
+            self.transition.draw()
         if self.result_transition is not None:
             self.result_transition.draw(self.width, self.height, global_data.textures['shutter'][0], global_data.textures['shutter'][1])
 
@@ -764,9 +767,13 @@ class Judgement:
             self.curr_hit_ms = str(round(ms_display, 2))
 
         self.fade_animation_1 = Animation.create_fade(132, initial_opacity=0.5, delay=100)
+        self.fade_animation_1.start()
         self.fade_animation_2 = Animation.create_fade(316 - 233.3, delay=233.3)
+        self.fade_animation_2.start()
         self.move_animation = Animation.create_move(83, total_distance=15, start_position=144)
+        self.move_animation.start()
         self.texture_animation = Animation.create_texture_change(100, textures=[(33, 50, 1), (50, 83, 2), (83, 100, 3), (100, float('inf'), 4)])
+        self.texture_animation.start()
 
     def update(self, current_ms):
         self.fade_animation_1.update(current_ms)
@@ -811,6 +818,7 @@ class LaneHitEffect:
         self.type = type
         self.color = ray.fade(ray.WHITE, 0.5)
         self.fade = Animation.create_fade(150, delay=83, initial_opacity=0.5)
+        self.fade.start()
         self.is_finished = False
 
     def update(self, current_ms: float):
@@ -835,6 +843,7 @@ class DrumHitEffect:
         self.color = ray.fade(ray.WHITE, 1)
         self.is_finished = False
         self.fade = Animation.create_fade(100, delay=67)
+        self.fade.start()
 
     def update(self, current_ms: float):
         self.fade.update(current_ms)
@@ -861,10 +870,15 @@ class GaugeHitEffect:
         self.note_texture = note_texture
         self.is_big = big
         self.texture_change = Animation.create_texture_change(116.67, textures=[(0, 33.33, 1), (33.33, 66.66, 2), (66.66, float('inf'), 3)])
+        self.texture_change.start()
         self.circle_fadein = Animation.create_fade(133, initial_opacity=0.0, final_opacity=1.0, delay=16.67)
+        self.circle_fadein.start()
         self.resize = Animation.create_texture_resize(233, delay=self.texture_change.duration, initial_size=0.75, final_size=1.15)
+        self.resize.start()
         self.fade_out = Animation.create_fade(66, delay=233)
+        self.fade_out.start()
         self.test = Animation.create_fade(300, delay=116.67, initial_opacity=0.0, final_opacity=1.0)
+        self.test.start()
         self.color = ray.fade(ray.YELLOW, self.circle_fadein.attribute)
         self.is_finished = False
     def update(self, current_ms):
@@ -1000,7 +1014,9 @@ class DrumrollCounter:
         self.total_duration = 1349
         self.drumroll_count = 0
         self.fade_animation = Animation.create_fade(166, delay=self.total_duration - 166)
+        self.fade_animation.start()
         self.stretch_animation = Animation.create_text_stretch(0)
+        self.stretch_animation.start()
 
     def update_count(self, count: int, elapsed_time: float):
         self.total_duration = elapsed_time + 1349
@@ -1008,6 +1024,7 @@ class DrumrollCounter:
         if self.drumroll_count != count:
             self.drumroll_count = count
             self.stretch_animation = Animation.create_text_stretch(50)
+            self.stretch_animation.start()
 
     def update(self, game_screen: GameScreen, current_ms: float, drumroll_count: int):
         self.stretch_animation.update(current_ms)
@@ -1040,12 +1057,15 @@ class BalloonAnimation:
         self.balloon_total = balloon_total
         self.is_popped = False
         self.fade_animation = Animation.create_fade(166)
+        self.fade_animation.start()
         self.stretch_animation = Animation.create_text_stretch(0)
+        self.stretch_animation.start()
 
     def update_count(self, balloon_count: int):
         if self.balloon_count != balloon_count:
             self.balloon_count = balloon_count
             self.stretch_animation = Animation.create_text_stretch(50)
+            self.stretch_animation.start()
 
     def update(self, game_screen: GameScreen, current_ms: float, balloon_count: int, is_popped: bool):
         self.update_count(balloon_count)
@@ -1084,6 +1104,7 @@ class Combo:
     def __init__(self, combo: int, current_ms: float):
         self.combo = combo
         self.stretch_animation = Animation.create_text_stretch(0)
+        self.stretch_animation.start()
         self.color = [ray.fade(ray.WHITE, 1), ray.fade(ray.WHITE, 1), ray.fade(ray.WHITE, 1)]
         self.glimmer_dict = {0: 0, 1: 0, 2: 0}
         self.total_time = 250
@@ -1098,6 +1119,7 @@ class Combo:
         if self.combo != combo:
             self.combo = combo
             self.stretch_animation = Animation.create_text_stretch(50)
+            self.stretch_animation.start()
 
     def update(self, game_screen: GameScreen, current_ms: float, combo: int):
         self.update_count(current_ms, combo)
@@ -1149,11 +1171,13 @@ class ScoreCounter:
     def __init__(self, score: int):
         self.score = score
         self.stretch_animation = Animation.create_text_stretch(0)
+        self.stretch_animation.start()
 
     def update_count(self, current_ms: float, score: int):
         if self.score != score:
             self.score = score
             self.stretch_animation = Animation.create_text_stretch(50)
+            self.stretch_animation.start()
 
     def update(self, current_ms: float, score: int):
         self.update_count(current_ms, score)
@@ -1175,11 +1199,17 @@ class ScoreCounterAnimation:
     def __init__(self, counter: int):
         self.counter = counter
         self.fade_animation_1 = Animation.create_fade(50, initial_opacity=0.0, final_opacity=1.0)
+        self.fade_animation_1.start()
         self.move_animation_1 = Animation.create_move(80, total_distance=-20, start_position=175)
+        self.move_animation_1.start()
         self.fade_animation_2 = Animation.create_fade(80, delay=366.74)
+        self.fade_animation_2.start()
         self.move_animation_2 = Animation.create_move(66, total_distance=5, start_position=145, delay=80)
+        self.move_animation_2.start()
         self.move_animation_3 = Animation.create_move(66, delay=279.36, total_distance=-2, start_position=146)
+        self.move_animation_3.start()
         self.move_animation_4 = Animation.create_move(80, delay=366.74, total_distance=10, start_position=148)
+        self.move_animation_4.start()
 
         self.color = ray.fade(ray.Color(254, 102, 0, 255), 1.0)
         self.is_finished = False
@@ -1236,8 +1266,11 @@ class SongInfo:
             song_name, 40, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5
         )
         self.fade_in = Animation.create_fade(self.FADE_DURATION, initial_opacity=0.0, final_opacity=1.0)
+        self.fade_in.start()
         self.fade_out = Animation.create_fade(self.FADE_DURATION, delay=self.DISPLAY_DURATION)
+        self.fade_out.start()
         self.fade_fake = Animation.create_fade(0, delay=self.DISPLAY_DURATION*2 + self.FADE_DURATION)
+        self.fade_fake.start()
 
     def update(self, current_ms: float):
         self.fade_in.update(current_ms)
@@ -1256,8 +1289,11 @@ class SongInfo:
 
     def _reset_animations(self, current_ms: float):
         self.fade_in = Animation.create_fade(self.FADE_DURATION, initial_opacity=0.0, final_opacity=1.0)
+        self.fade_in.start()
         self.fade_out = Animation.create_fade(self.FADE_DURATION, delay=self.DISPLAY_DURATION)
+        self.fade_out.start()
         self.fade_fake = Animation.create_fade(0, delay=self.DISPLAY_DURATION*2 + self.FADE_DURATION)
+        self.fade_fake.start()
 
     def draw(self, game_screen: GameScreen):
         song_texture_index = (global_data.songs_played % 4) + 8
@@ -1273,62 +1309,10 @@ class SongInfo:
         dest = ray.Rectangle(text_x, text_y, self.song_title.texture.width, self.song_title.texture.height)
         self.song_title.draw(src, dest, ray.Vector2(0, 0), 0, self.song_name_fade)
 
-class Transition:
-    def __init__(self, screen_height: int, title: str, subtitle: str) -> None:
-        duration = 266
-        self.is_finished = False
-        self.rainbow_up = Animation.create_move(duration, start_position=0, total_distance=screen_height + global_data.textures['scene_change_rainbow'][2].height, ease_in='cubic')
-        self.chara_down = None
-        self.title = OutlinedText(title, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
-        self.subtitle = OutlinedText(subtitle, 30, ray.WHITE, ray.BLACK, outline_thickness=5)
-        self.song_info_fade = Animation.create_fade(duration/2)
-    def update(self, current_time_ms: float):
-        self.rainbow_up.update(current_time_ms)
-        self.song_info_fade.update(current_time_ms)
-        if self.rainbow_up.is_finished and self.chara_down is None:
-            self.chara_down = Animation.create_move(33, start_position=0, total_distance=30)
-
-        if self.chara_down is not None:
-            self.chara_down.update(current_time_ms)
-            self.is_finished = self.chara_down.is_finished
-
-    def draw_song_info(self):
-        texture = global_data.textures['scene_change_rainbow'][6]
-        y = 720//2 - texture.height
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(1280//2 - (texture.width*3)//2, y, texture.width*3, texture.height*2)
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, min(0.70, self.song_info_fade.attribute)))
-
-        texture = self.title.texture
-        y = 720//2 - texture.height//2 - 20
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(1280//2 - texture.width//2, y, texture.width, texture.height)
-        self.title.draw(src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.song_info_fade.attribute))
-
-        texture = self.subtitle.texture
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(1280//2 - texture.width//2, y + 50, texture.width, texture.height)
-        self.subtitle.draw(src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.song_info_fade.attribute))
-
-    def draw(self, screen_height: int):
-        ray.draw_texture(global_data.textures['scene_change_rainbow'][1], 0, screen_height - int(self.rainbow_up.attribute), ray.WHITE)
-        texture = global_data.textures['scene_change_rainbow'][0]
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(0, -int(self.rainbow_up.attribute), texture.width, screen_height)
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
-        texture = global_data.textures['scene_change_rainbow'][3]
-        offset = 0
-        if self.chara_down is not None:
-            offset = int(self.chara_down.attribute)
-        ray.draw_texture(global_data.textures['scene_change_rainbow'][4], 142, 14 -int(self.rainbow_up.attribute*3) - offset, ray.WHITE)
-        ray.draw_texture(global_data.textures['scene_change_rainbow'][5], 958, 144 -int(self.rainbow_up.attribute*3) - offset, ray.WHITE)
-        ray.draw_texture(texture, 76, -int(self.rainbow_up.attribute*3) - offset, ray.WHITE)
-
-        self.draw_song_info()
-
 class ResultTransition:
     def __init__(self, screen_height: int):
         self.move = Animation.create_move(983.33, start_position=0, total_distance=screen_height//2, ease_out='quadratic')
+        self.move.start()
 
         self.is_finished = False
 
@@ -1409,6 +1393,7 @@ class Gauge:
 
     def add_good(self):
         self.gauge_update_anim = Animation.create_fade(450)
+        self.gauge_update_anim.start()
         self.previous_length = int(self.gauge_length)
         self.gauge_length += (1 / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
         if self.gauge_length > 87:
@@ -1416,6 +1401,7 @@ class Gauge:
 
     def add_ok(self):
         self.gauge_update_anim = Animation.create_fade(450)
+        self.gauge_update_anim.start()
         self.previous_length = int(self.gauge_length)
         self.gauge_length += ((1 * self.table[self.difficulty][self.level]["ok_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
         if self.gauge_length > 87:
@@ -1430,6 +1416,7 @@ class Gauge:
     def update(self, current_ms: float, good_count: int, ok_count: int, bad_count: int, total_notes: int):
         if self.gauge_length == 87 and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
+            self.rainbow_fade_in.start()
 
         if self.gauge_update_anim is not None:
             self.gauge_update_anim.update(current_ms)
@@ -1441,6 +1428,7 @@ class Gauge:
 
         if self.rainbow_animation is None:
             self.rainbow_animation = Animation.create_texture_change((16.67*8) * 3, textures=[((16.67 * 3) * i, (16.67 * 3) * (i + 1), i) for i in range(8)])
+            self.rainbow_animation.start()
         else:
             self.rainbow_animation.update(current_ms)
             if self.rainbow_animation.is_finished or self.gauge_length < 87:

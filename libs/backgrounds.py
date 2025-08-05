@@ -52,12 +52,14 @@ class DonBGBase:
         self.name = 'donbg_a_' + str(index).zfill(2)
         self.textures = (load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.name}_{self.player_num}p.zip')))
         self.move = Animation.create_move(3000, start_position=0, total_distance=-self.textures[self.name + f'_{self.player_num}p'][0].width)
+        self.move.start()
         self.is_clear = False
         self.clear_fade = None
 
     def update(self, current_time_ms: float, is_clear: bool):
         if not self.is_clear and is_clear:
             self.clear_fade = Animation.create_fade(150, initial_opacity=0.0, final_opacity=1.0)
+            self.clear_fade.start()
         self.is_clear = is_clear
         self.move.update(current_time_ms)
         if self.clear_fade is not None:
@@ -74,6 +76,7 @@ class DonBG1(DonBGBase):
     def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
         super().__init__(index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1000, start_position=0, total_distance=20, reverse_delay=0)
+        self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
@@ -100,6 +103,7 @@ class DonBG2(DonBGBase):
     def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
         super().__init__(index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1500, start_position=0, total_distance=20, reverse_delay=0)
+        self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
@@ -124,9 +128,13 @@ class DonBG3(DonBGBase):
         duration = 266
         bounce_distance = 40
         self.bounce_up = Animation.create_move(duration, total_distance=-bounce_distance, ease_out='quadratic')
+        self.bounce_up.start()
         self.bounce_down = Animation.create_move(duration, total_distance=-bounce_distance, ease_in='quadratic', delay=self.bounce_up.duration)
+        self.bounce_down.start()
         self.overlay_move = Animation.create_move(duration*3, total_distance=20, reverse_delay=0, ease_in='quadratic', ease_out='quadratic', delay=self.bounce_up.duration+self.bounce_down.duration)
+        self.overlay_move.start()
         self.overlay_move_2 = Animation.create_move(duration*3, total_distance=20, reverse_delay=0, ease_in='quadratic', ease_out='quadratic', delay=self.bounce_up.duration+self.bounce_down.duration+self.overlay_move.duration)
+        self.overlay_move_2.start()
 
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
@@ -157,6 +165,7 @@ class DonBG4(DonBGBase):
     def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
         super().__init__(index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1500, start_position=0, total_distance=20, reverse_delay=0)
+        self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
@@ -182,8 +191,11 @@ class DonBG5(DonBGBase):
         duration = 266
         bounce_distance = 40
         self.bounce_up = Animation.create_move(duration, total_distance=-bounce_distance, ease_out='quadratic')
+        self.bounce_up.start()
         self.bounce_down = Animation.create_move(duration, total_distance=-bounce_distance, ease_in='quadratic', delay=self.bounce_up.duration)
+        self.bounce_down.start()
         self.adjust = Animation.create_move(1000, total_distance=10, reverse_delay=0, delay=self.bounce_up.duration+self.bounce_down.duration)
+        self.adjust.start()
 
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
@@ -212,6 +224,7 @@ class DonBG6(DonBGBase):
     def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
         super().__init__(index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1000, start_position=0, total_distance=20, reverse_delay=0)
+        self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
@@ -260,6 +273,7 @@ class BGNormal1(BGNormalBase):
     def __init__(self, index: int, screen_width: int, screen_height: int):
         super().__init__(index, screen_width, screen_height)
         self.flicker = Animation.create_fade(16.67*4, initial_opacity=0.5, final_opacity=0.4, reverse_delay=0)
+        self.flicker.start()
     def update(self, current_time_ms: float):
         self.flicker.update(current_time_ms)
         if self.flicker.is_finished:
@@ -272,6 +286,7 @@ class BGNormal2(BGNormalBase):
     def __init__(self, index: int, screen_width: int, screen_height: int):
         super().__init__(index, screen_width, screen_height)
         self.flicker = Animation.create_fade(16.67*4, initial_opacity=0.5, final_opacity=0.4, reverse_delay=0)
+        self.flicker.start()
     def update(self, current_time_ms: float):
         self.flicker.update(current_time_ms)
         if self.flicker.is_finished:
@@ -284,6 +299,7 @@ class BGNormal3(BGNormalBase):
     def __init__(self, index: int, screen_width: int, screen_height: int):
         super().__init__(index, screen_width, screen_height)
         self.flicker = Animation.create_fade(16.67*10, initial_opacity=0.5, final_opacity=0.4, reverse_delay=0)
+        self.flicker.start()
     def update(self, current_time_ms):
         self.flicker.update(current_time_ms)
         if self.flicker.is_finished:
@@ -325,7 +341,9 @@ class BGNormal4(BGNormalBase):
             self.spawn_point = self.random_excluding_range()
             duration = random.randint(1400, 2000)
             self.move_y = Animation.create_move(duration, total_distance=360)
+            self.move_y.start()
             self.move_x = Animation.create_move(duration, total_distance=random.randint(-300, 300))
+            self.move_x.start()
         def random_excluding_range(self):
             while True:
                 num = random.randint(0, 1280)
@@ -339,9 +357,12 @@ class BGNormal4(BGNormalBase):
     def __init__(self, index: int, screen_width: int, screen_height: int):
         super().__init__(index, screen_width, screen_height)
         self.flicker = Animation.create_fade(16.67*3, initial_opacity=0.5, final_opacity=0.4, reverse_delay=0)
+        self.flicker.start()
         self.turtle_move = Animation.create_move(3333*2, start_position=screen_width+112, total_distance=-(screen_width+(112*4)))
+        self.turtle_move.start()
         textures = ((0, 100, 3), (100, 200, 4), (200, 300, 5), (300, 400, 6), (400, 500, 7), (500, 600, 8))
         self.turtle_change = Animation.create_texture_change(600, textures=textures)
+        self.turtle_change.start()
         self.petals = {self.Petal(), self.Petal(), self.Petal(), self.Petal(), self.Petal()}
     def update(self, current_time_ms: float):
         self.flicker.update(current_time_ms)
@@ -372,6 +393,7 @@ class BGNormal5(BGNormalBase):
     def __init__(self, index: int, screen_width: int, screen_height: int):
         super().__init__(index, screen_width, screen_height)
         self.flicker = Animation.create_fade(16.67*10, initial_opacity=0.75, final_opacity=0.4, reverse_delay=0)
+        self.flicker.start()
     def update(self, current_time_ms: float):
         self.flicker.update(current_time_ms)
         if self.flicker.is_finished:
@@ -434,13 +456,17 @@ class BGFever4(BGFeverBase):
     def __init__(self, index: int, screen_width: int, screen_height: int):
         super().__init__(index, screen_width, screen_height)
         self.vertical_move = Animation.create_move(1300, start_position=0, total_distance=50, reverse_delay=0)
+        self.vertical_move.start()
         self.horizontal_move = Animation.create_move(5000, start_position=0, total_distance=self.textures[self.name][2].width)
+        self.horizontal_move.start()
         self.bg_texture_move_down = None
         self.bg_texture_move_up = None
 
     def start(self):
         self.bg_texture_move_down = Animation.create_move(516, total_distance=400, ease_in='cubic')
+        self.bg_texture_move_down.start()
         self.bg_texture_move_up = Animation.create_move(200, total_distance=40, delay=self.bg_texture_move_down.duration, ease_out='quadratic')
+        self.bg_texture_move_up.start()
 
     def update(self, current_time_ms: float):
         if self.bg_texture_move_down is not None:

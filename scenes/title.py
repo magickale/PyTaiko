@@ -3,15 +3,13 @@ from pathlib import Path
 
 import pyray as ray
 
-from libs.animation import Animation
 from libs.audio import audio
+from libs.texture import tex
 from libs.utils import (
     get_current_ms,
     global_data,
     is_l_don_pressed,
     is_r_don_pressed,
-    load_all_textures_from_zip,
-    load_texture_from_zip,
 )
 from libs.video import VideoPlayer
 
@@ -29,9 +27,7 @@ class TitleScreen:
         self.op_video_list = [file for file in video_dir.glob("**/*.mp4")]
         video_dir = Path(global_data.config["paths"]["video_path"]) / "attract_videos"
         self.attract_video_list = [file for file in video_dir.glob("**/*.mp4")]
-        self.load_sounds()
         self.screen_init = False
-        self.fade_out = None
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
@@ -41,32 +37,25 @@ class TitleScreen:
         self.sound_bachi_hit = audio.load_sound(title_dir / "SE_ATTRACT_3.ogg")
         self.sound_warning_message = audio.load_sound(title_dir / "VO_ATTRACT_3.ogg")
         self.sound_warning_error = audio.load_sound(title_dir / "SE_ATTRACT_1.ogg")
-        self.sounds = [self.sound_bachi_swipe, self.sound_bachi_hit, self.sound_warning_message, self.sound_warning_error]
-
-    def load_textures(self):
-        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/attract/keikoku.zip'))
-        self.texture_black = load_texture_from_zip(Path('Graphics/lumendata/attract/movie.zip'), 'movie_img00000.png')
 
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
-            self.load_textures()
+            tex.load_screen_textures('title')
+            self.load_sounds()
             self.state = State.OP_VIDEO
             self.op_video = None
             self.attract_video = None
             self.warning_board = None
+            self.fade_out = tex.get_animation(13)
 
     def on_screen_end(self) -> str:
         if self.op_video is not None:
             self.op_video.stop()
         if self.attract_video is not None:
             self.attract_video.stop()
-        for sound in self.sounds:
-            if audio.is_sound_playing(sound):
-                audio.stop_sound(sound)
-        for zip in self.textures:
-            for texture in self.textures[zip]:
-                ray.unload_texture(texture)
+        audio.unload_all_sounds()
+        tex.unload_textures()
         self.screen_init = False
         return "ENTRY"
 
@@ -82,7 +71,7 @@ class TitleScreen:
                 self.state = State.WARNING
         elif self.state == State.WARNING:
             if self.warning_board is None:
-                self.warning_board = WarningScreen(get_current_ms(), self)
+                self.warning_board = WarningScreen(get_current_ms())
             self.warning_board.update(get_current_ms(), self)
             if self.warning_board.is_finished:
                 self.state = State.ATTRACT_VIDEO
@@ -101,66 +90,59 @@ class TitleScreen:
     def update(self):
         self.on_screen_start()
 
-        if self.fade_out is not None:
-            self.fade_out.update(get_current_ms())
-            if self.fade_out.is_finished:
-                return self.on_screen_end()
+        self.fade_out.update(get_current_ms())
+        if self.fade_out.is_finished:
+            return self.on_screen_end()
 
         self.scene_manager()
         if is_l_don_pressed() or is_r_don_pressed():
-            self.fade_out = Animation.create_fade(1000, initial_opacity=0.0, final_opacity=1.0)
+            self.fade_out.start()
             audio.play_sound(self.sound_don)
 
     def draw(self):
         if self.state == State.OP_VIDEO and self.op_video is not None:
             self.op_video.draw()
         elif self.state == State.WARNING and self.warning_board is not None:
-            bg_source = ray.Rectangle(0, 0, self.textures['keikoku'][0].width, self.textures['keikoku'][0].height)
-            bg_dest = ray.Rectangle(0, 0, self.width, self.height)
-            ray.draw_texture_pro(self.textures['keikoku'][0], bg_source, bg_dest, ray.Vector2(0,0), 0, ray.WHITE)
-            self.warning_board.draw(self)
+            tex.draw_texture('warning', 'background')
+            self.warning_board.draw()
         elif self.state == State.ATTRACT_VIDEO and self.attract_video is not None:
             self.attract_video.draw()
 
-        if self.fade_out is not None:
-            src = ray.Rectangle(0, 0, self.texture_black.width, self.texture_black.height)
-            dest = ray.Rectangle(0, 0, self.width, self.height)
-            ray.draw_texture_pro(self.texture_black, src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.fade_out.attribute))
+        tex.draw_texture('movie', 'background', color=ray.fade(ray.WHITE, self.fade_out.attribute))
 
     def draw_3d(self):
         pass
 
 class WarningScreen:
     class X:
-        DELAY = 4250
         def __init__(self):
-            self.resize = Animation.create_texture_resize(166.67, initial_size=1.0, final_size=1.5, delay=self.DELAY, reverse_delay=0)
-            self.fadein = Animation.create_fade(166.67, delay=self.DELAY, initial_opacity=0.0, final_opacity=1.0, reverse_delay=166.67)
-            self.fadein_2 = Animation.create_fade(166.67, delay=self.DELAY + self.fadein.duration, initial_opacity=0.0, final_opacity=1.0)
-
+            self.resize = tex.get_animation(0)
+            self.resize.start()
+            self.fadein = tex.get_animation(1)
+            self.fadein.start()
+            self.fadein_2 = tex.get_animation(2)
+            self.fadein_2.start()
             self.sound_played = False
 
-        def update(self, current_ms: float, sound, elapsed_time):
+        def update(self, current_ms: float, sound):
+            self.resize.update(current_ms)
             self.fadein.update(current_ms)
             self.fadein_2.update(current_ms)
-            self.resize.update(current_ms)
 
-            if self.DELAY + self.fadein.duration <= elapsed_time and not self.sound_played:
+            if self.resize.attribute > 1 and not self.sound_played:
                 audio.play_sound(sound)
                 self.sound_played = True
 
-        def draw(self, texture):
-            scale = self.resize.attribute
-            x_x = 150 + (texture.width//2) - ((texture.width * scale)//2)
-            x_y = 200 + (texture.height//2) - ((texture.height * scale)//2)
-            x_source = ray.Rectangle(0, 0, texture.width, texture.height)
-            x_dest = ray.Rectangle(x_x, x_y, texture.width*scale, texture.height*scale)
-            ray.draw_texture_pro(texture, x_source, x_dest, ray.Vector2(0,0), 0, ray.fade(ray.WHITE, self.fadein.attribute))
+        def draw_bg(self):
+            tex.draw_texture('warning', 'x_lightred', color=ray.fade(ray.WHITE, self.fadein_2.attribute))
+
+        def draw_fg(self):
+            tex.draw_texture('warning', 'x_red', color=ray.fade(ray.WHITE, self.fadein.attribute), scale=self.resize.attribute, center=True)
 
     class BachiHit:
         def __init__(self):
-            self.resize = Animation.create_texture_resize(233.34, initial_size=0.5, final_size=1.5)
-            self.fadein = Animation.create_fade(116.67, initial_opacity=0.0, final_opacity=1.0, reverse_delay=0)
+            self.resize = tex.get_animation(3)
+            self.fadein = tex.get_animation(4)
 
             self.sound_played = False
 
@@ -168,83 +150,55 @@ class WarningScreen:
             if not self.sound_played:
                 audio.play_sound(sound)
                 self.sound_played = True
-                self.resize.start_ms = current_ms
-                self.fadein.start_ms = current_ms
+                self.fadein.start()
+                self.resize.start()
             self.resize.update(current_ms)
             self.fadein.update(current_ms)
 
-        def draw(self, texture):
-            scale = self.resize.attribute
-            hit_x = 350 + (texture.width//2) - ((texture.width * scale)//2)
-            hit_y = 225 + (texture.height//2) - ((texture.height * scale)//2)
-            hit_source = ray.Rectangle(0, 0, texture.width, texture.height)
-            hit_dest = ray.Rectangle(hit_x, hit_y, texture.width*scale, texture.height*scale)
-            ray.draw_texture_pro(texture, hit_source, hit_dest, ray.Vector2(0,0), 0, ray.fade(ray.WHITE, self.fadein.attribute))
+        def draw(self):
+            tex.draw_texture('warning', 'bachi_hit', color=ray.fade(ray.WHITE, self.fadein.attribute), scale=self.resize.attribute, center=True)
+            if self.resize.attribute > 0 and self.sound_played:
+                tex.draw_texture('warning', 'bachi')
 
     class Characters:
-        def __init__(self, current_ms: float, start_ms: float):
-            self.start_ms = start_ms
-            self.current_ms = current_ms
-            self.shadow_fade = Animation.create_fade(50, delay=16.67, initial_opacity=0.75)
-
-            self.animation_sequence = [(300.00, 5, 4), (183.33, 6, 4), (166.67, 7, 4), (166.67, 8, 9), (166.67, 11, 9), (166.67, 12, 9), (166.67, 13, 9),
-                     (166.67, 5, 4), (150.00, 5, 4), (133.34, 6, 4), (133.34, 7, 4), (133.34, 8, 9), (133.34, 11, 9), (133.34, 12, 9), (133.34, 13, 9),
-                     (133.34, 5, 4), (116.67, 5, 4), (100.00, 6, 4), (100.00, 7, 4), (100.00, 8, 9), (100.00, 11, 9), (100.00, 12, 9), (100.00, 13, 9),
-                     (100.00, 5, 4), (100.00, 5, 4), (83.330, 6, 4), (83.330, 7, 4), (83.330, 8, 9), (83.330, 11, 9), (83.330, 12, 9), (83.330, 13, 9),
-                     (83.330, 5, 4), (83.330, 5, 4), (66.670, 6, 4), (66.670, 7, 4), (66.670, 8, 9), (66.670, 11, 9), (66.670, 12, 9), (66.670, 13, 9),
-                     (66.670, 5, 4), (66.670, 5, 4), (66.670, 6, 4), (66.670, 7, 4), (66.670, 8, 9), (66.670, 11, 9), (66.670, 12, 9), (66.670, 13, 9),
-                     (66.670, 5, 4), (66.670, 5, 4), (66.670, 6, 4), (66.670, 7, 4), (66.670, 8, 9), (66.670, 11, 9), (66.670, 12, 9), (66.670, 13, 9),
-                     (66.670, 17, 16)]
-
-
-            self.time = 0
-            self.index_val = 0
+        def __init__(self):
+            self.shadow_fade = tex.get_animation(5)
+            self.chara_0_frame = tex.get_animation(7)
+            self.chara_1_frame = tex.get_animation(6)
+            self.chara_0_frame.start()
+            self.chara_1_frame.start()
+            self.saved_frame = 0
             self.is_finished = False
-
-        def character_index(self, index: int) -> int:
-            elapsed_time = self.current_ms - self.start_ms
-            delay = 566.67
-            if self.index_val == len(self.animation_sequence)-1:
-                return int(self.animation_sequence[len(self.animation_sequence)-1][index])
-            elif elapsed_time <= delay:
-                return int(self.animation_sequence[0][index])
-            elif elapsed_time >= delay + self.time:
-                new_index = self.animation_sequence[self.index_val][index]
-                self.index_val += 1
-                self.shadow_fade.start_ms = self.current_ms
-                self.shadow_fade.duration = int(self.animation_sequence[self.index_val][0])
-                self.time += self.animation_sequence[self.index_val][0]
-                return int(new_index)
-            else:
-                return int(self.animation_sequence[self.index_val][index])
 
         def update(self, current_ms: float):
             self.shadow_fade.update(current_ms)
+            self.chara_1_frame.update(current_ms)
+            self.chara_0_frame.update(current_ms)
             self.current_ms = current_ms
-            self.is_finished = True if self.character_index(1) == self.animation_sequence[-1][1] else False
+            if self.chara_1_frame.attribute != self.saved_frame:
+                self.saved_frame = self.chara_1_frame.attribute
+                if not self.shadow_fade.is_started:
+                    self.shadow_fade.start()
+                else:
+                    self.shadow_fade.restart()
+            self.is_finished = self.chara_1_frame.is_finished
+        def draw(self, fade: ray.Color, fade_2: ray.Color):
+            tex.draw_texture('warning', 'chara_0_shadow', color=fade_2)
+            tex.draw_texture('warning', 'chara_0', frame=self.chara_0_frame.attribute, color=fade)
 
-        def draw(self, textures, fade: ray.Color, fade_2: ray.Color, y: int):
-            ray.draw_texture(textures['keikoku'][2], 135, y+textures['keikoku'][4].height+110, fade_2)
-            ray.draw_texture(textures['keikoku'][self.character_index(2)], 115, y+150, fade)
-
-            ray.draw_texture(textures['keikoku'][3], 360, y+textures['keikoku'][5].height+60, fade_2)
-
-            if 6 < self.character_index(1) < 17:
-                ray.draw_texture(textures['keikoku'][self.character_index(1) - 1], 315, y+100, ray.fade(ray.WHITE, self.shadow_fade.attribute))
-            ray.draw_texture(textures['keikoku'][self.character_index(1)], 315, y+100, fade)
-            if self.character_index(1) == 17:
-                ray.draw_texture(textures['keikoku'][19], 350, y+135, ray.WHITE)
+            tex.draw_texture('warning', 'chara_1_shadow', color=fade_2)
+            if -1 < self.chara_1_frame.attribute-1 < 7:
+                tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute-1, color=ray.fade(ray.WHITE, self.shadow_fade.attribute))
+            tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute, color=fade)
 
     class Board:
-        def __init__(self, screen_width, screen_height, texture):
-            #Move warning board down from top of screen
-            self.move_down = Animation.create_move(266.67, total_distance=screen_height + ((screen_height - texture.height)//2) + 20, start_position=-720)
-
-            #Move warning board up a little bit
-            self.move_up = Animation.create_move(116.67, start_position=92 + 20, delay=self.move_down.duration, total_distance =-30)
-
-            #And finally into its correct position
-            self.move_center = Animation.create_move(116.67, start_position=82, delay=self.move_down.duration + self.move_up.duration, total_distance=10)
+        def __init__(self):
+            self.move_down = tex.get_animation(10)
+            self.move_down.start()
+            self.move_up = tex.get_animation(11)
+            self.move_up.start()
+            self.move_center = tex.get_animation(12)
+            self.move_center.start()
             self.y_pos = 0
 
         def update(self, current_ms):
@@ -252,29 +206,29 @@ class WarningScreen:
             self.move_up.update(current_ms)
             self.move_center.update(current_ms)
             if self.move_up.is_finished:
-                self.y_pos = int(self.move_center.attribute)
+                self.y_pos = self.move_center.attribute
             elif self.move_down.is_finished:
-                self.y_pos = int(self.move_up.attribute)
+                self.y_pos = self.move_up.attribute
             else:
-                self.y_pos = int(self.move_down.attribute)
+                self.y_pos = self.move_down.attribute
+            tex.update_attr('warning', 'warning_box', 'y', self.y_pos)
 
-        def draw(self, texture):
-            ray.draw_texture(texture, 0, self.y_pos, ray.WHITE)
+        def draw(self):
+            tex.draw_texture('warning', 'warning_box')
 
 
-    def __init__(self, current_ms: float, title_screen: TitleScreen):
+    def __init__(self, current_ms: float):
         self.start_ms = current_ms
 
-        self.fade_in = Animation.create_fade(300, delay=266.67, initial_opacity=0.0, final_opacity=1.0)
-        self.fade_out = Animation.create_fade(500, delay=1000, initial_opacity=0.0, final_opacity=1.0)
+        self.fade_in = tex.get_animation(8)
+        self.fade_in.start()
+        self.fade_out = tex.get_animation(9)
+        self.fade_out.start()
 
-        self.board = self.Board(title_screen.width, title_screen.height, title_screen.textures['keikoku'][1])
+        self.board = self.Board()
         self.warning_x = self.X()
         self.warning_bachi_hit = self.BachiHit()
-        self.characters = self.Characters(current_ms, self.start_ms)
-
-        self.source_rect = ray.Rectangle(0, 0, title_screen.texture_black.width, title_screen.texture_black.height)
-        self.dest_rect = ray.Rectangle(0, 0, title_screen.width, title_screen.height)
+        self.characters = self.Characters()
 
         self.is_finished = False
 
@@ -284,8 +238,12 @@ class WarningScreen:
         self.fade_out.update(current_ms)
         delay = 566.67
         elapsed_time = current_ms - self.start_ms
-        self.warning_x.update(current_ms, title_screen.sound_warning_error, elapsed_time)
+        self.warning_x.update(current_ms, title_screen.sound_warning_error)
         self.characters.update(current_ms)
+        tex.update_attr('warning', 'chara_0', 'y', self.board.y_pos)
+        tex.update_attr('warning', 'chara_0_shadow', 'y', self.board.y_pos)
+        tex.update_attr('warning', 'chara_1_shadow', 'y', self.board.y_pos)
+        tex.update_attr('warning', 'chara_1', 'y', self.board.y_pos)
 
         if self.characters.is_finished:
             self.warning_bachi_hit.update(current_ms, title_screen.sound_bachi_hit)
@@ -297,16 +255,14 @@ class WarningScreen:
 
         self.is_finished = self.fade_out.is_finished
 
-    def draw(self, title_screen: TitleScreen):
+    def draw(self):
         fade = ray.fade(ray.WHITE, self.fade_in.attribute)
-        fade_2 = ray.fade(ray.WHITE, self.fade_in.attribute if self.fade_in.attribute < 0.75 else 0.75)
-        self.board.draw(title_screen.textures['keikoku'][1])
-        ray.draw_texture(title_screen.textures['keikoku'][15], 150, 200, ray.fade(ray.WHITE, self.warning_x.fadein_2.attribute))
+        fade_2 = ray.fade(ray.WHITE, min(self.fade_in.attribute, 0.75))
 
-        self.characters.draw(title_screen.textures, fade, fade_2, self.board.y_pos)
+        self.board.draw()
+        self.warning_x.draw_bg()
+        self.characters.draw(fade, fade_2)
+        self.warning_x.draw_fg()
+        self.warning_bachi_hit.draw()
 
-        self.warning_x.draw(title_screen.textures['keikoku'][14])
-
-        self.warning_bachi_hit.draw(title_screen.textures['keikoku'][18])
-
-        ray.draw_texture_pro(title_screen.texture_black, self.source_rect, self.dest_rect, ray.Vector2(0,0), 0, ray.fade(ray.WHITE, self.fade_out.attribute))
+        tex.draw_texture('movie', 'background', color=ray.fade(ray.WHITE, self.fade_out.attribute))

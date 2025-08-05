@@ -1,6 +1,17 @@
-from typing import Optional
+import time
+from typing import Any, Optional
 
-from libs.utils import get_current_ms
+
+def rounded(num: float) -> int:
+    sign = 1 if (num >= 0) else -1
+    num = abs(num)
+    result = int(num)
+    if (num - result >= 0.5):
+        result += 1
+    return sign * result
+
+def get_current_ms() -> int:
+    return rounded(time.time() * 1000)
 
 
 class BaseAnimation():
@@ -15,17 +26,39 @@ class BaseAnimation():
         """
         self.duration = duration
         self.delay = delay
+        self.delay_saved = delay
         self.start_ms = get_current_ms()
         self.is_finished = False
         self.attribute = 0
+        self.is_started = False
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __str__(self):
+        return str(self.__dict__)
 
     def update(self, current_time_ms: float) -> None:
         """Update the animation based on the current time."""
-        pass
 
     def restart(self) -> None:
         self.start_ms = get_current_ms()
         self.is_finished = False
+        self.delay = self.delay_saved
+
+    def start(self) -> None:
+        self.is_started = True
+        self.restart()
+
+    def pause(self):
+        self.is_started = False
+
+    def unpause(self):
+        self.is_started = True
+
+    def reset(self):
+        self.restart()
+        self.pause()
 
     def _ease_in(self, progress: float, ease_type: str) -> float:
         if ease_type == "quadratic":
@@ -60,6 +93,7 @@ class FadeAnimation(BaseAnimation):
                      reverse_delay: Optional[float] = None) -> None:
         super().__init__(duration, delay)
         self.initial_opacity = initial_opacity
+        self.attribute = initial_opacity
         self.final_opacity = final_opacity
         self.initial_opacity_saved = initial_opacity
         self.final_opacity_saved = final_opacity
@@ -73,8 +107,13 @@ class FadeAnimation(BaseAnimation):
         self.reverse_delay = self.reverse_delay_saved
         self.initial_opacity = self.initial_opacity_saved
         self.final_opacity = self.final_opacity_saved
+        self.attribute = self.initial_opacity
 
     def update(self, current_time_ms: float) -> None:
+        if not self.is_started:
+            return
+        else:
+            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
 
         if elapsed_time <= self.delay:
@@ -116,8 +155,13 @@ class MoveAnimation(BaseAnimation):
         self.reverse_delay = self.reverse_delay_saved
         self.total_distance = self.total_distance_saved
         self.start_position = self.start_position_saved
+        self.attribute = self.start_position
 
     def update(self, current_time_ms: float) -> None:
+        if not self.is_started:
+            return
+        else:
+            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time < self.delay:
             self.attribute = self.start_position
@@ -142,12 +186,22 @@ class TextureChangeAnimation(BaseAnimation):
         super().__init__(duration)
         self.textures = textures
         self.delay = delay
+        self.delay_saved = delay
 
     def update(self, current_time_ms: float) -> None:
-        elapsed_time = current_time_ms - self.start_ms - self.delay
-        if elapsed_time <= self.duration:
+        super().update(current_time_ms)
+        if not self.is_started:
+            return
+        else:
+            self.is_started = not self.is_finished
+        elapsed_time = current_time_ms - self.start_ms
+        if elapsed_time < self.delay:
+            return
+
+        animation_time = elapsed_time - self.delay
+        if animation_time <= self.duration:
             for start, end, index in self.textures:
-                if start < elapsed_time <= end:
+                if start < animation_time <= end:
                     self.attribute = index
         else:
             self.is_finished = True
@@ -156,6 +210,10 @@ class TextStretchAnimation(BaseAnimation):
     def __init__(self, duration: float) -> None:
         super().__init__(duration)
     def update(self, current_time_ms: float) -> None:
+        if not self.is_started:
+            return
+        else:
+            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time <= self.duration:
             self.attribute = 2 + 5 * (elapsed_time // 25)
@@ -189,6 +247,10 @@ class TextureResizeAnimation(BaseAnimation):
 
 
     def update(self, current_time_ms: float) -> None:
+        if not self.is_started:
+            return
+        else:
+            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
 
         if elapsed_time <= self.delay:
@@ -286,3 +348,86 @@ class Animation:
             reverse_delay: If provided, resize will play in reverse after this delay
         """
         return TextureResizeAnimation(duration, **kwargs)
+
+ANIMATION_CLASSES = {
+    "fade": FadeAnimation,
+    "move": MoveAnimation,
+    "texture_change": TextureChangeAnimation,
+    "text_stretch": TextStretchAnimation,
+    "texture_resize": TextureResizeAnimation
+}
+
+def parse_animations(animation_json):
+    raw_anims = {}
+    for item in animation_json:
+        if "id" not in item:
+            raise Exception("Animation requires id")
+        if "type" not in item:
+            raise Exception("Animation requires type")
+
+        raw_anims[item["id"]] = item.copy()
+
+    def find_refs(anim_id: int, visited: Optional[set] = None):
+        if visited is None:
+            visited = set()
+
+        if anim_id in visited:
+            raise Exception(f"Circular reference detected involving animation {anim_id}")
+
+        visited.add(anim_id)
+        animation = raw_anims[anim_id].copy()
+
+        for key, value in animation.items():
+            if isinstance(value, dict) and "reference_id" in value:
+                animation[key] = resolve_value(value, visited.copy())
+
+        visited.remove(anim_id)
+        return animation
+
+    def resolve_value(ref_obj: dict[str, Any], visited: set):
+        if "property" not in ref_obj:
+            raise Exception("Reference requires 'property' field")
+
+        ref_id = ref_obj["reference_id"]
+        ref_property = ref_obj["property"]
+
+        if ref_id not in raw_anims:
+            raise Exception(f"Referenced animation {ref_id} not found")
+
+        resolved_ref_animation = find_refs(ref_id, visited)
+
+        if ref_property not in resolved_ref_animation:
+            raise Exception(f"Property '{ref_property}' not found in animation {ref_id}")
+
+        base_value = resolved_ref_animation[ref_property]
+
+        if "init_val" in ref_obj:
+            init_val = ref_obj["init_val"]
+
+            if isinstance(init_val, dict) and "reference_id" in init_val:
+                init_val = resolve_value(init_val, visited)
+
+            try:
+                return base_value + init_val
+            except TypeError:
+                raise Exception(f"Cannot add init_val {init_val} to referenced value {base_value}")
+
+        return base_value
+
+    anim_dict = dict()
+
+    for id in raw_anims:
+        absolute_anim = find_refs(id)
+        type = absolute_anim.pop("type")
+        id_val = absolute_anim.pop("id")
+        if "comment" in absolute_anim:
+            absolute_anim.pop("comment")
+        if type not in ANIMATION_CLASSES:
+            raise Exception(f"Unknown Animation type: {type}")
+
+        anim_class = ANIMATION_CLASSES[type]
+
+        anim_object = anim_class(**absolute_anim)
+        anim_dict[id_val] = anim_object
+
+    return anim_dict

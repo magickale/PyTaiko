@@ -1,5 +1,8 @@
+import ctypes
+import hashlib
 import math
 import os
+import sys
 import tempfile
 import time
 import zipfile
@@ -16,7 +19,25 @@ from raylib import (
     SHADER_UNIFORM_VEC4,
 )
 
-#TJA Format creator is unknown. I did not create the format, but I did write the parser though.
+from libs.texture import TextureWrapper
+
+
+def force_dedicated_gpu():
+    """Force Windows to use dedicated GPU for this application"""
+    if sys.platform == "win32":
+        try:
+            # NVIDIA Optimus
+            nvapi = ctypes.windll.kernel32.LoadLibraryW("nvapi64.dll")
+            if nvapi:
+                ctypes.windll.kernel32.SetEnvironmentVariableW("SHIM_MCCOMPAT", "0x800000001")
+        except Exception as e:
+            print(e)
+
+        try:
+            # AMD PowerXpress
+            ctypes.windll.kernel32.SetEnvironmentVariableW("AMD_VULKAN_ICD", "DISABLE")
+        except Exception as e:
+            print(e)
 
 def get_zip_filenames(zip_path: Path) -> list[str]:
     result = []
@@ -230,6 +251,7 @@ def reset_session():
 class GlobalData:
     selected_song: Path = Path()
     textures: dict[str, list[ray.Texture]] = field(default_factory=lambda: dict())
+    tex: TextureWrapper = field(default_factory=lambda: TextureWrapper())
     songs_played: int = 0
     config: dict = field(default_factory=lambda: dict())
     song_hashes: dict[str, list[dict]] = field(default_factory=lambda: dict()) #Hash to path
@@ -239,13 +261,24 @@ class GlobalData:
 
 global_data = GlobalData()
 
+text_cache = set()
+if not Path('cache/image').exists():
+    Path('cache/image').mkdir()
+
+for file in Path('cache/image').iterdir():
+    text_cache.add(file.stem)
+
 class OutlinedText:
     def __init__(self, text: str, font_size: int, color: ray.Color, outline_color: ray.Color, outline_thickness=5.0, vertical=False):
-        self.font = self._load_font_for_text(text)
-        if vertical:
-            self.texture = self._create_text_vertical(text, font_size, color, ray.BLANK, self.font)
+        self.hash = self._hash_text(text, font_size, color, vertical)
+        if self.hash in text_cache:
+            self.texture = ray.load_texture(f'cache/image/{self.hash}.png')
         else:
-            self.texture = self._create_text_horizontal(text, font_size, color, ray.BLANK, self.font)
+            self.font = self._load_font_for_text(text)
+            if vertical:
+                self.texture = self._create_text_vertical(text, font_size, color, ray.BLANK, self.font)
+            else:
+                self.texture = self._create_text_horizontal(text, font_size, color, ray.BLANK, self.font)
         outline_size = ray.ffi.new('float*', outline_thickness)
         if isinstance(outline_color, tuple):
             outline_color_alloc = ray.ffi.new("float[4]", [
@@ -272,11 +305,31 @@ class OutlinedText:
         ray.set_shader_value(self.shader, outline_color_loc, outline_color_alloc, SHADER_UNIFORM_VEC4)
         ray.set_shader_value(self.shader, texture_size_loc, texture_size, SHADER_UNIFORM_VEC2)
 
+        self.default_src = ray.Rectangle(0, 0, self.texture.width, self.texture.height)
+
+    def _hash_text(self, text: str, font_size: int, color: ray.Color, vertical: bool):
+        n = hashlib.sha256()
+        n.update(text.encode('utf-8'))
+        n.update(str(font_size).encode('utf-8'))
+        if isinstance(color, tuple):
+            n.update(str(color[0]).encode('utf-8'))
+            n.update(str(color[1]).encode('utf-8'))
+            n.update(str(color[2]).encode('utf-8'))
+            n.update(str(color[3]).encode('utf-8'))
+        else:
+            n.update(str(color.r).encode('utf-8'))
+            n.update(str(color.g).encode('utf-8'))
+            n.update(str(color.b).encode('utf-8'))
+            n.update(str(color.a).encode('utf-8'))
+        n.update(str(vertical).encode('utf-8'))
+        return n.hexdigest()
+
     def _load_font_for_text(self, text: str) -> ray.Font:
         codepoint_count = ray.ffi.new('int *', 0)
         unique_codepoints = set(text)
         codepoints = ray.load_codepoints(''.join(unique_codepoints), codepoint_count)
-        return ray.load_font_ex(str(Path('Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, 0)
+        font = ray.load_font_ex(str(Path('Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, 0)
+        return font
 
     def _create_text_vertical(self, text: str, font_size: int, color: ray.Color, bg_color: ray.Color, font: Optional[ray.Font]=None, padding: int=10):
         rotate_chars = {'-', '‐', '|', '/', '\\', 'ー', '～', '~', '（', '）', '(', ')',
@@ -427,6 +480,7 @@ class OutlinedText:
                             ray.WHITE)
                 ray.unload_image(char_image)
 
+        ray.export_image(image, f'cache/image/{self.hash}.png')
         texture = ray.load_texture_from_image(image)
         ray.unload_image(image)
         return texture
@@ -452,6 +506,7 @@ class OutlinedText:
                     ray.WHITE)
         ray.unload_image(text_image)
 
+        ray.export_image(image, f'cache/image/{self.hash}.png')
         texture = ray.load_texture_from_image(image)
         ray.unload_image(image)
         return texture

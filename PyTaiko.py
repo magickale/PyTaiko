@@ -12,6 +12,7 @@ from raylib.defines import (
 
 from libs.audio import audio
 from libs.utils import (
+    force_dedicated_gpu,
     get_config,
     global_data,
     load_all_textures_from_zip,
@@ -59,6 +60,7 @@ def create_song_db():
         print("Scores database created successfully")
 
 def main():
+    force_dedicated_gpu()
     global_data.config = get_config()
     screen_width: int = global_data.config["video"]["screen_width"]
     screen_height: int = global_data.config["video"]["screen_height"]
@@ -77,6 +79,7 @@ def main():
 
     ray.init_window(screen_width, screen_height, "PyTaiko")
     global_data.textures = load_all_textures_from_zip(Path('Graphics/lumendata/intermission.zip'))
+    global_data.tex.load_screen_textures('transition')
     if global_data.config["video"]["borderless"]:
         ray.toggle_borderless_windowed()
     if global_data.config["video"]["fullscreen"]:
@@ -114,21 +117,22 @@ def main():
     ray.set_exit_key(ray.KeyboardKey.KEY_A)
 
     while not ray.window_should_close():
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_F11):
+            ray.toggle_fullscreen()
+        elif ray.is_key_pressed(ray.KeyboardKey.KEY_F10):
+            ray.toggle_borderless_windowed()
+
         ray.begin_texture_mode(target)
         ray.begin_blend_mode(ray.BlendMode.BLEND_CUSTOM_SEPARATE)
 
         screen = screen_mapping[current_screen]
-        # Begin 3D mode with orthographic camera
-
-        if ray.is_key_pressed(ray.KeyboardKey.KEY_F11):
-            ray.toggle_borderless_windowed()
 
         next_screen = screen.update()
         ray.clear_background(ray.BLACK)
         screen.draw()
-        ray.begin_mode_3d(camera)
-        screen.draw_3d()
-        ray.end_mode_3d()
+        #ray.begin_mode_3d(camera)
+        #screen.draw_3d()
+       # ray.end_mode_3d()
 
         if next_screen is not None:
             current_screen = next_screen

@@ -16,14 +16,18 @@ Windows:
 ```
   Run PyTaiko.exe
 ```
-MacOS/Linux:
+MacOS:
 ```
 Good luck, would suggest running with python directly
+```
+Linux:
+```
+    Run PyTaiko.bin for Debian based systems, otherwise run python
 ```
 
 ## Roadmap
 
-https://linear.app/pytaiko
+Ask me
 
 
 ## Known Issues

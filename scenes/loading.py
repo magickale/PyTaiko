@@ -1,11 +1,11 @@
 import threading
-from pathlib import Path
 
 import pyray as ray
 
 from libs.animation import Animation
 from libs.song_hash import build_song_hashes
-from libs.utils import get_current_ms, global_data, load_all_textures_from_zip
+from libs.texture import tex
+from libs.utils import get_current_ms, global_data
 from scenes.song_select import SongSelectScreen
 
 
@@ -29,8 +29,6 @@ class LoadScreen:
         self.loading_thread = None
         self.navigator_thread = None
 
-        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/attract/kidou.zip'))
-
         self.fade_in = None
 
     def _load_song_hashes(self):
@@ -53,6 +51,7 @@ class LoadScreen:
 
     def on_screen_start(self):
         if not self.screen_init:
+            tex.load_screen_textures('loading')
             self.loading_thread = threading.Thread(target=self._load_song_hashes)
             self.loading_thread.daemon = True
             self.loading_thread.start()
@@ -60,7 +59,7 @@ class LoadScreen:
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
-
+        tex.unload_textures()
         if self.loading_thread and self.loading_thread.is_alive():
             self.loading_thread.join(timeout=1.0)
         if self.navigator_thread and self.navigator_thread.is_alive():
@@ -79,6 +78,7 @@ class LoadScreen:
 
         if self.loading_complete and self.fade_in is None:
             self.fade_in = Animation.create_fade(1000, initial_opacity=0.0, final_opacity=1.0, ease_in='cubic')
+            self.fade_in.start()
 
         if self.fade_in is not None:
             self.fade_in.update(get_current_ms())
@@ -87,7 +87,7 @@ class LoadScreen:
 
     def draw(self):
         ray.draw_rectangle(0, 0, self.width, self.height, ray.BLACK)
-        ray.draw_texture(self.textures['kidou'][1], self.width//2 - self.textures['kidou'][1].width//2, 50, ray.WHITE)
+        tex.draw_texture('kidou', 'warning')
 
         # Draw progress bar background
         ray.draw_rectangle(

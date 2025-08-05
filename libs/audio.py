@@ -17,6 +17,7 @@ from numpy import (
     interp,
     mean,
     ndarray,
+    ones,
     sqrt,
     uint8,
     zeros,
@@ -570,93 +571,116 @@ class AudioEngine:
         return True
 
     def _audio_callback(self, outdata: ndarray, frames: int, time: int, status: str) -> None:
-        """Callback function for the sounddevice stream"""
+        """callback function for the sounddevice stream"""
         if status:
             print(f"Status: {status}")
 
-        # Process any new sound play requests
-        while not self.sound_queue.empty():
-            try:
-                sound_name = self.sound_queue.get_nowait()
-                if sound_name in self.sounds:
-                    self.sounds[sound_name].play()
-            except queue.Empty:
-                break
+        self._process_sound_queue()
+        self._process_music_queue()
 
-        # Process any new music play requests
-        while not self.music_queue.empty():
-            try:
-                music_name, action, *args = self.music_queue.get_nowait()
-                if music_name in self.music_streams:
-                    music = self.music_streams[music_name]
-                    if action == 'play':
-                        music.play()
-                    elif action == 'stop':
-                        music.stop()
-                    elif action == 'pause':
-                        music.pause()
-                    elif action == 'resume':
-                        music.resume()
-                    elif action == 'seek' and args:
-                        music.seek(args[0])
-            except queue.Empty:
-                break
+        # Pre-allocate output buffer (reuse if possible)
+        if not hasattr(self, '_output_buffer') or self._output_buffer.shape != (frames, self.output_channels):
+            self._output_buffer = zeros((frames, self.output_channels), dtype=float32)
+        else:
+            self._output_buffer.fill(0.0)  # Clear previous data
 
-        # Mix all playing sounds and music
-        output = zeros((frames, self.output_channels), dtype=float32)
+        self._mix_sounds(self._output_buffer, frames)
 
-        # Mix sounds
-        for sound_name, sound in self.sounds.items():
-            if sound.is_playing:
-                sound_data = sound.get_frames(frames)
+        self._mix_music(self._output_buffer, frames)
 
-                # If mono sound but stereo output, duplicate to both channels
-                if isinstance(sound_data, ndarray):
-                    if sound.channels == 1 and self.output_channels > 1:
-                        sound_data = column_stack([sound_data] * self.output_channels)
+        # Apply master volume in-place
+        if self.master_volume != 1.0:
+            self._output_buffer *= self.master_volume
 
-                    # Ensure sound_data matches the output format
-                    if sound.channels > self.output_channels:
-                        # Down-mix if needed
-                        if self.output_channels == 1:
-                            sound_data = mean(sound_data, axis=1)
-                        else:
-                            # Keep only the first output_channels
-                            sound_data = sound_data[:, :self.output_channels]
-
-                    # Add to the mix (simple additive mixing)
-                    output += sound_data
-
-        # Mix music streams
-        for music_name, music in self.music_streams.items():
-            if music.is_playing:
-                music_data = music.get_frames(frames)
-
-                # If mono music but stereo output, duplicate to both channels
-                if music.channels == 1 and self.output_channels > 1:
-                    music_data = column_stack([music_data] * self.output_channels)
-
-                # Ensure music_data matches the output format
-                if music.channels > self.output_channels:
-                    # Down-mix if needed
-                    if self.output_channels == 1:
-                        music_data = mean(music_data, axis=1)
-                    else:
-                        # Keep only the first output_channels
-                        music_data = music_data[:, :self.output_channels]
-
-                # Add to the mix
-                output += music_data
-
-        # Apply master volume
-        output *= self.master_volume
-
-        # Apply simple limiter to prevent clipping
-        max_val = np_max(np_abs(output))
+        # Apply limiter only if needed
+        max_val = np_max(np_abs(self._output_buffer))
         if max_val > 1.0:
-            output = output / max_val
+            self._output_buffer /= max_val
 
-        outdata[:] = output
+        outdata[:] = self._output_buffer
+
+    def _process_sound_queue(self) -> None:
+        """Process sound queue"""
+        sounds_to_play = []
+        try:
+            while True:
+                sounds_to_play.append(self.sound_queue.get_nowait())
+        except queue.Empty:
+            pass
+
+        for sound_name in sounds_to_play:
+            if sound_name in self.sounds:
+                self.sounds[sound_name].play()
+
+    def _process_music_queue(self) -> None:
+        """Process music queue"""
+        music_commands = []
+        try:
+            while True:
+                music_commands.append(self.music_queue.get_nowait())
+        except queue.Empty:
+            pass
+
+        for command in music_commands:
+            music_name, action, *args = command
+            if music_name in self.music_streams:
+                music = self.music_streams[music_name]
+                if action == 'play':
+                    music.play()
+                elif action == 'stop':
+                    music.stop()
+                elif action == 'pause':
+                    music.pause()
+                elif action == 'resume':
+                    music.resume()
+                elif action == 'seek' and args:
+                    music.seek(args[0])
+
+    def _mix_sounds(self, output: ndarray, frames: int) -> None:
+        """sound mixing"""
+        for sound in self.sounds.values():
+            if not sound.is_playing:
+                continue
+
+            sound_data = sound.get_frames(frames)
+            if sound_data is None or not isinstance(sound_data, ndarray):
+                continue
+
+            # Handle channel mismatch
+            if sound.channels != self.output_channels:
+                sound_data = self._convert_channels(sound_data, sound.channels)
+
+            output += sound_data
+
+    def _mix_music(self, output: ndarray, frames: int) -> None:
+        """music mixing"""
+        for music in self.music_streams.values():
+            if not music.is_playing:
+                continue
+
+            music_data = music.get_frames(frames)
+            if music_data is None:
+                continue
+
+            if music.channels != self.output_channels:
+                music_data = self._convert_channels(music_data, music.channels)
+
+            output += music_data
+
+    def _convert_channels(self, data: ndarray, input_channels: int) -> ndarray:
+        """channel conversion with caching"""
+        if input_channels == self.output_channels:
+            return data
+
+        if input_channels == 1 and self.output_channels > 1:
+            return data[:, None] * ones((1, self.output_channels), dtype=float32)
+        elif input_channels > self.output_channels:
+            if self.output_channels == 1:
+                return mean(data, axis=1, keepdims=True)
+            else:
+                return data[:, :self.output_channels]
+
+        return data
 
     def _start_update_thread(self) -> None:
         """Start a thread to update music streams"""
@@ -671,16 +695,13 @@ class AudioEngine:
             active_streams = [music for music in self.music_streams.values() if music.is_playing]
 
             if not active_streams:
-                # Sleep longer when no streams are active
                 time.sleep(0.5)
                 continue
 
             for music in active_streams:
                 music.update()
 
-            # Adjust sleep based on number of active streams
-            sleep_time = max(0.05, 0.1 / len(active_streams))
-            time.sleep(sleep_time)
+            time.sleep(0.1)
 
     def init_audio_device(self):
         if self.audio_device_ready:
@@ -769,6 +790,9 @@ class AudioEngine:
     def unload_sound(self, sound: str) -> None:
         if sound in self.sounds:
             del self.sounds[sound]
+
+    def unload_all_sounds(self) -> None:
+        self.sounds.clear()
 
     def normalize_sound(self, sound: str, rms: float) -> None:
         if sound in self.sounds:

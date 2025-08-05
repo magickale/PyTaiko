@@ -2,18 +2,15 @@ from pathlib import Path
 
 import pyray as ray
 
-from libs.animation import Animation
 from libs.audio import audio
+from libs.texture import tex
 from libs.utils import (
     OutlinedText,
-    draw_scaled_texture,
     get_current_ms,
     is_l_don_pressed,
     is_l_kat_pressed,
     is_r_don_pressed,
     is_r_kat_pressed,
-    load_all_textures_from_zip,
-    load_texture_from_zip,
 )
 
 
@@ -26,19 +23,9 @@ class EntryScreen:
         self.width = width
         self.height = height
         self.screen_init = False
-        self.box_titles: list[tuple[OutlinedText, OutlinedText]] = [(OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
-        OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)),
-        (OutlinedText('ゲーム設定', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
-        OutlinedText('ゲーム設定', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True))]
 
     def load_textures(self):
-        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/entry.zip'))
-        self.texture_black = load_texture_from_zip(Path('Graphics/lumendata/attract/movie.zip'), 'movie_img00000.png')
-
-    def unload_textures(self):
-        for group in self.textures:
-            for texture in self.textures[group]:
-                ray.unload_texture(texture)
+        tex.load_screen_textures('entry')
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
@@ -51,43 +38,44 @@ class EntryScreen:
             self.load_textures()
             self.load_sounds()
             self.side = 1
-            self.selected_box = 0
-            self.num_boxes = 2
+            self.box_manager = BoxManager()
             self.state = State.SELECT_SIDE
             self.screen_init = True
-            self.drum_move_1 = None
-            self.drum_move_2 = None
-            self.drum_move_3 = None
-            self.cloud_resize = None
-            self.cloud_texture_change = None
-            self.cloud_fade = None
-            self.fade_out = None
-            self.cloud_resize_loop = Animation.create_texture_resize(200, initial_size=1.0, final_size=1.1, reverse_delay=200)
-            self.side_select_fade = Animation.create_fade(100, initial_opacity=0.0, final_opacity=1.0)
-            self.bg_flicker = Animation.create_fade(500, initial_opacity=0.5, final_opacity=0.4, reverse_delay=0)
+            self.side_select_fade = tex.get_animation(0)
+            self.bg_flicker = tex.get_animation(1)
+            self.drum_move_1 = tex.get_animation(2)
+            self.drum_move_2 = tex.get_animation(3)
+            self.drum_move_3 = tex.get_animation(4)
+            self.cloud_resize = tex.get_animation(5)
+            self.cloud_resize_loop = tex.get_animation(6)
+            self.cloud_texture_change = tex.get_animation(7)
+            self.cloud_fade = tex.get_animation(8)
+            self.cloud_resize_loop.start()
+            self.side_select_fade.start()
+            self.bg_flicker.start()
             audio.play_sound(self.bgm)
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
-        self.unload_textures()
         audio.stop_sound(self.bgm)
+        tex.unload_textures()
+        audio.unload_all_sounds()
         return next_screen
 
     def handle_input(self):
-        if self.fade_out is not None:
+        if self.box_manager.is_box_selected():
             return
         if self.state == State.SELECT_SIDE:
             if is_l_don_pressed() or is_r_don_pressed():
                 if self.side == 1:
                     return self.on_screen_end("TITLE")
-                self.drum_move_1 = Animation.create_move(350, total_distance=-295, ease_out='quadratic')
-                self.drum_move_2 = Animation.create_move(200, total_distance=50, delay=self.drum_move_1.duration, ease_in='quadratic')
-                self.drum_move_3 = Animation.create_move(350, total_distance=-170, delay=self.drum_move_1.duration+self.drum_move_2.duration, ease_out='quadratic')
-                self.cloud_resize = Animation.create_texture_resize(350, initial_size=0.75, final_size=1.0)
-                self.cloud_resize_loop = Animation.create_texture_resize(200, initial_size=1.0, final_size=1.2, reverse_delay=200, delay=self.cloud_resize.duration)
-                textures = ((0, 83.35, 45), (83.35, 166.7, 48), (166.7, 250, 49), (250, 333, 50))
-                self.cloud_texture_change = Animation.create_texture_change(333, textures=textures, delay=self.drum_move_1.duration+self.drum_move_2.duration+self.drum_move_3.duration)
-                self.cloud_fade = Animation.create_fade(83.35, delay=self.drum_move_1.duration+self.drum_move_2.duration+self.drum_move_3.duration+self.cloud_texture_change.duration)
+                self.drum_move_1.start()
+                self.drum_move_2.start()
+                self.drum_move_3.start()
+                self.cloud_resize.start()
+                self.cloud_resize_loop.start()
+                self.cloud_texture_change.start()
+                self.cloud_fade.start()
                 self.state = State.SELECT_MODE
                 audio.play_sound(self.sound_don)
             if is_l_kat_pressed():
@@ -99,13 +87,13 @@ class EntryScreen:
         elif self.state == State.SELECT_MODE:
             if is_l_don_pressed() or is_r_don_pressed():
                 audio.play_sound(self.sound_don)
-                self.fade_out = Animation.create_fade(160)
+                self.box_manager.select_box()
             if is_l_kat_pressed():
                 audio.play_sound(self.sound_kat)
-                self.selected_box = max(0, self.selected_box - 1)
+                self.box_manager.move_left()
             if is_r_kat_pressed():
                 audio.play_sound(self.sound_kat)
-                self.selected_box = min(self.num_boxes - 1, self.selected_box + 1)
+                self.box_manager.move_right()
 
     def update(self):
         self.on_screen_start()
@@ -113,197 +101,255 @@ class EntryScreen:
         self.bg_flicker.update(get_current_ms())
         if self.bg_flicker.is_finished:
             self.bg_flicker.restart()
-        if self.drum_move_1 is not None:
-            self.drum_move_1.update(get_current_ms())
-        if self.drum_move_2 is not None:
-            self.drum_move_2.update(get_current_ms())
-        if self.drum_move_3 is not None:
-            self.drum_move_3.update(get_current_ms())
-        if self.cloud_resize is not None:
-            self.cloud_resize.update(get_current_ms())
-        if self.cloud_texture_change is not None:
-            self.cloud_texture_change.update(get_current_ms())
-        if self.cloud_fade is not None:
-            self.cloud_fade.update(get_current_ms())
+        self.drum_move_1.update(get_current_ms())
+        self.drum_move_2.update(get_current_ms())
+        self.drum_move_3.update(get_current_ms())
+        self.cloud_resize.update(get_current_ms())
+        self.cloud_texture_change.update(get_current_ms())
+        self.cloud_fade.update(get_current_ms())
         self.cloud_resize_loop.update(get_current_ms())
         if self.cloud_resize_loop.is_finished:
-            self.cloud_resize_loop = Animation.create_texture_resize(200, initial_size=1.0, final_size=1.1, reverse_delay=200)
-        if self.fade_out is not None:
-            self.fade_out.update(get_current_ms())
-            if self.fade_out.is_finished:
-                if self.selected_box == 0:
-                    return self.on_screen_end("SONG_SELECT")
-                elif self.selected_box == 1:
-                    return self.on_screen_end("SETTINGS")
+            self.cloud_resize_loop.restart()
+        self.box_manager.update(get_current_ms())
+        if self.box_manager.is_finished():
+            return self.on_screen_end(self.box_manager.selected_box())
         return self.handle_input()
 
     def draw_background(self):
-        bg_texture = self.textures['entry'][368]
-        src = ray.Rectangle(0, 0, bg_texture.width, bg_texture.height)
-        dest = ray.Rectangle(0, 0, self.width, bg_texture.height)
-        ray.draw_texture_pro(bg_texture, src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
-
-        ray.draw_texture(self.textures['entry'][369], (self.width // 2) - (self.textures['entry'][369].width // 2), (self.height // 2) - self.textures['entry'][369].height, ray.WHITE)
-        ray.draw_texture(self.textures['entry'][370], 0, (self.height // 2) - (self.textures['entry'][370].height // 2), ray.WHITE)
-        ray.draw_texture(self.textures['entry'][371], (self.width // 2) - (self.textures['entry'][371].width // 2), (self.height // 2) - (self.textures['entry'][371].height // 2) + 10, ray.WHITE)
-        ray.draw_texture(self.textures['entry'][372], 0, 0, ray.WHITE)
-        ray.draw_texture(self.textures['entry'][373], self.width - self.textures['entry'][373].width, 0, ray.WHITE)
-        draw_scaled_texture(self.textures['entry'][374], -7, -15, 2.0, ray.fade(ray.WHITE, self.bg_flicker.attribute))
+        tex.draw_texture('background', 'bg')
+        tex.draw_texture('background', 'tower')
+        tex.draw_texture('background', 'shops_center')
+        tex.draw_texture('background', 'people')
+        tex.draw_texture('background', 'shops_left')
+        tex.draw_texture('background', 'shops_right')
+        tex.draw_texture('background', 'lights', scale=2.0, color=ray.fade(ray.WHITE, self.bg_flicker.attribute))
 
     def draw_footer(self):
-        ray.draw_texture(self.textures['entry'][375], 1, self.height - self.textures['entry'][375].height + 7, ray.WHITE)
+        tex.draw_texture('side_select', 'footer')
         if self.state == State.SELECT_SIDE or self.side != 0:
-            ray.draw_texture(self.textures['entry'][376], 1, self.height - self.textures['entry'][376].height + 1, ray.WHITE)
+            tex.draw_texture('side_select', 'footer_left')
         if self.state == State.SELECT_SIDE or self.side != 2:
-            ray.draw_texture(self.textures['entry'][377], 2 + self.textures['entry'][377].width, self.height - self.textures['entry'][376].height + 1, ray.WHITE)
+            tex.draw_texture('side_select', 'footer_right')
 
     def draw_side_select(self, fade):
         color = ray.fade(ray.WHITE, fade)
-        left_x, top_y, right_x, bottom_y = 238, 108, 979, 520
-        ray.draw_texture(self.textures['entry'][205], left_x, top_y, color)
-        ray.draw_texture(self.textures['entry'][208], right_x, top_y, color)
-        ray.draw_texture(self.textures['entry'][204], left_x, bottom_y, color)
-        ray.draw_texture(self.textures['entry'][207], right_x, bottom_y, color)
+        tex.draw_texture('side_select', 'box_top_left', color=color)
+        tex.draw_texture('side_select', 'box_top_right', color=color)
+        tex.draw_texture('side_select', 'box_bottom_left', color=color)
+        tex.draw_texture('side_select', 'box_bottom_right', color=color)
 
-        texture = self.textures['entry'][209]
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(left_x + self.textures['entry'][205].width, top_y, right_x - left_x - (self.textures['entry'][205].width), texture.height)
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, color)
-        texture = self.textures['entry'][210]
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(left_x + self.textures['entry'][205].width, bottom_y, right_x - left_x - (self.textures['entry'][205].width), texture.height)
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, color)
+        tex.draw_texture('side_select', 'box_top', color=color)
+        tex.draw_texture('side_select', 'box_bottom', color=color)
+        tex.draw_texture('side_select', 'box_left', color=color)
+        tex.draw_texture('side_select', 'box_right', color=color)
+        tex.draw_texture('side_select', 'box_center', color=color)
 
-        texture = self.textures['entry'][203]
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(left_x, top_y + self.textures['entry'][205].height, texture.width, bottom_y - top_y - (self.textures['entry'][205].height))
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, color)
-        texture = self.textures['entry'][206]
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(right_x, top_y + self.textures['entry'][205].height, texture.width, bottom_y - top_y - (self.textures['entry'][205].height))
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, color)
+        tex.draw_texture('side_select', 'question', color=color)
 
-        texture = self.textures['entry'][202]
-        src = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest = ray.Rectangle(left_x + self.textures['entry'][205].width, top_y + self.textures['entry'][205].height, right_x - left_x - (self.textures['entry'][205].width), bottom_y - top_y - (self.textures['entry'][205].height))
-        ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, color)
-
-        ray.draw_texture(self.textures['entry'][226], 384, 144, color)
-
-        cursor_x = 261
-        cursor_texture = self.textures['entry'][230]
-        flip = 1
+        tex.draw_texture('side_select', '1P', color=color)
+        tex.draw_texture('side_select', 'cancel', color=color)
+        tex.draw_texture('side_select', '2P', color=color)
         if self.side == 0:
-            texture = self.textures['entry'][229]
-            flip = -1
+            tex.draw_texture('side_select', '1P_highlight', color=color)
+            tex.textures['side_select']['1P2P_outline'].x = 261
+            tex.draw_texture('side_select', '1P2P_outline', color=color, mirror='horizontal')
+        elif self.side == 1:
+            tex.draw_texture('side_select', 'cancel_highlight', color=color)
+            tex.draw_texture('side_select', 'cancel_outline', color=color)
         else:
-            texture = self.textures['entry'][232]
-        ray.draw_texture(texture, 261, 400, color)
-
-        if self.side == 1:
-            texture = self.textures['entry'][76]
-            cursor_texture = self.textures['entry'][77]
-            cursor_x = 512
-        else:
-            texture = self.textures['entry'][228]
-        ray.draw_texture(texture, 512, 400, color)
-        ray.draw_texture(self.textures['entry'][201], 512, 408, color)
-
-        if self.side == 2:
-            texture = self.textures['entry'][233]
-            cursor_x = 762
-        else:
-            texture = self.textures['entry'][227]
-        ray.draw_texture(texture, 762, 400, color)
-
-        src = ray.Rectangle(0, 0, cursor_texture.width * flip, cursor_texture.height)
-        dest = ray.Rectangle(cursor_x, 400, cursor_texture.width, cursor_texture.height)
-        ray.draw_texture_pro(cursor_texture, src, dest, ray.Vector2(0, 0), 0, color)
+            tex.draw_texture('side_select', '2P_highlight', color=color)
+            tex.textures['side_select']['1P2P_outline'].x = 762
+            tex.draw_texture('side_select', '1P2P_outline', color=color)
+        tex.draw_texture('side_select', 'cancel_text', color=color)
 
     def draw_player_drum(self):
-        move_x = 0
-        if self.drum_move_3 is not None:
-            move_x = int(self.drum_move_3.attribute)
+        move_x = self.drum_move_3.attribute
+        move_y = self.drum_move_1.attribute + self.drum_move_2.attribute
+        tex.update_attr('side_select', 'red_drum', 'x', move_x)
+        tex.update_attr('side_select', 'red_drum', 'y', move_y)
+        tex.update_attr('side_select', 'blue_drum', 'y', move_y)
         if self.side == 0:
-            drum_texture = self.textures['entry'][366]
-            x = 160
+            tex.draw_texture('side_select', 'red_drum')
         else:
-            drum_texture = self.textures['entry'][367]
-            x = 780
-            move_x = move_x * -1
-        move_y = 0
-        if self.drum_move_1 is not None:
-            move_y = int(self.drum_move_1.attribute)
-            if self.drum_move_2 is not None:
-                move_y += int(self.drum_move_2.attribute)
-        ray.draw_texture(drum_texture, x + move_x, 720 + move_y, ray.WHITE)
-        if self.cloud_resize is not None and not self.cloud_resize.is_finished:
-            scale = self.cloud_resize.attribute
-        else:
+            move_x *= -1
+            tex.textures['side_select']['cloud'].init_vals['x'] = tex.textures['side_select']['blue_drum'].init_vals['x']
+            tex.update_attr('side_select', 'blue_drum', 'x', move_x)
+            tex.draw_texture('side_select', 'blue_drum')
+
+        scale = self.cloud_resize.attribute
+        if self.cloud_resize.is_finished:
             scale = max(1, self.cloud_resize_loop.attribute)
-        texture_index = 45
-        if self.cloud_texture_change is not None and self.cloud_texture_change.attribute != 0:
-            texture_index = self.cloud_texture_change.attribute
-        color = ray.fade(ray.WHITE, 1.0)
-        if self.cloud_fade is not None:
-            color = ray.fade(ray.WHITE, self.cloud_fade.attribute)
-        draw_scaled_texture(self.textures['entry'][texture_index], x + move_x - int(160 * (scale-1)), 720 + move_y - 200 - int(160 * (scale-1)), scale, color)
+        color = ray.fade(ray.WHITE, self.cloud_fade.attribute)
+        tex.update_attr('side_select', 'cloud', 'x', move_x)
+        tex.update_attr('side_select', 'cloud', 'y', move_y)
+        tex.draw_texture('side_select', 'cloud', frame=self.cloud_texture_change.attribute, color=color, scale=scale, center=True)
 
-    def draw_mode_select(self, fade):
+    def draw_mode_select(self):
         self.draw_player_drum()
-        color = ray.fade(ray.WHITE, fade)
-        if self.cloud_fade is not None and self.cloud_fade.is_finished:
-            box_width = self.textures['entry'][262].width
-            spacing = 80
-            push_distance = 50
-            total_width = self.num_boxes * box_width + (self.num_boxes - 1) * spacing
-            start_x = self.width//2 - total_width//2
-            y = self.height//2 - (self.textures['entry'][262].height//2) - 15
-            for i in range(self.num_boxes):
-                x_pos = start_x + i * (box_width + spacing)
-                push_offset = 0
-                if i != self.selected_box:
-                    if i < self.selected_box:
-                        push_offset = -push_distance
-                    else:
-                        push_offset = push_distance
-                final_x = x_pos + push_offset
-                ray.draw_texture(self.textures['entry'][262], final_x, y, color)
-                if i == self.selected_box:
-                    ray.draw_texture(self.textures['entry'][302], final_x, y, color)
-                    texture = self.textures['entry'][304]
-                    src = ray.Rectangle(0, 0, texture.width, texture.height)
-                    dest = ray.Rectangle(final_x + self.textures['entry'][302].width, y, 100 - self.textures['entry'][302].width, texture.height)
-                    ray.draw_texture_pro(texture, src, dest, ray.Vector2(0, 0), 0, color)
-                    ray.draw_texture(self.textures['entry'][303], final_x+100, y, color)
-
-                    box_title = self.box_titles[i][1]
-                    src = ray.Rectangle(0, 0, box_title.texture.width, box_title.texture.height)
-                    dest = ray.Rectangle(final_x + 25, y + 20, box_title.texture.width, box_title.texture.height)
-                    box_title.draw(src, dest, ray.Vector2(0, 0), 0, color)
-                else:
-                    box_title = self.box_titles[i][0]
-                    src = ray.Rectangle(0, 0, box_title.texture.width, box_title.texture.height)
-                    dest = ray.Rectangle(final_x + 20, y + 20, box_title.texture.width, box_title.texture.height)
-                    box_title.draw(src, dest, ray.Vector2(0, 0), 0, color)
+        if not self.cloud_texture_change.is_finished:
+            return
+        self.box_manager.draw()
 
     def draw(self):
         self.draw_background()
         if self.state == State.SELECT_SIDE:
             self.draw_side_select(self.side_select_fade.attribute)
         elif self.state == State.SELECT_MODE:
-            if self.fade_out is not None:
-                self.draw_mode_select(self.fade_out.attribute)
-            else:
-                self.draw_mode_select(1.0)
+            self.draw_mode_select()
         self.draw_footer()
 
-        ray.draw_texture(self.textures['entry'][320], 0, 0, ray.WHITE)
+        tex.draw_texture('global', 'player_entry')
 
-        if self.fade_out is not None and self.fade_out.is_finished:
-            src = ray.Rectangle(0, 0, self.texture_black.width, self.texture_black.height)
-            dest = ray.Rectangle(0, 0, self.width, self.height)
-            ray.draw_texture_pro(self.texture_black, src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+        if self.box_manager.is_finished():
+            ray.draw_rectangle(0, 0, self.width, self.height, ray.BLACK)
 
     def draw_3d(self):
         pass
+
+class Box:
+    def __init__(self, text: tuple[OutlinedText, OutlinedText], location: str):
+        self.text, self.text_highlight = text
+        self.location = location
+        self.box_tex_obj = tex.textures['mode_select']['box']
+        if isinstance(self.box_tex_obj.texture, list):
+            raise Exception("Box texture cannot be iterable")
+        self.texture = self.box_tex_obj.texture
+        self.x = self.box_tex_obj.x
+        self.y = self.box_tex_obj.y
+        self.move = tex.get_animation(10)
+        self.open = tex.get_animation(11)
+        self.is_selected = False
+        self.moving_left = False
+        self.moving_right = False
+
+    def set_positions(self, x: int):
+        self.x = x
+        self.static_x = self.x
+        self.left_x = self.x
+        self.static_left = self.left_x
+        self.right_x = self.left_x + tex.textures['mode_select']['box'].width - tex.textures['mode_select']['box_highlight_right'].width
+        self.static_right = self.right_x
+
+    def update(self, current_time_ms: float, is_selected: bool):
+        self.move.update(current_time_ms)
+        if self.moving_left:
+            self.x = self.static_x - int(self.move.attribute)
+        elif self.moving_right:
+            self.x = self.static_x + int(self.move.attribute)
+        if self.move.is_finished:
+            self.moving_left = False
+            self.moving_right = False
+            self.static_x = self.x
+
+        if is_selected and not self.is_selected:
+            self.open.start()
+        self.is_selected = is_selected
+        if self.is_selected:
+            self.left_x = self.static_left - int(self.open.attribute)
+            self.right_x = self.static_right + int(self.open.attribute)
+        self.open.update(current_time_ms)
+
+    def move_left(self):
+        if not self.move.is_started:
+            self.move.start()
+        self.moving_left = True
+
+    def move_right(self):
+        if not self.move.is_started:
+            self.move.start()
+        self.moving_right = True
+
+    def _draw_highlighted(self, color):
+        texture_left = tex.textures['mode_select']['box_highlight_left'].texture
+        texture_center = tex.textures['mode_select']['box_highlight_center'].texture
+        texture_right = tex.textures['mode_select']['box_highlight_right'].texture
+        if isinstance(texture_center, list) or isinstance(texture_left, list):
+            raise Exception("highlight textures cannot be iterable")
+        center_src = ray.Rectangle(0, 0, texture_center.width, texture_center.height)
+        center_dest = ray.Rectangle(self.left_x + texture_left.width, self.y, self.right_x - self.left_x, texture_center.height)
+        ray.draw_texture_pro(texture_center, center_src, center_dest, ray.Vector2(0, 0), 0, color)
+        ray.draw_texture(texture_center, self.left_x, self.y, color)
+        ray.draw_texture(texture_left, self.left_x, self.y, color)
+        ray.draw_texture(texture_right, self.right_x, self.y, color)
+
+    def _draw_text(self, color):
+        text_x = self.x + (self.texture.width//2) - (self.text.texture.width//2)
+        text_y = self.y + 20
+        text_dest = ray.Rectangle(text_x, text_y, self.text.texture.width, self.text.texture.height)
+        if self.is_selected:
+            self.text_highlight.draw(self.text.default_src, text_dest, ray.Vector2(0, 0), 0, color)
+        else:
+            self.text.draw(self.text.default_src, text_dest, ray.Vector2(0, 0), 0, color)
+
+    def draw(self, fade: float):
+        color = ray.fade(ray.WHITE, fade)
+        ray.draw_texture(self.texture, self.x, self.y, color)
+        if self.is_selected and self.move.is_finished:
+            self._draw_highlighted(color)
+        self._draw_text(color)
+
+class BoxManager:
+    def __init__(self):
+        self.box_titles: list[tuple[OutlinedText, OutlinedText]] = [
+        (OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
+         OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)),
+        (OutlinedText('ゲーム設定', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
+         OutlinedText('ゲーム設定', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True))]
+        self.box_locations = ["SONG_SELECT", "SETTINGS"]
+        self.num_boxes = len(self.box_titles)
+        self.boxes = [Box(self.box_titles[i], self.box_locations[i]) for i in range(len(self.box_titles))]
+        self.selected_box_index = 0
+        self.fade_out = tex.get_animation(9)
+
+        spacing = 80
+        box_width = self.boxes[0].texture.width
+        total_width = self.num_boxes * box_width + (self.num_boxes - 1) * spacing
+        start_x = 640 - total_width//2
+        for i, box in enumerate(self.boxes):
+            box.set_positions(start_x + i * (box_width + spacing))
+            if i > 0:
+                box.move_right()
+
+    def select_box(self):
+        self.fade_out.start()
+
+    def is_box_selected(self):
+        return self.fade_out.is_started
+
+    def is_finished(self):
+        return self.fade_out.is_finished
+
+    def selected_box(self):
+        return self.boxes[self.selected_box_index].location
+
+    def move_left(self):
+        prev_selection = self.selected_box_index
+        if self.boxes[prev_selection].move.is_started and not self.boxes[prev_selection].move.is_finished:
+            return
+        self.selected_box_index = max(0, self.selected_box_index - 1)
+        if prev_selection == self.selected_box_index:
+            return
+        if self.selected_box_index != self.selected_box_index - 1:
+            self.boxes[self.selected_box_index+1].move_right()
+        self.boxes[self.selected_box_index].move_right()
+
+    def move_right(self):
+        prev_selection = self.selected_box_index
+        if self.boxes[prev_selection].move.is_started and not self.boxes[prev_selection].move.is_finished:
+            return
+        self.selected_box_index = min(self.num_boxes - 1, self.selected_box_index + 1)
+        if prev_selection == self.selected_box_index:
+            return
+        if self.selected_box_index != 0:
+            self.boxes[self.selected_box_index-1].move_left()
+        self.boxes[self.selected_box_index].move_left()
+
+    def update(self, current_time_ms: float):
+        self.fade_out.update(current_time_ms)
+        for i, box in enumerate(self.boxes):
+            is_selected = i == self.selected_box_index
+            box.update(current_time_ms, is_selected)
+
+    def draw(self):
+        for box in self.boxes:
+            box.draw(self.fade_out.attribute)

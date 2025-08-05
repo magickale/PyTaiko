@@ -142,6 +142,7 @@ class ResultScreen:
         if self.score_delay is not None:
             if get_current_ms() > self.score_delay and self.fade_in_bottom is None:
                 self.fade_in_bottom = Animation.create_fade(333, initial_opacity=0.0, final_opacity=1.0)
+                self.fade_in_bottom.start()
                 if self.gauge is not None:
                     self.state = self.gauge.state
 
@@ -258,10 +259,15 @@ class Crown:
     def __init__(self):
         duration = 466
         self.resize = Animation.create_texture_resize(duration, initial_size=3.5, final_size=0.90, ease_in='quadratic')
+        self.resize.start()
         self.resize_fix = Animation.create_texture_resize(216, initial_size=self.resize.final_size, final_size=1.0, delay=self.resize.duration)
+        self.resize_fix.start()
         self.white_fadein = Animation.create_fade(133, initial_opacity=0.0, final_opacity=1.0, delay=self.resize.duration + self.resize_fix.duration, reverse_delay=0)
+        self.white_fadein.start()
         self.gleam = Animation.create_texture_change(400, textures=[(0, 200, 0), (200, 250, 127), (250, 300, 128), (300, 350, 129), (350, 400, 0)], delay=self.resize.duration + self.resize_fix.duration + self.white_fadein.duration)
+        self.gleam.start()
         self.fadein = Animation.create_fade(duration, initial_opacity=0.0, final_opacity=1.0, ease_in='quadratic')
+        self.fadein.start()
         self.sound = audio.load_sound(Path('Sounds/result/SE_RESULT [1].ogg'))
         self.sound_played = False
 
@@ -303,12 +309,16 @@ class BottomCharacters:
         self.char_1_index = 339
         self.char_2_index = 340
         self.c_bounce_up = Animation.create_move(266, total_distance=40, ease_in='quadratic')
+        self.c_bounce_up.start()
         self.c_bounce_down = Animation.create_move(266, total_distance=40, ease_out='quadratic', delay=self.c_bounce_up.duration)
+        self.c_bounce_down.start()
         self.is_finished = False
 
     def start(self):
         self.move_up = Animation.create_move(366, total_distance=380, ease_out='cubic')
+        self.move_up.start()
         self.move_down = Animation.create_move(133, total_distance=30, ease_out='cubic', delay=self.move_up.duration-5)
+        self.move_down.start()
 
     def update(self, state):
         self.state = state
@@ -317,10 +327,14 @@ class BottomCharacters:
             self.char_2_index = 346
             if self.bounce_up is None:
                 self.bounce_up = Animation.create_move(266, total_distance=40, ease_in='quadratic')
+                self.bounce_up.start()
                 self.bounce_down = Animation.create_move(266, total_distance=40, ease_out='quadratic', delay=self.bounce_up.duration)
+                self.bounce_down.start()
                 self.move_center = Animation.create_move(266, total_distance=450, ease_out='quadratic', delay=self.bounce_down.duration+self.bounce_up.duration)
+                self.move_center.start()
             if self.flower_up is None:
                 self.flower_up = Animation.create_move(333, total_distance=365, ease_out='quadratic')
+                self.flower_up.start()
                 self.flower_start = get_current_ms()
         elif self.state == State.FAIL:
             self.char_1_index = 347
@@ -384,6 +398,7 @@ class BottomCharacters:
 class FadeIn:
     def __init__(self):
         self.fadein = Animation.create_fade(450, initial_opacity=1.0, final_opacity=0.0, delay=100)
+        self.fadein.start()
         self.fade = ray.fade(ray.WHITE, self.fadein.attribute)
 
         self.is_finished = False
@@ -430,6 +445,7 @@ class Gauge:
         self.gauge_length = gauge_length
         self.rainbow_animation = None
         self.gauge_fade_in = Animation.create_fade(366, initial_opacity=0.0, final_opacity=1.0)
+        self.gauge_fade_in.start()
         self.is_finished = self.gauge_fade_in.is_finished
         if self.gauge_length == 87:
             self.state = State.RAINBOW
@@ -440,10 +456,12 @@ class Gauge:
 
     def _create_rainbow_anim(self, current_ms):
         anim = Animation.create_texture_change((16.67*8) * 3, textures=[((16.67 * 3) * i, (16.67 * 3) * (i + 1), i) for i in range(8)])
+        anim.start()
         return anim
 
     def _create_anim(self, current_ms: float, init: float, final: float):
         anim = Animation.create_fade(450, initial_opacity=init, final_opacity=final)
+        anim.start()
         return anim
 
     def update(self, current_ms: float):
@@ -493,6 +511,7 @@ class FadeOut:
     def __init__(self) -> None:
         self.texture = global_data.textures['scene_change_fade'][0]
         self.fade_out = Animation.create_fade(1000, initial_opacity=0.0, final_opacity=1.0)
+        self.fade_out.start()
         self.is_finished = False
     def update(self, current_time_ms: float):
         self.fade_out.update(current_time_ms)
