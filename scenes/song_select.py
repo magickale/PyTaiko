@@ -900,7 +900,7 @@ class FileNavigator:
 
             # Parse box.def if it exists
             name = dir_path.name if dir_path.name else str(dir_path)
-            texture_index = 620
+            texture_index = 9
             box_texture = None
             collection = None
 
@@ -953,7 +953,7 @@ class FileNavigator:
                     self.song_count += 1
                     global_data.song_progress = self.song_count / global_data.total_songs
                     if song_obj.is_recent:
-                        self.new_items.append(SongFile(tja_path, tja_path.name, 620, name_texture_index=texture_index))
+                        self.new_items.append(SongFile(tja_path, tja_path.name, 9, name_texture_index=texture_index))
                     self.all_song_files[song_key] = song_obj
 
                 content_items.append(self.all_song_files[song_key])
