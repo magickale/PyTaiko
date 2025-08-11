@@ -10,6 +10,7 @@ import pyray as ray
 from libs.animation import Animation
 from libs.audio import audio
 from libs.backgrounds import Background
+from libs.texture import tex
 from libs.tja import Balloon, Drumroll, Note, TJAParser, calculate_base_score
 from libs.transition import Transition
 from libs.utils import (
@@ -20,9 +21,6 @@ from libs.utils import (
     is_l_kat_pressed,
     is_r_don_pressed,
     is_r_kat_pressed,
-    load_all_textures_from_zip,
-    load_image_from_zip,
-    load_texture_from_zip,
     session_data,
 )
 from libs.video import VideoPlayer
@@ -34,55 +32,11 @@ class GameScreen:
         self.width = width
         self.height = height
         self.current_ms = 0
-        self.result_transition = None
-        self.transition = None
-        self.song_info = None
         self.screen_init = False
         self.movie = None
         self.end_ms = 0
         self.start_delay = 1000
         self.song_started = False
-
-    def load_textures(self):
-        self.textures = load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/common.zip'))
-        zip_file = Path('Graphics/lumendata/enso_system/common.zip')
-
-        image = load_image_from_zip(zip_file, 'lane_img00000.png')
-        ray.image_resize(image, 948, 176)
-        ray.unload_texture(self.textures['lane'][0])
-        self.textures['lane'][0] = ray.load_texture_from_image(image)
-
-        image = load_image_from_zip(zip_file, 'lane_hit_img00005.png')
-        ray.image_resize(image, 951, 130)
-        ray.unload_texture(self.textures['lane_hit'][5])
-        self.textures['lane_hit'][5] = ray.load_texture_from_image(image)
-        image = load_image_from_zip(zip_file, 'lane_hit_img00006.png')
-        ray.image_resize(image, 951, 130)
-        ray.unload_texture(self.textures['lane_hit'][6])
-        self.textures['lane_hit'][6] = ray.load_texture_from_image(image)
-        image = load_image_from_zip(zip_file, 'lane_hit_img00007.png')
-        ray.image_resize(image, 951, 130)
-        ray.unload_texture(self.textures['lane_hit'][7])
-        self.textures['lane_hit'][7] = ray.load_texture_from_image(image)
-
-        self.texture_combo_text = [load_texture_from_zip(zip_file, 'lane_obi_img00035.png'),
-        load_texture_from_zip(zip_file, 'lane_obi_img00046.png')]
-        self.texture_combo_numbers = []
-        for i in range(36, 58):
-            if i not in [46, 48]:
-                filename = f'lane_obi_img{str(i).zfill(5)}.png'
-                self.texture_combo_numbers.append(load_texture_from_zip(zip_file, filename))
-        self.texture_combo_glimmer = load_texture_from_zip(zip_file, 'lane_obi_img00048.png')
-
-        self.texture_se_moji = []
-        for i in range(0, 17):
-            filename = f'onp_moji_img{str(i).zfill(5)}.png'
-            if i == 8:
-                filename = 'onp_renda_moji_img00001.png'
-            self.texture_se_moji.append(load_texture_from_zip(zip_file, filename))
-
-        self.textures.update(load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/base1p.zip')))
-        self.textures.update(load_all_textures_from_zip(Path('Graphics/lumendata/enso_system/don1p.zip')))
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
@@ -94,17 +48,6 @@ class GameScreen:
         self.sounds = [self.sound_don, self.sound_kat, self.sound_balloon_pop, self.sound_result_transition]
 
     def init_tja(self, song: Path, difficulty: int):
-        #Map notes to textures
-        self.note_type_list = [self.textures['lane_syousetsu'][0],
-            self.textures['onp_don'], self.textures['onp_katsu'],
-            self.textures['onp_don_dai'], self.textures['onp_katsu_dai'],
-            [self.textures['onp_renda'][2], self.textures['onp_renda'][3]],
-            [self.textures['onp_renda_dai'][2], self.textures['onp_renda_dai'][3]],
-            [self.textures['onp_fusen'][1], self.textures['onp_fusen'][2]],
-            self.textures['onp_renda'][0], self.textures['onp_renda'][1],
-            self.textures['onp_renda_dai'][0], self.textures['onp_renda_dai'][1],
-            self.textures['onp_fusen'][0]]
-
         if song == Path(''):
             self.start_ms = get_current_ms()
             self.tja = None
@@ -129,12 +72,12 @@ class GameScreen:
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
+            tex.load_screen_textures('game')
             self.background = Background(self.width, self.height)
-            self.load_textures()
             self.load_sounds()
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
             self.song_info = SongInfo(session_data.song_title, 'TEST')
-            self.result_transition = None
+            self.result_transition = ResultTransition()
             if self.tja is not None:
                 subtitle = self.tja.metadata.subtitle.get(global_data.config['general']['language'].lower(), '')
             else:
@@ -145,9 +88,7 @@ class GameScreen:
 
     def on_screen_end(self, next_screen):
         self.screen_init = False
-        for zip in self.textures:
-            for texture in self.textures[zip]:
-                ray.unload_texture(texture)
+        tex.unload_textures()
         if self.song_music is not None:
             audio.unload_sound(self.song_music)
         del self.song_music
@@ -184,8 +125,7 @@ class GameScreen:
 
     def update(self):
         self.on_screen_start()
-        if self.transition is not None:
-            self.transition.update(get_current_ms())
+        self.transition.update(get_current_ms())
         self.current_ms = get_current_ms() - self.start_ms
         if self.tja is not None:
             if (self.current_ms >= self.tja.metadata.offset*1000 + self.start_delay - global_data.config["general"]["judge_offset"]) and not self.song_started:
@@ -202,20 +142,19 @@ class GameScreen:
             self.background.update(get_current_ms(), self.player_1.gauge.gauge_length > self.player_1.gauge.clear_start[min(self.player_1.difficulty, 3)])
 
         self.player_1.update(self)
-        if self.song_info is not None:
-            self.song_info.update(get_current_ms())
+        self.song_info.update(get_current_ms())
 
-        if self.result_transition is not None:
-            self.result_transition.update(get_current_ms())
-            if self.result_transition.is_finished:
-                return self.on_screen_end('RESULT')
+        self.result_transition.update(get_current_ms())
+        if self.result_transition.is_finished:
+            return self.on_screen_end('RESULT')
         elif len(self.player_1.play_notes) == 0:
             session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
             session_data.result_gauge_length = self.player_1.gauge.gauge_length
             if self.end_ms != 0:
                 if get_current_ms() >= self.end_ms + 8533.34:
-                    self.result_transition = ResultTransition(self.height)
-                    audio.play_sound(self.sound_result_transition)
+                    if not self.result_transition.is_started:
+                        self.result_transition.start()
+                        audio.play_sound(self.sound_result_transition)
             else:
                 self.write_score()
                 self.end_ms = get_current_ms()
@@ -236,12 +175,9 @@ class GameScreen:
         else:
             self.background.draw()
         self.player_1.draw(self)
-        if self.song_info is not None:
-            self.song_info.draw(self)
-        if self.transition is not None:
-            self.transition.draw()
-        if self.result_transition is not None:
-            self.result_transition.draw(self.width, self.height, global_data.textures['shutter'][0], global_data.textures['shutter'][1])
+        self.song_info.draw()
+        self.transition.draw()
+        self.result_transition.draw()
 
     def draw_3d(self):
         self.player_1.draw_3d()
@@ -406,30 +342,25 @@ class Player:
         self.play_note_manager(game_screen)
         self.draw_note_manager(game_screen)
 
-    def note_correct(self, game_screen: GameScreen, note: Note):
+    def note_correct(self, note: Note):
         self.play_notes.popleft()
         index = note.index
         if note.type == 7:
-            note_type = game_screen.note_type_list[3][0]
             self.play_notes.popleft()
-        else:
-            note_type = game_screen.note_type_list[note.type][0]
 
         if note.type < 7:
             self.combo += 1
             if self.combo > self.max_combo:
                 self.max_combo = self.combo
 
-        self.draw_arc_list.append(NoteArc(note_type, get_current_ms(), self.player_number, note.type == 3 or note.type == 4) or note.type == 7)
-        #game_screen.background.chibis.append(game_screen.background.Chibi())
+        self.draw_arc_list.append(NoteArc(note.type, get_current_ms(), self.player_number, note.type == 3 or note.type == 4) or note.type == 7)
 
         if note in self.current_notes_draw:
             index = self.current_notes_draw.index(note)
             self.current_notes_draw.pop(index)
 
-    def check_drumroll(self, game_screen: GameScreen, drum_type: int):
-        note_type = game_screen.note_type_list[drum_type][0]
-        self.draw_arc_list.append(NoteArc(note_type, get_current_ms(), self.player_number, drum_type == 3 or drum_type == 4))
+    def check_drumroll(self, drum_type: int):
+        self.draw_arc_list.append(NoteArc(drum_type, get_current_ms(), self.player_number, drum_type == 3 or drum_type == 4))
         self.curr_drumroll_count += 1
         self.total_drumroll += 1
         self.score += 100
@@ -450,9 +381,9 @@ class Player:
         if self.curr_balloon_count == note.count:
             self.is_balloon = False
             note.popped = True
-            self.balloon_anim.update(game_screen, get_current_ms(), self.curr_balloon_count, note.popped)
+            self.balloon_anim.update(get_current_ms(), self.curr_balloon_count, note.popped)
             audio.play_sound(game_screen.sound_balloon_pop)
-            self.note_correct(game_screen, self.play_notes[0])
+            self.note_correct(self.play_notes[0])
 
     def check_note(self, game_screen: GameScreen, drum_type: int):
         if len(self.play_notes) == 0:
@@ -460,7 +391,7 @@ class Player:
 
         curr_note = self.play_notes[0]
         if self.is_drumroll:
-            self.check_drumroll(game_screen, drum_type)
+            self.check_drumroll(drum_type)
         elif self.is_balloon:
             if not isinstance(curr_note, Balloon):
                 raise Exception("Balloon mode entered but current note is not balloon")
@@ -489,7 +420,7 @@ class Player:
                 self.good_count += 1
                 self.score += self.base_score
                 self.base_score_list.append(ScoreCounterAnimation(self.base_score))
-                self.note_correct(game_screen, curr_note)
+                self.note_correct(curr_note)
                 self.gauge.add_good()
 
             elif (curr_note.hit_ms - Player.TIMING_OK) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_OK):
@@ -497,7 +428,7 @@ class Player:
                 self.ok_count += 1
                 self.score += 10 * math.floor(self.base_score / 2 / 10)
                 self.base_score_list.append(ScoreCounterAnimation(10 * math.floor(self.base_score / 2 / 10)))
-                self.note_correct(game_screen, curr_note)
+                self.note_correct(curr_note)
                 self.gauge.add_ok()
 
             elif (curr_note.hit_ms - Player.TIMING_BAD) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_BAD):
@@ -507,7 +438,7 @@ class Player:
                 self.play_notes.popleft()
                 self.gauge.add_bad()
 
-    def drumroll_counter_manager(self, game_screen: GameScreen):
+    def drumroll_counter_manager(self):
         if self.is_drumroll and self.curr_drumroll_count > 0 and self.drumroll_counter is None:
             self.drumroll_counter = DrumrollCounter(get_current_ms())
 
@@ -515,11 +446,11 @@ class Player:
             if self.drumroll_counter.is_finished and not self.is_drumroll:
                 self.drumroll_counter = None
             else:
-                self.drumroll_counter.update(game_screen, get_current_ms(), self.curr_drumroll_count)
+                self.drumroll_counter.update(get_current_ms(), self.curr_drumroll_count)
 
-    def balloon_manager(self, game_screen: GameScreen):
+    def balloon_manager(self):
         if self.balloon_anim is not None:
-            self.balloon_anim.update(game_screen, get_current_ms(), self.curr_balloon_count, not self.is_balloon)
+            self.balloon_anim.update(get_current_ms(), self.curr_balloon_count, not self.is_balloon)
             if self.balloon_anim.is_finished:
                 self.balloon_anim = None
 
@@ -595,17 +526,17 @@ class Player:
 
     def update(self, game_screen: GameScreen):
         self.note_manager(game_screen)
-        self.combo_display.update(game_screen, get_current_ms(), self.combo)
-        self.drumroll_counter_manager(game_screen)
+        self.combo_display.update(get_current_ms(), self.combo)
+        self.drumroll_counter_manager()
         self.animation_manager(self.draw_judge_list)
-        self.balloon_manager(game_screen)
+        self.balloon_manager()
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.update(get_current_ms())
         self.animation_manager(self.draw_drum_hit_list)
         for anim in self.draw_arc_list:
             anim.update(get_current_ms())
             if anim.is_finished:
-                self.gauge_hit_effect.append(GaugeHitEffect(anim.texture, anim.is_big))
+                self.gauge_hit_effect.append(GaugeHitEffect(anim.note_type, anim.is_big))
                 self.draw_arc_list.remove(anim)
         self.animation_manager(self.gauge_hit_effect)
         self.animation_manager(self.base_score_list)
@@ -613,39 +544,29 @@ class Player:
         self.autoplay_manager(game_screen)
         self.handle_input(game_screen)
 
-        self.gauge.update(get_current_ms(), self.good_count, self.ok_count, self.bad_count, self.total_notes)
+        self.gauge.update(get_current_ms())
 
     def draw_drumroll(self, game_screen: GameScreen, head: Drumroll, current_eighth: int):
         start_position = self.get_position_x(game_screen.width, game_screen.current_ms, head.load_ms, head.pixels_per_frame_x)
-        tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), None)
-        if tail is None:
-            raise Exception("Tail for Balloon not found")
-        is_big = int(head.type == 6) * 2
+        tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), self.current_notes_draw[1])
+        is_big = int(head.type == 6)
         end_position = self.get_position_x(game_screen.width, game_screen.current_ms, tail.load_ms, tail.pixels_per_frame_x)
         length = (end_position - start_position - 50)
         if length <= 0:
             end_position += 50
-        source_rect = ray.Rectangle(0,0,game_screen.note_type_list[8].width, game_screen.note_type_list[8].height)
-        dest_rect = ray.Rectangle(start_position+64, 192, length, game_screen.note_type_list[1][0].height)
         color = ray.Color(255, head.color, head.color, 255)
-        ray.draw_texture_pro(game_screen.note_type_list[8 + is_big], source_rect, dest_rect, ray.Vector2(0,0), 0, color)
-        ray.draw_texture(game_screen.note_type_list[9 + is_big], end_position, 192, color)
-        ray.draw_texture(game_screen.note_type_list[head.type][current_eighth % 2], start_position, 192, color)
+        tex.draw_texture('notes', "8", frame=is_big, x=start_position+64, y=192, x2=length, color=color)
+        tex.draw_texture('notes', "9", frame=is_big, x=end_position, y=192, color=color)
+        tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=start_position, y=192, color=color)
 
-        source_rect = ray.Rectangle(0,0,game_screen.texture_se_moji[8].width,game_screen.texture_se_moji[8].height)
-        dest_rect = ray.Rectangle(start_position - (game_screen.texture_se_moji[8].width // 2) + 64, 323, length,game_screen.texture_se_moji[8].height)
-        ray.draw_texture_pro(game_screen.texture_se_moji[8], source_rect, dest_rect, ray.Vector2(0,0), 0, ray.WHITE)
-        moji_texture = game_screen.texture_se_moji[head.moji]
-        ray.draw_texture(moji_texture, start_position - (moji_texture.width//2) + 64, 323, ray.WHITE)
-        moji_texture = game_screen.texture_se_moji[tail.moji]
-        ray.draw_texture(moji_texture, (end_position - (moji_texture.width//2)) + 32, 323, ray.WHITE)
+        tex.draw_texture('notes', 'moji_drumroll_mid', x=start_position + 60, y=323, x2=length)
+        tex.draw_texture('notes', 'moji', frame=head.moji, x=(start_position - (168//2)) + 64, y=323)
+        tex.draw_texture('notes', 'moji', frame=tail.moji, x=(end_position - (168//2)) + 32, y=323)
 
     def draw_balloon(self, game_screen: GameScreen, head: Balloon, current_eighth: int):
         offset = 12
         start_position = self.get_position_x(game_screen.width, game_screen.current_ms, head.load_ms, head.pixels_per_frame_x)
-        tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), None)
-        if tail is None:
-            raise Exception("Tail for Balloon not found")
+        tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), self.current_notes_draw[1])
         end_position = self.get_position_x(game_screen.width, game_screen.current_ms, tail.load_ms, tail.pixels_per_frame_x)
         pause_position = 349
         if game_screen.current_ms >= tail.hit_ms:
@@ -654,8 +575,8 @@ class Player:
             position = pause_position
         else:
             position = start_position
-        ray.draw_texture(game_screen.note_type_list[head.type][current_eighth % 2], position-offset, 192, ray.WHITE)
-        ray.draw_texture(game_screen.note_type_list[12], position-offset+128, 192, ray.WHITE)
+        tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=position-offset, y=192)
+        tex.draw_texture('notes', '10', frame=current_eighth % 2, x=position-offset+128, y=192)
 
     def draw_bars(self, game_screen: GameScreen):
         if len(self.current_bars) <= 0:
@@ -666,7 +587,7 @@ class Player:
                 continue
             x_position = self.get_position_x(game_screen.width, game_screen.current_ms, bar.load_ms, bar.pixels_per_frame_x)
             y_position = self.get_position_y(game_screen.current_ms, bar.load_ms, bar.pixels_per_frame_y, bar.pixels_per_frame_x)
-            ray.draw_texture(game_screen.note_type_list[bar.type], x_position + 60, y_position + 190, ray.WHITE)
+            tex.draw_texture('notes', str(bar.type), x=x_position+60, y=y_position+190)
 
     def draw_notes(self, game_screen: GameScreen):
         if len(self.current_notes_draw) <= 0:
@@ -697,50 +618,42 @@ class Player:
                 self.draw_drumroll(game_screen, note, current_eighth)
             elif isinstance(note, Balloon):
                 self.draw_balloon(game_screen, note, current_eighth)
-                moji_texture = game_screen.texture_se_moji[note.moji]
-                ray.draw_texture(moji_texture, x_position - (moji_texture.width//2) + 64, 323 + y_position, ray.WHITE)
+                tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position - (168//2) + 64, y=323 + y_position)
             else:
-                ray.draw_texture(game_screen.note_type_list[note.type][current_eighth % 2], x_position, y_position + 192, ray.WHITE)
-                moji_texture = game_screen.texture_se_moji[note.moji]
-                ray.draw_texture(moji_texture, x_position - (moji_texture.width//2) + 64, 323 + y_position, ray.WHITE)
-            #ray.draw_text(str(note.index), position+64, 192, 25, ray.GREEN)
+                tex.draw_texture('notes', str(note.type), frame=current_eighth % 2, x=x_position, y=y_position+192)
+                tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position - (168//2) + 64, y=323 + y_position)
 
     def draw(self, game_screen: GameScreen):
-        ray.draw_texture(game_screen.textures['lane'][0], 332, 184, ray.WHITE)
-        self.gauge.draw(game_screen.textures['gage_don_1p_hard'])
+        tex.draw_texture('lane', 'lane_background')
+        self.gauge.draw()
         if self.lane_hit_effect is not None:
-            self.lane_hit_effect.draw(game_screen.textures['lane_hit'])
-        ray.draw_texture(game_screen.textures['lane_hit'][17], 342, 184, ray.WHITE)
+            self.lane_hit_effect.draw()
+        tex.draw_texture('lane', 'lane_hit_circle')
         for anim in self.draw_judge_list:
-            anim.draw(game_screen.textures['lane_hit'], game_screen.textures['lane_hit_effect'])
-
-        #ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][0], 350, 192, ray.WHITE)
-        #ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][22], 332, -84, ray.WHITE)
-        #ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][6], 1187 - 29, 130 - 29, ray.WHITE)
-
+            anim.draw()
         self.draw_bars(game_screen)
         self.draw_notes(game_screen)
-        ray.draw_texture(game_screen.textures['lane_obi'][0], 0, 184, ray.WHITE)
-        ray.draw_texture(game_screen.textures['lane_obi'][14], 211, 206, ray.WHITE)
+        tex.draw_texture('lane', 'lane_cover')
+        tex.draw_texture('lane', 'drum')
         if global_data.config["general"]["autoplay"]:
-            ray.draw_texture(game_screen.textures['lane_obi'][58], 0, 290, ray.WHITE)
+            tex.draw_texture('lane', 'auto_icon')
         for anim in self.draw_drum_hit_list:
-            anim.draw(game_screen)
-        self.combo_display.draw(game_screen)
-        ray.draw_texture(game_screen.textures['lane_obi'][3], 0, 184, ray.WHITE)
-        ray.draw_texture(game_screen.textures['lane_obi'][19], 0, 225, ray.WHITE)
-        ray.draw_texture(game_screen.textures['lane_obi'][self.difficulty+21], 50, 222, ray.WHITE)
+            anim.draw()
+        self.combo_display.draw()
+        tex.draw_texture('lane', 'lane_score_cover')
+        tex.draw_texture('lane', '1p_icon')
+        tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty)
         if self.drumroll_counter is not None:
-            self.drumroll_counter.draw(game_screen)
+            self.drumroll_counter.draw()
         for anim in self.draw_arc_list:
-            anim.draw(game_screen)
+            anim.draw()
         for anim in self.gauge_hit_effect:
-            anim.draw(game_screen)
+            anim.draw()
         if self.balloon_anim is not None:
-            self.balloon_anim.draw(game_screen)
-        self.score_counter.draw(game_screen)
+            self.balloon_anim.draw()
+        self.score_counter.draw()
         for anim in self.base_score_list:
-            anim.draw(game_screen)
+            anim.draw()
         #ray.draw_circle(game_screen.width//2, game_screen.height, 300, ray.ORANGE)
 
     def draw_3d(self):
@@ -772,7 +685,7 @@ class Judgement:
         self.fade_animation_2.start()
         self.move_animation = Animation.create_move(83, total_distance=15, start_position=144)
         self.move_animation.start()
-        self.texture_animation = Animation.create_texture_change(100, textures=[(33, 50, 1), (50, 83, 2), (83, 100, 3), (100, float('inf'), 4)])
+        self.texture_animation = Animation.create_texture_change(100, textures=[(33, 50, 0), (50, 83, 1), (83, 100, 2), (100, float('inf'), 3)])
         self.texture_animation.start()
 
     def update(self, current_ms):
@@ -784,7 +697,7 @@ class Judgement:
         if self.fade_animation_2.is_finished:
             self.is_finished = True
 
-    def draw(self, textures_1: list[ray.Texture], textures_2: list[ray.Texture]):
+    def draw(self):
         y = self.move_animation.attribute
         index = int(self.texture_animation.attribute)
         hit_color = ray.fade(ray.WHITE, self.fade_animation_1.attribute)
@@ -796,28 +709,28 @@ class Judgement:
                 color = ray.fade(ray.RED, self.fade_animation_2.attribute)
         if self.type == 'GOOD':
             if self.big:
-                ray.draw_texture(textures_1[21], 342, 184, color)
-                ray.draw_texture(textures_2[index+11], 304, 143, hit_color)
+                tex.draw_texture('hit_effect', 'hit_effect_good_big', color=color)
+                tex.draw_texture('hit_effect', 'outer_good_big', frame=index, color=hit_color)
             else:
-                ray.draw_texture(textures_1[19], 342, 184, color)
-                ray.draw_texture(textures_2[index+5], 304, 143, hit_color)
-            ray.draw_texture(textures_2[9], 370, int(y), color)
+                tex.draw_texture('hit_effect', 'hit_effect_good', color=color)
+                tex.draw_texture('hit_effect', 'outer_good', frame=index, color=hit_color)
+            tex.draw_texture('hit_effect', 'judge_good', y=y, color=color)
         elif self.type == 'OK':
             if self.big:
-                ray.draw_texture(textures_1[20], 342, 184, color)
-                ray.draw_texture(textures_2[index+16], 304, 143, hit_color)
+                tex.draw_texture('hit_effect', 'hit_effect_ok_big', color=color)
+                tex.draw_texture('hit_effect', 'outer_ok_big', frame=index, color=hit_color)
             else:
-                ray.draw_texture(textures_1[18], 342, 184, color)
-                ray.draw_texture(textures_2[index], 304, 143, hit_color)
-            ray.draw_texture(textures_2[4], 370, int(y), color)
+                tex.draw_texture('hit_effect', 'hit_effect_ok', color=color)
+                tex.draw_texture('hit_effect', 'outer_ok', frame=index, color=hit_color)
+            tex.draw_texture('hit_effect', 'judge_ok', y=y, color=color)
         elif self.type == 'BAD':
-            ray.draw_texture(textures_2[10], 370, int(y), color)
+            tex.draw_texture('hit_effect', 'judge_bad', y=y, color=color)
 
 class LaneHitEffect:
     def __init__(self, type: str):
         self.type = type
         self.color = ray.fade(ray.WHITE, 0.5)
-        self.fade = Animation.create_fade(150, delay=83, initial_opacity=0.5)
+        self.fade = tex.get_animation(0, is_copy=True)
         self.fade.start()
         self.is_finished = False
 
@@ -828,13 +741,13 @@ class LaneHitEffect:
         if self.fade.is_finished:
             self.is_finished = True
 
-    def draw(self, textures: list[ray.Texture]):
+    def draw(self):
         if self.type == 'GOOD':
-            ray.draw_texture(textures[7], 328, 192, self.color)
+            tex.draw_texture('lane', 'lane_hit_effect', frame=2, color=self.color)
         elif self.type == 'DON':
-            ray.draw_texture(textures[5], 328, 192, self.color)
+            tex.draw_texture('lane', 'lane_hit_effect', frame=0, color=self.color)
         elif self.type == 'KAT':
-            ray.draw_texture(textures[6], 328, 192, self.color)
+            tex.draw_texture('lane', 'lane_hit_effect', frame=1, color=self.color)
 
 class DrumHitEffect:
     def __init__(self, type: str, side: str):
@@ -842,7 +755,7 @@ class DrumHitEffect:
         self.side = side
         self.color = ray.fade(ray.WHITE, 1)
         self.is_finished = False
-        self.fade = Animation.create_fade(100, delay=67)
+        self.fade = tex.get_animation(1, is_copy=True)
         self.fade.start()
 
     def update(self, current_ms: float):
@@ -852,24 +765,23 @@ class DrumHitEffect:
         if self.fade.is_finished:
             self.is_finished = True
 
-    def draw(self, game_screen):
-        x, y = 211, 206
+    def draw(self):
         if self.type == 'DON':
             if self.side == 'L':
-                ray.draw_texture(game_screen.textures['lane_obi'][16], x, y, self.color)
+                tex.draw_texture('lane', 'drum_don_l', color=self.color)
             elif self.side == 'R':
-                ray.draw_texture(game_screen.textures['lane_obi'][15], x, y, self.color)
+                tex.draw_texture('lane', 'drum_don_r', color=self.color)
         elif self.type == 'KAT':
             if self.side == 'L':
-                ray.draw_texture(game_screen.textures['lane_obi'][18], x, y, self.color)
+                tex.draw_texture('lane', 'drum_kat_l', color=self.color)
             elif self.side == 'R':
-                ray.draw_texture(game_screen.textures['lane_obi'][17], x, y, self.color)
+                tex.draw_texture('lane', 'drum_kat_r', color=self.color)
 
 class GaugeHitEffect:
-    def __init__(self, note_texture: ray.Texture, big: bool):
-        self.note_texture = note_texture
+    def __init__(self, note_type: int, big: bool):
+        self.note_type = note_type
         self.is_big = big
-        self.texture_change = Animation.create_texture_change(116.67, textures=[(0, 33.33, 1), (33.33, 66.66, 2), (66.66, float('inf'), 3)])
+        self.texture_change = tex.get_animation(2, is_copy=True)
         self.texture_change.start()
         self.circle_fadein = Animation.create_fade(133, initial_opacity=0.0, final_opacity=1.0, delay=16.67)
         self.circle_fadein.start()
@@ -877,8 +789,8 @@ class GaugeHitEffect:
         self.resize.start()
         self.fade_out = Animation.create_fade(66, delay=233)
         self.fade_out.start()
-        self.test = Animation.create_fade(300, delay=116.67, initial_opacity=0.0, final_opacity=1.0)
-        self.test.start()
+        self.rotation = Animation.create_fade(300, delay=116.67, initial_opacity=0.0, final_opacity=1.0)
+        self.rotation.start()
         self.color = ray.fade(ray.YELLOW, self.circle_fadein.attribute)
         self.is_finished = False
     def update(self, current_ms):
@@ -886,15 +798,14 @@ class GaugeHitEffect:
         self.circle_fadein.update(current_ms)
         self.fade_out.update(current_ms)
         self.resize.update(current_ms)
-        self.test.update(current_ms)
+        self.rotation.update(current_ms)
         color = ray.YELLOW
         if self.circle_fadein.is_finished:
             color = ray.WHITE
         self.color = ray.fade(color, min(self.fade_out.attribute, self.circle_fadein.attribute))
         if self.fade_out.is_finished:
             self.is_finished = True
-    def draw(self, game_screen):
-        texture = game_screen.textures['onp_kiseki_don_1p'][self.texture_change.attribute]
+    def draw(self):
         color_map = {0.70: ray.WHITE, 0.80: ray.YELLOW, 0.90: ray.ORANGE, 1.00: ray.RED}
         texture_color = ray.WHITE
         for upper_bound, color in color_map.items():
@@ -904,23 +815,20 @@ class GaugeHitEffect:
                 texture_color = color
             elif self.resize.attribute >= upper_bound:
                 texture_color = ray.RED
-        original_x = 1223
-        original_y = 164
-        source = ray.Rectangle(0, 0, texture.width, texture.height)
-        dest_width = texture.width * self.resize.attribute
-        dest_height = texture.height * self.resize.attribute
-        dest = ray.Rectangle(original_x, original_y, dest_width, dest_height)
+        dest_width = 152 * self.resize.attribute
+        dest_height = 152 * self.resize.attribute
         origin = ray.Vector2(dest_width / 2, dest_height / 2)
-        ray.draw_texture_pro(texture, source, dest, origin, self.test.attribute*100, ray.fade(texture_color, self.fade_out.attribute))
-        ray.draw_texture(self.note_texture, 1187 - 29, 130 - 29, ray.fade(ray.WHITE, self.fade_out.attribute))
+        rotation = self.rotation.attribute*100
+        tex.draw_texture('gauge', 'hit_effect', frame=self.texture_change.attribute, x2=-152 + (152 * self.resize.attribute), y2=-152 + (152 * self.resize.attribute), color=ray.fade(texture_color, self.fade_out.attribute), origin=origin, rotation=rotation, center=True)
+        tex.draw_texture('notes', str(self.note_type), x=1158, y=101, color=ray.fade(ray.WHITE, self.fade_out.attribute))
         if self.is_big:
-            ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][20], 1187 - 29, 130 - 29, self.color)
+            tex.draw_texture('gauge', 'hit_effect_circle_big', color=self.color)
         else:
-            ray.draw_texture(game_screen.textures['onp_kiseki_don_1p'][4], 1187 - 29, 130 - 29, self.color)
+            tex.draw_texture('gauge', 'hit_effect_circle', color=self.color)
 
 class NoteArc:
-    def __init__(self, note_texture: ray.Texture, current_ms: float, player_number: int, big: bool):
-        self.texture = note_texture
+    def __init__(self, note_type: int, current_ms: float, player_number: int, big: bool):
+        self.note_type = note_type
         self.is_big = big
         self.arc_points = 22
         self.create_ms = current_ms
@@ -1004,8 +912,8 @@ class NoteArc:
             self.x_i = self.end_x
             self.y_i = self.end_y
 
-    def draw(self, game_screen):
-        ray.draw_texture(self.texture, self.x_i, self.y_i, ray.WHITE)
+    def draw(self):
+        tex.draw_texture('notes', str(self.note_type), x=self.x_i, y=self.y_i)
 
 class DrumrollCounter:
     def __init__(self, current_ms: float):
@@ -1013,20 +921,18 @@ class DrumrollCounter:
         self.is_finished = False
         self.total_duration = 1349
         self.drumroll_count = 0
-        self.fade_animation = Animation.create_fade(166, delay=self.total_duration - 166)
+        self.fade_animation = tex.get_animation(8)
         self.fade_animation.start()
-        self.stretch_animation = Animation.create_text_stretch(0)
-        self.stretch_animation.start()
+        self.stretch_animation = tex.get_animation(9)
 
     def update_count(self, count: int, elapsed_time: float):
         self.total_duration = elapsed_time + 1349
         self.fade_animation.delay = self.total_duration - 166
         if self.drumroll_count != count:
             self.drumroll_count = count
-            self.stretch_animation = Animation.create_text_stretch(50)
             self.stretch_animation.start()
 
-    def update(self, game_screen: GameScreen, current_ms: float, drumroll_count: int):
+    def update(self, current_ms: float, drumroll_count: int):
         self.stretch_animation.update(current_ms)
         self.fade_animation.update(current_ms)
 
@@ -1036,16 +942,13 @@ class DrumrollCounter:
         if self.fade_animation.is_finished:
             self.is_finished = True
 
-    def draw(self, game_screen: GameScreen):
+    def draw(self):
         color = ray.fade(ray.WHITE, self.fade_animation.attribute)
-        ray.draw_texture(game_screen.textures['renda_num'][0], 200, 0, color)
+        tex.draw_texture('drumroll_counter', 'bubble', color=color)
         counter = str(self.drumroll_count)
         total_width = len(counter) * 52
-        start_x = 344 - (total_width // 2)
-        source_rect = ray.Rectangle(0, 0, game_screen.textures['renda_num'][1].width, game_screen.textures['renda_num'][1].height)
         for i in range(len(counter)):
-            dest_rect = ray.Rectangle(start_x + (i * 52), 50 - self.stretch_animation.attribute, game_screen.textures['renda_num'][1].width, game_screen.textures['renda_num'][1].height + self.stretch_animation.attribute)
-            ray.draw_texture_pro(game_screen.textures['renda_num'][int(counter[i])+1], source_rect, dest_rect, ray.Vector2(0,0), 0, color)
+            tex.draw_texture('drumroll_counter', 'counter', color=color, frame=int(counter[i]), x=-(total_width//2)+(i*52), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
 
 class BalloonAnimation:
     def __init__(self, current_ms: float, balloon_total: int):
@@ -1056,18 +959,16 @@ class BalloonAnimation:
         self.balloon_count = 0
         self.balloon_total = balloon_total
         self.is_popped = False
-        self.fade_animation = Animation.create_fade(166)
+        self.stretch_animation = tex.get_animation(6)
+        self.fade_animation = tex.get_animation(7)
         self.fade_animation.start()
-        self.stretch_animation = Animation.create_text_stretch(0)
-        self.stretch_animation.start()
 
     def update_count(self, balloon_count: int):
         if self.balloon_count != balloon_count:
             self.balloon_count = balloon_count
-            self.stretch_animation = Animation.create_text_stretch(50)
             self.stretch_animation.start()
 
-    def update(self, game_screen: GameScreen, current_ms: float, balloon_count: int, is_popped: bool):
+    def update(self, current_ms: float, balloon_count: int, is_popped: bool):
         self.update_count(balloon_count)
         self.stretch_animation.update(current_ms)
         self.is_popped = is_popped
@@ -1082,29 +983,23 @@ class BalloonAnimation:
         if self.fade_animation.is_finished:
             self.is_finished = True
 
-    def draw(self, game_screen: GameScreen):
+    def draw(self):
         if self.is_popped:
-            ray.draw_texture(game_screen.textures['action_fusen_1p'][18], 460, 130, self.color)
+            tex.draw_texture('balloon', 'pop', frame=7, color=self.color)
         elif self.balloon_count >= 1:
-            balloon_index = min(7, (self.balloon_count - 1) * 7 // self.balloon_total)
-            ray.draw_texture(game_screen.textures['action_fusen_1p'][balloon_index+11], 460, 130, self.color)
+            balloon_index = min(6, (self.balloon_count - 1) * 6 // self.balloon_total)
+            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color)
         if self.balloon_count > 0:
-            ray.draw_texture(game_screen.textures['action_fusen_1p'][0], 414, 40, ray.WHITE)
+            tex.draw_texture('balloon', 'bubble')
             counter = str(max(0, self.balloon_total - self.balloon_count + 1))
-            x, y = 493, 68
-            margin = 52
-            total_width = len(counter) * margin
-            start_x = x - (total_width // 2)
-            source_rect = ray.Rectangle(0, 0, game_screen.textures['action_fusen_1p'][1].width, game_screen.textures['action_fusen_1p'][1].height)
+            total_width = len(counter) * 52
             for i in range(len(counter)):
-                dest_rect = ray.Rectangle(start_x + (i * margin), y - self.stretch_animation.attribute, game_screen.textures['action_fusen_1p'][1].width, game_screen.textures['action_fusen_1p'][1].height + self.stretch_animation.attribute)
-                ray.draw_texture_pro(game_screen.textures['action_fusen_1p'][int(counter[i])+1], source_rect, dest_rect, ray.Vector2(0,0), 0, self.color)
+                tex.draw_texture('balloon', 'counter', frame=int(counter[i]), color=self.color, x=-(total_width // 2) + (i * 52), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
 
 class Combo:
     def __init__(self, combo: int, current_ms: float):
         self.combo = combo
-        self.stretch_animation = Animation.create_text_stretch(0)
-        self.stretch_animation.start()
+        self.stretch_animation = tex.get_animation(5)
         self.color = [ray.fade(ray.WHITE, 1), ray.fade(ray.WHITE, 1), ray.fade(ray.WHITE, 1)]
         self.glimmer_dict = {0: 0, 1: 0, 2: 0}
         self.total_time = 250
@@ -1115,14 +1010,13 @@ class Combo:
                     current_ms + (4 / 3) * self.cycle_time
                 ]
 
-    def update_count(self, current_ms: float, combo: int):
+    def update_count(self, combo: int):
         if self.combo != combo:
             self.combo = combo
-            self.stretch_animation = Animation.create_text_stretch(50)
             self.stretch_animation.start()
 
-    def update(self, game_screen: GameScreen, current_ms: float, combo: int):
-        self.update_count(current_ms, combo)
+    def update(self, current_ms: float, combo: int):
+        self.update_count(combo)
         self.stretch_animation.update(current_ms)
 
         for i in range(3):
@@ -1143,57 +1037,50 @@ class Combo:
                 fade = 0
             self.color[i] = ray.fade(ray.WHITE, fade)
 
-    def draw(self, game_screen: GameScreen):
+    def draw(self):
+        counter = str(self.combo)
         if self.combo < 3:
             return
         if self.combo < 100:
-            text_color = 0
             margin = 30
+            total_width = len(counter) * margin
+            tex.draw_texture('combo', 'combo')
+            for i in range(len(counter)):
+                tex.draw_texture('combo', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * margin), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
         else:
-            text_color = 1
             margin = 35
-        ray.draw_texture(game_screen.texture_combo_text[text_color], 234, 265, ray.WHITE)
-        counter = str(self.combo)
-        total_width = len(counter) * margin
-        x, y = 262, 220
-        start_x = x - (total_width // 2)
-        source_rect = ray.Rectangle(0, 0, game_screen.texture_combo_numbers[0].width, game_screen.texture_combo_numbers[0].height)
-        for i in range(len(counter)):
-            dest_rect = ray.Rectangle(start_x + (i * margin), y - self.stretch_animation.attribute, game_screen.texture_combo_numbers[0].width, game_screen.texture_combo_numbers[0].height + self.stretch_animation.attribute)
-            ray.draw_texture_pro(game_screen.texture_combo_numbers[int(counter[i]) + (text_color*10)], source_rect, dest_rect, ray.Vector2(0,0), 0, ray.WHITE)
-        glimmer_positions = [(225, 210), (200, 230), (250, 230)]
-        if self.combo >= 100:
+            total_width = len(counter) * margin
+            tex.draw_texture('combo', 'combo_100')
+            for i in range(len(counter)):
+                tex.draw_texture('combo', 'counter_100', frame=int(counter[i]), x=-(total_width // 2) + (i * margin), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
+            glimmer_positions = [(225, 210), (200, 230), (250, 230)]
             for j, (x, y) in enumerate(glimmer_positions):
                 for i in range(3):
-                    ray.draw_texture(game_screen.texture_combo_glimmer, x + (i * 30), y + self.glimmer_dict[j], self.color[j])
+                    tex.draw_texture('combo', 'gleam', x=x+(i*30), y=y+self.glimmer_dict[j], color=self.color[j])
 
 class ScoreCounter:
     def __init__(self, score: int):
         self.score = score
-        self.stretch_animation = Animation.create_text_stretch(0)
-        self.stretch_animation.start()
+        self.stretch = tex.get_animation(4)
 
-    def update_count(self, current_ms: float, score: int):
+    def update_count(self, score: int):
         if self.score != score:
             self.score = score
-            self.stretch_animation = Animation.create_text_stretch(50)
-            self.stretch_animation.start()
+            self.stretch.start()
 
     def update(self, current_ms: float, score: int):
-        self.update_count(current_ms, score)
+        self.update_count(score)
         if self.score > 0:
-            self.stretch_animation.update(current_ms)
+            self.stretch.update(current_ms)
 
-    def draw(self, game_screen: GameScreen):
+    def draw(self):
         counter = str(self.score)
         x, y = 150, 185
         margin = 20
         total_width = len(counter) * margin
         start_x = x - total_width
-        source_rect = ray.Rectangle(0, 0, game_screen.textures['lane_obi'][4].width, game_screen.textures['lane_obi'][4].height)
         for i in range(len(counter)):
-            dest_rect = ray.Rectangle(start_x + (i * margin), y - self.stretch_animation.attribute, game_screen.textures['lane_obi'][4].width, game_screen.textures['lane_obi'][4].height + self.stretch_animation.attribute)
-            ray.draw_texture_pro(game_screen.textures['lane_obi'][int(counter[i])+4], source_rect, dest_rect, ray.Vector2(0,0), 0, ray.WHITE)
+            tex.draw_texture('lane', 'score_number', frame=int(counter[i]), x=start_x + (i * margin), y=y - self.stretch.attribute, y2=self.stretch.attribute)
 
 class ScoreCounterAnimation:
     def __init__(self, counter: int):
@@ -1233,7 +1120,7 @@ class ScoreCounterAnimation:
         for i in range(1, len(str(self.counter))+1):
             self.y_pos_list.append(self.move_animation_4.attribute + i*5)
 
-    def draw(self, game_screen: GameScreen):
+    def draw(self):
         if self.move_animation_1.is_finished:
             x = self.move_animation_2.attribute
         else:
@@ -1244,7 +1131,6 @@ class ScoreCounterAnimation:
         margin = 20
         total_width = len(counter) * margin
         start_x = x - total_width
-        source_rect = ray.Rectangle(0, 0, game_screen.textures['score_add_1p'][0].width, game_screen.textures['score_add_1p'][0].height)
         for i in range(len(counter)):
             if self.move_animation_3.is_finished:
                 y = self.y_pos_list[i]
@@ -1252,87 +1138,53 @@ class ScoreCounterAnimation:
                 y = self.move_animation_3.attribute
             else:
                 y = 148
-            dest_rect = ray.Rectangle(start_x + (i * margin), y, game_screen.textures['score_add_1p'][0].width, game_screen.textures['score_add_1p'][0].height)
-            ray.draw_texture_pro(game_screen.textures['score_add_1p'][int(counter[i])], source_rect, dest_rect, ray.Vector2(0,0), 0, self.color)
+            tex.draw_texture('lane', 'score_number', frame=int(counter[i]), x=start_x + (i * margin), y=y, color=self.color)
 
 class SongInfo:
-    FADE_DURATION = 366
-    DISPLAY_DURATION = 1666
-
     def __init__(self, song_name: str, genre: str):
         self.song_name = song_name
         self.genre = genre
-        self.song_title = OutlinedText(
-            song_name, 40, ray.Color(255, 255, 255, 255), ray.Color(0, 0, 0, 255), outline_thickness=5
-        )
-        self.fade_in = Animation.create_fade(self.FADE_DURATION, initial_opacity=0.0, final_opacity=1.0)
-        self.fade_in.start()
-        self.fade_out = Animation.create_fade(self.FADE_DURATION, delay=self.DISPLAY_DURATION)
-        self.fade_out.start()
-        self.fade_fake = Animation.create_fade(0, delay=self.DISPLAY_DURATION*2 + self.FADE_DURATION)
-        self.fade_fake.start()
+        self.song_title = OutlinedText(song_name, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
+        self.fade = tex.get_animation(3)
+        self.fade.start()
 
     def update(self, current_ms: float):
-        self.fade_in.update(current_ms)
-        self.fade_out.update(current_ms)
-        self.fade_fake.update(current_ms)
+        self.fade.update(current_ms)
+        if self.fade.is_finished:
+            self.fade.restart()
 
-        if not self.fade_in.is_finished:
-            self.song_num_fade = ray.fade(ray.WHITE, self.fade_in.attribute)
-            self.song_name_fade = ray.fade(ray.WHITE, 1 - self.fade_in.attribute)
-        else:
-            self.song_num_fade = ray.fade(ray.WHITE, self.fade_out.attribute)
-            self.song_name_fade = ray.fade(ray.WHITE, 1 - self.fade_out.attribute)
-
-        if self.fade_fake.is_finished:
-            self._reset_animations(current_ms)
-
-    def _reset_animations(self, current_ms: float):
-        self.fade_in = Animation.create_fade(self.FADE_DURATION, initial_opacity=0.0, final_opacity=1.0)
-        self.fade_in.start()
-        self.fade_out = Animation.create_fade(self.FADE_DURATION, delay=self.DISPLAY_DURATION)
-        self.fade_out.start()
-        self.fade_fake = Animation.create_fade(0, delay=self.DISPLAY_DURATION*2 + self.FADE_DURATION)
-        self.fade_fake.start()
-
-    def draw(self, game_screen: GameScreen):
-        song_texture_index = (global_data.songs_played % 4) + 8
-        ray.draw_texture(
-            game_screen.textures['song_info'][song_texture_index],
-            1132, 25,
-            self.song_num_fade
-        )
+    def draw(self):
+        tex.draw_texture('song_info', 'song_num', color=ray.fade(ray.WHITE, self.fade.attribute), frame=global_data.songs_played % 4)
 
         text_x = 1252 - self.song_title.texture.width
-        text_y = int(50 - self.song_title.texture.height / 2)
-        src = ray.Rectangle(0, 0, self.song_title.texture.width, self.song_title.texture.height)
+        text_y = 50 - self.song_title.texture.height//2
         dest = ray.Rectangle(text_x, text_y, self.song_title.texture.width, self.song_title.texture.height)
-        self.song_title.draw(src, dest, ray.Vector2(0, 0), 0, self.song_name_fade)
+        self.song_title.draw(self.song_title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade.attribute))
 
 class ResultTransition:
-    def __init__(self, screen_height: int):
-        self.move = Animation.create_move(983.33, start_position=0, total_distance=screen_height//2, ease_out='quadratic')
-        self.move.start()
-
+    def __init__(self):
+        self.move = global_data.tex.get_animation(5)
+        self.move.reset()
         self.is_finished = False
+        self.is_started = False
+
+    def start(self):
+        self.move.start()
 
     def update(self, current_ms: float):
         self.move.update(current_ms)
+        self.is_started = self.move.is_started
+        self.is_finished = self.move.is_finished
 
-        if self.move.is_finished:
-            self.is_finished = True
-
-    def draw(self, screen_width: int, screen_height: int, texture_1: ray.Texture, texture_2: ray.Texture):
+    def draw(self):
         x = 0
+        screen_width = 1280
         while x < screen_width:
-            ray.draw_texture(texture_1, x, (0 - texture_1.height) + int(self.move.attribute), ray.WHITE)
-            ray.draw_texture(texture_1, x, (screen_height) - int(self.move.attribute), ray.WHITE)
-            x += texture_1.width
-        x = 0
-        while x < screen_width:
-            ray.draw_texture(texture_2, x, (0 - texture_2.height//2) - (texture_1.height//2) + int(self.move.attribute), ray.WHITE)
-            ray.draw_texture(texture_2, x, (screen_height) + (texture_1.height//2) - (texture_2.height//2) - int(self.move.attribute), ray.WHITE)
-            x += texture_2.width
+            global_data.tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
+            global_data.tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=720 - self.move.attribute)
+            global_data.tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-432 + self.move.attribute)
+            global_data.tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=1008 - self.move.attribute)
+            x += 256
 
 class Gauge:
     GAUGE_MAX = 87
@@ -1413,7 +1265,7 @@ class Gauge:
         if self.gauge_length < 0:
             self.gauge_length = 0
 
-    def update(self, current_ms: float, good_count: int, ok_count: int, bad_count: int, total_notes: int):
+    def update(self, current_ms: float):
         if self.gauge_length == 87 and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
             self.rainbow_fade_in.start()
@@ -1434,33 +1286,33 @@ class Gauge:
             if self.rainbow_animation.is_finished or self.gauge_length < 87:
                 self.rainbow_animation = None
 
-    def draw(self, textures: list[ray.Texture]):
-        ray.draw_texture(textures[0], 327, 132, ray.WHITE)
-        ray.draw_texture(textures[1], 483, 124, ray.WHITE)
+    def draw(self):
+        tex.draw_texture('gauge', 'border')
+        tex.draw_texture('gauge', 'unfilled')
         gauge_length = int(self.gauge_length)
         for i in range(gauge_length):
             if i == 68:
-                ray.draw_texture(textures[16], 491 + (i*textures[13].width), 160 - 24, ray.WHITE)
+                tex.draw_texture('gauge', 'bar_clear_transition', x=i*8)
             elif i > 68:
-                ray.draw_texture(textures[15], 491 + (i*textures[13].width) + 2, 160 - 22, ray.WHITE)
-                ray.draw_texture(textures[20], 491 + (i*textures[13].width) + 2, 160, ray.WHITE)
+                tex.draw_texture('gauge', 'bar_clear_top', x=i*8)
+                tex.draw_texture('gauge', 'bar_clear_bottom', x=i*8)
             else:
-                ray.draw_texture(textures[13], 491 + (i*textures[13].width), 160, ray.WHITE)
+                tex.draw_texture('gauge', 'bar', x=i*8)
         if gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
-                ray.draw_texture(textures[1 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
-            ray.draw_texture(textures[2 + int(self.rainbow_animation.attribute)], 483, 124, ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
-        if self.gauge_update_anim is not None and gauge_length < 88 and gauge_length != self.previous_length:
+                tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute-1, color=ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
+            tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute, color=ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
+        if self.gauge_update_anim is not None and gauge_length < 88 and gauge_length > self.previous_length:
             if gauge_length == 69:
-                ray.draw_texture(textures[17], 491 + (gauge_length*textures[13].width) - 13, 160 - 8 - 24, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*8, color=ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
             elif gauge_length > 69:
-                ray.draw_texture(textures[21], 491 + (gauge_length*textures[13].width) - 13, 160 - 8 - 22, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, color=ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
             else:
-                ray.draw_texture(textures[14], 491 + (gauge_length*textures[13].width) - 13, 160 - 8, ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
-        ray.draw_texture(textures[10], 483, 124, ray.fade(ray.WHITE, 0.15))
-        if gauge_length >= 70:
-            ray.draw_texture(textures[18], 1038, 141, ray.WHITE)
-            ray.draw_texture(textures[19], 1187, 130, ray.WHITE)
+                tex.draw_texture('gauge', 'bar_fade', x=gauge_length*8, color=ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+        tex.draw_texture('gauge', 'overlay', color=ray.fade(ray.WHITE, 0.15))
+        if gauge_length >= 69:
+            tex.draw_texture('gauge', 'clear')
+            tex.draw_texture('gauge', 'tamashii')
         else:
-            ray.draw_texture(textures[11], 1038, 141, ray.WHITE)
-            ray.draw_texture(textures[12], 1187, 130, ray.WHITE)
+            tex.draw_texture('gauge', 'clear_dark')
+            tex.draw_texture('gauge', 'tamashii_dark')

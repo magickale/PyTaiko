@@ -114,7 +114,7 @@ class TextureWrapper:
                         raise Exception(f"Texture {tex_name} was not found in {zip}")
 
 
-    def draw_texture(self, subset: str, texture: str, color: ray.Color=ray.WHITE, frame: int = 0, scale: float = 1.0, center: bool = False, mirror: str = '', x: int | float = 0, y: int | float = 0, x2: int | float = 0, y2: int | float = 0) -> None:
+    def draw_texture(self, subset: str, texture: str, color: ray.Color=ray.WHITE, frame: int = 0, scale: float = 1.0, center: bool = False, mirror: str = '', x: float = 0, y: float = 0, x2: float = 0, y2: float = 0, origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0) -> None:
         mirror_x = -1 if mirror == 'horizontal' else 1
         mirror_y = -1 if mirror == 'vertical' else 1
         tex_object = self.textures[subset][texture]
@@ -128,10 +128,10 @@ class TextureWrapper:
                 raise Exception("Texture was marked as multiframe but is only 1 texture")
             if frame >= len(tex_object.texture):
                 raise Exception(f"Frame {frame} not available in iterable texture {tex_object.name}")
-            ray.draw_texture_pro(tex_object.texture[frame], source_rect, dest_rect, ray.Vector2(0, 0), 0, color)
+            ray.draw_texture_pro(tex_object.texture[frame], source_rect, dest_rect, origin, rotation, color)
         else:
             if isinstance(tex_object.texture, list):
                 raise Exception("Texture is multiframe but was called as 1 texture")
-            ray.draw_texture_pro(tex_object.texture, source_rect, dest_rect, ray.Vector2(0, 0), 0, color)
+            ray.draw_texture_pro(tex_object.texture, source_rect, dest_rect, origin, rotation, color)
 
 tex = TextureWrapper()

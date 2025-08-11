@@ -112,8 +112,6 @@ class FadeAnimation(BaseAnimation):
     def update(self, current_time_ms: float) -> None:
         if not self.is_started:
             return
-        else:
-            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
 
         if elapsed_time <= self.delay:
@@ -160,8 +158,6 @@ class MoveAnimation(BaseAnimation):
     def update(self, current_time_ms: float) -> None:
         if not self.is_started:
             return
-        else:
-            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time < self.delay:
             self.attribute = self.start_position
@@ -187,13 +183,12 @@ class TextureChangeAnimation(BaseAnimation):
         self.textures = textures
         self.delay = delay
         self.delay_saved = delay
+        self.attribute = textures[0][2]
 
     def update(self, current_time_ms: float) -> None:
         super().update(current_time_ms)
         if not self.is_started:
             return
-        else:
-            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time < self.delay:
             return
@@ -212,8 +207,6 @@ class TextStretchAnimation(BaseAnimation):
     def update(self, current_time_ms: float) -> None:
         if not self.is_started:
             return
-        else:
-            self.is_started = not self.is_finished
         elapsed_time = current_time_ms - self.start_ms
         if elapsed_time <= self.duration:
             self.attribute = 2 + 5 * (elapsed_time // 25)

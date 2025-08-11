@@ -1,5 +1,4 @@
 import sqlite3
-from pathlib import Path
 
 import pyray as ray
 from raylib import CAMERA_ORTHOGRAPHIC
@@ -15,7 +14,6 @@ from libs.utils import (
     force_dedicated_gpu,
     get_config,
     global_data,
-    load_all_textures_from_zip,
 )
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
@@ -78,7 +76,6 @@ def main():
     camera.projection = CAMERA_ORTHOGRAPHIC
 
     ray.init_window(screen_width, screen_height, "PyTaiko")
-    global_data.textures = load_all_textures_from_zip(Path('Graphics/lumendata/intermission.zip'))
     global_data.tex.load_screen_textures('transition')
     if global_data.config["video"]["borderless"]:
         ray.toggle_borderless_windowed()

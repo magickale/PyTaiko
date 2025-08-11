@@ -39,34 +39,6 @@ def force_dedicated_gpu():
         except Exception as e:
             print(e)
 
-def get_zip_filenames(zip_path: Path) -> list[str]:
-    result = []
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        file_list = zip_ref.namelist()
-        for file_name in file_list:
-            result.append(file_name)
-    return result
-
-def load_image_from_zip(zip_path: Path, filename: str) -> ray.Image:
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        with zip_ref.open(filename) as image_file:
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
-                temp_file.write(image_file.read())
-                temp_file_path = temp_file.name
-        image = ray.load_image(temp_file_path)
-        os.remove(temp_file_path)
-        return image
-
-def load_texture_from_zip(zip_path: Path, filename: str) -> ray.Texture:
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        with zip_ref.open(filename) as image_file:
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
-                temp_file.write(image_file.read())
-                temp_file_path = temp_file.name
-        texture = ray.load_texture(temp_file_path)
-        os.remove(temp_file_path)
-        return texture
-
 def load_all_textures_from_zip(zip_path: Path) -> dict[str, list[ray.Texture]]:
     result_dict = dict()
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -250,7 +222,6 @@ def reset_session():
 @dataclass
 class GlobalData:
     selected_song: Path = Path()
-    textures: dict[str, list[ray.Texture]] = field(default_factory=lambda: dict())
     tex: TextureWrapper = field(default_factory=lambda: TextureWrapper())
     songs_played: int = 0
     config: dict = field(default_factory=lambda: dict())

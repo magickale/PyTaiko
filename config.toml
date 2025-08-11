@@ -5,7 +5,6 @@ visual_offset = 0
 autoplay = false
 sfx = true
 language = "ja"
-send_diagnostic_data = false
 hard_judge = 108
 
 [paths]
