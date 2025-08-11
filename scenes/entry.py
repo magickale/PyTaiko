@@ -122,7 +122,7 @@ class EntryScreen:
         tex.draw_texture('background', 'people')
         tex.draw_texture('background', 'shops_left')
         tex.draw_texture('background', 'shops_right')
-        tex.draw_texture('background', 'lights', scale=2.0, color=ray.fade(ray.WHITE, self.bg_flicker.attribute))
+        tex.draw_texture('background', 'lights', scale=2.0, fade=self.bg_flicker.attribute)
 
     def draw_footer(self):
         tex.draw_texture('side_select', 'footer')
@@ -132,35 +132,34 @@ class EntryScreen:
             tex.draw_texture('side_select', 'footer_right')
 
     def draw_side_select(self, fade):
-        color = ray.fade(ray.WHITE, fade)
-        tex.draw_texture('side_select', 'box_top_left', color=color)
-        tex.draw_texture('side_select', 'box_top_right', color=color)
-        tex.draw_texture('side_select', 'box_bottom_left', color=color)
-        tex.draw_texture('side_select', 'box_bottom_right', color=color)
+        tex.draw_texture('side_select', 'box_top_left', fade=fade)
+        tex.draw_texture('side_select', 'box_top_right', fade=fade)
+        tex.draw_texture('side_select', 'box_bottom_left', fade=fade)
+        tex.draw_texture('side_select', 'box_bottom_right', fade=fade)
 
-        tex.draw_texture('side_select', 'box_top', color=color)
-        tex.draw_texture('side_select', 'box_bottom', color=color)
-        tex.draw_texture('side_select', 'box_left', color=color)
-        tex.draw_texture('side_select', 'box_right', color=color)
-        tex.draw_texture('side_select', 'box_center', color=color)
+        tex.draw_texture('side_select', 'box_top', fade=fade)
+        tex.draw_texture('side_select', 'box_bottom', fade=fade)
+        tex.draw_texture('side_select', 'box_left', fade=fade)
+        tex.draw_texture('side_select', 'box_right', fade=fade)
+        tex.draw_texture('side_select', 'box_center', fade=fade)
 
-        tex.draw_texture('side_select', 'question', color=color)
+        tex.draw_texture('side_select', 'question', fade=fade)
 
-        tex.draw_texture('side_select', '1P', color=color)
-        tex.draw_texture('side_select', 'cancel', color=color)
-        tex.draw_texture('side_select', '2P', color=color)
+        tex.draw_texture('side_select', '1P', fade=fade)
+        tex.draw_texture('side_select', 'cancel', fade=fade)
+        tex.draw_texture('side_select', '2P', fade=fade)
         if self.side == 0:
-            tex.draw_texture('side_select', '1P_highlight', color=color)
+            tex.draw_texture('side_select', '1P_highlight', fade=fade)
             tex.textures['side_select']['1P2P_outline'].x = 261
-            tex.draw_texture('side_select', '1P2P_outline', color=color, mirror='horizontal')
+            tex.draw_texture('side_select', '1P2P_outline', fade=fade, mirror='horizontal')
         elif self.side == 1:
-            tex.draw_texture('side_select', 'cancel_highlight', color=color)
-            tex.draw_texture('side_select', 'cancel_outline', color=color)
+            tex.draw_texture('side_select', 'cancel_highlight', fade=fade)
+            tex.draw_texture('side_select', 'cancel_outline', fade=fade)
         else:
-            tex.draw_texture('side_select', '2P_highlight', color=color)
+            tex.draw_texture('side_select', '2P_highlight', fade=fade)
             tex.textures['side_select']['1P2P_outline'].x = 762
-            tex.draw_texture('side_select', '1P2P_outline', color=color)
-        tex.draw_texture('side_select', 'cancel_text', color=color)
+            tex.draw_texture('side_select', '1P2P_outline', fade=fade)
+        tex.draw_texture('side_select', 'cancel_text', fade=fade)
 
     def draw_player_drum(self):
         move_x = self.drum_move_3.attribute
@@ -179,10 +178,9 @@ class EntryScreen:
         scale = self.cloud_resize.attribute
         if self.cloud_resize.is_finished:
             scale = max(1, self.cloud_resize_loop.attribute)
-        color = ray.fade(ray.WHITE, self.cloud_fade.attribute)
         tex.update_attr('side_select', 'cloud', 'x', move_x)
         tex.update_attr('side_select', 'cloud', 'y', move_y)
-        tex.draw_texture('side_select', 'cloud', frame=self.cloud_texture_change.attribute, color=color, scale=scale, center=True)
+        tex.draw_texture('side_select', 'cloud', frame=self.cloud_texture_change.attribute, fade=self.cloud_fade.attribute, scale=scale, center=True)
 
     def draw_mode_select(self):
         self.draw_player_drum()

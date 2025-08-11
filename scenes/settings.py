@@ -25,7 +25,6 @@ class SettingsScreen:
         self.in_setting_edit = False
         self.editing_key = False
         self.editing_gamepad = False
-        self.temp_key_input = ""
 
     def on_screen_start(self):
         if not self.screen_init:
@@ -109,7 +108,6 @@ class SettingsScreen:
     def handle_key_binding(self, section, key):
         """Handle key binding changes"""
         self.editing_key = True
-        self.temp_key_input = ""
 
     def update_key_binding(self):
         """Update key binding based on input"""
@@ -129,7 +127,6 @@ class SettingsScreen:
 
     def handle_gamepad_binding(self, section, key):
         self.editing_gamepad = True
-        self.temp_key_input = ""
 
     def update_gamepad_binding(self):
         """Update gamepad binding based on input"""

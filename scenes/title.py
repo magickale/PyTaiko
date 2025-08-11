@@ -1,8 +1,6 @@
 import random
 from pathlib import Path
 
-import pyray as ray
-
 from libs.audio import audio
 from libs.texture import tex
 from libs.utils import (
@@ -108,7 +106,7 @@ class TitleScreen:
         elif self.state == State.ATTRACT_VIDEO and self.attract_video is not None:
             self.attract_video.draw()
 
-        tex.draw_texture('movie', 'background', color=ray.fade(ray.WHITE, self.fade_out.attribute))
+        tex.draw_texture('movie', 'background', fade=self.fade_out.attribute)
 
     def draw_3d(self):
         pass
@@ -134,10 +132,10 @@ class WarningScreen:
                 self.sound_played = True
 
         def draw_bg(self):
-            tex.draw_texture('warning', 'x_lightred', color=ray.fade(ray.WHITE, self.fadein_2.attribute))
+            tex.draw_texture('warning', 'x_lightred', fade=self.fadein_2.attribute)
 
         def draw_fg(self):
-            tex.draw_texture('warning', 'x_red', color=ray.fade(ray.WHITE, self.fadein.attribute), scale=self.resize.attribute, center=True)
+            tex.draw_texture('warning', 'x_red', fade=self.fadein.attribute, scale=self.resize.attribute, center=True)
 
     class BachiHit:
         def __init__(self):
@@ -156,7 +154,7 @@ class WarningScreen:
             self.fadein.update(current_ms)
 
         def draw(self):
-            tex.draw_texture('warning', 'bachi_hit', color=ray.fade(ray.WHITE, self.fadein.attribute), scale=self.resize.attribute, center=True)
+            tex.draw_texture('warning', 'bachi_hit', fade=self.fadein.attribute, scale=self.resize.attribute, center=True)
             if self.resize.attribute > 0 and self.sound_played:
                 tex.draw_texture('warning', 'bachi')
 
@@ -182,14 +180,14 @@ class WarningScreen:
                 else:
                     self.shadow_fade.restart()
             self.is_finished = self.chara_1_frame.is_finished
-        def draw(self, fade: ray.Color, fade_2: ray.Color):
-            tex.draw_texture('warning', 'chara_0_shadow', color=fade_2)
-            tex.draw_texture('warning', 'chara_0', frame=self.chara_0_frame.attribute, color=fade)
+        def draw(self, fade: float, fade_2: float):
+            tex.draw_texture('warning', 'chara_0_shadow', fade=fade_2)
+            tex.draw_texture('warning', 'chara_0', frame=self.chara_0_frame.attribute, fade=fade)
 
-            tex.draw_texture('warning', 'chara_1_shadow', color=fade_2)
+            tex.draw_texture('warning', 'chara_1_shadow', fade=fade_2)
             if -1 < self.chara_1_frame.attribute-1 < 7:
-                tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute-1, color=ray.fade(ray.WHITE, self.shadow_fade.attribute))
-            tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute, color=fade)
+                tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute-1, fade=self.shadow_fade.attribute)
+            tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute, fade=fade)
 
     class Board:
         def __init__(self):
@@ -256,13 +254,10 @@ class WarningScreen:
         self.is_finished = self.fade_out.is_finished
 
     def draw(self):
-        fade = ray.fade(ray.WHITE, self.fade_in.attribute)
-        fade_2 = ray.fade(ray.WHITE, min(self.fade_in.attribute, 0.75))
-
         self.board.draw()
         self.warning_x.draw_bg()
-        self.characters.draw(fade, fade_2)
+        self.characters.draw(self.fade_in.attribute, min(self.fade_in.attribute, 0.75))
         self.warning_x.draw_fg()
         self.warning_bachi_hit.draw()
 
-        tex.draw_texture('movie', 'background', color=ray.fade(ray.WHITE, self.fade_out.attribute))
+        tex.draw_texture('movie', 'background', fade=self.fade_out.attribute)

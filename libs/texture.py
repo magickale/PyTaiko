@@ -63,6 +63,55 @@ class TextureWrapper:
         tex_object.x2 = tex_mapping.get("x2", tex_object.width)
         tex_object.y2 = tex_mapping.get("y2", tex_object.height)
 
+    def load_animations(self, screen_name: str):
+        screen_path = self.graphics_path / screen_name
+        if (screen_path / 'animation.json').exists():
+            with open(screen_path / 'animation.json') as json_file:
+                self.animations = parse_animations(json.loads(json_file.read()))
+
+    def load_zip(self, screen_name: str, subset: str):
+        zip = (self.graphics_path / screen_name / subset).with_suffix('.zip')
+        with zipfile.ZipFile(zip, 'r') as zip_ref:
+            if 'texture.json' not in zip_ref.namelist():
+                raise Exception(f"texture.json file missing from {zip}")
+
+            with zip_ref.open('texture.json') as json_file:
+                tex_mapping_data = json.loads(json_file.read().decode('utf-8'))
+                self.textures[zip.stem] = dict()
+
+            for tex_name in tex_mapping_data:
+                if f"{tex_name}/" in zip_ref.namelist():
+                    tex_mapping = tex_mapping_data[tex_name]
+
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        zip_ref.extractall(temp_dir, members=[name for name in zip_ref.namelist()
+                                                            if name.startswith(tex_name)])
+
+                        extracted_path = Path(temp_dir) / tex_name
+                        if extracted_path.is_dir():
+                            frames = [ray.load_texture(str(frame)) for frame in sorted(extracted_path.iterdir(),
+                                      key=lambda x: int(x.stem)) if frame.is_file()]
+                        else:
+                            frames = [ray.load_texture(str(extracted_path))]
+                    self.textures[zip.stem][tex_name] = Texture(tex_name, frames, tex_mapping)
+                    self._read_tex_obj_data(tex_mapping, self.textures[zip.stem][tex_name])
+                elif f"{tex_name}.png" in zip_ref.namelist():
+                    tex_mapping = tex_mapping_data[tex_name]
+
+                    png_filename = f"{tex_name}.png"
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                        temp_file.write(zip_ref.read(png_filename))
+                        temp_path = temp_file.name
+
+                    try:
+                        tex = ray.load_texture(temp_path)
+                        self.textures[zip.stem][tex_name] = Texture(tex_name, tex, tex_mapping)
+                        self._read_tex_obj_data(tex_mapping, self.textures[zip.stem][tex_name])
+                    finally:
+                        os.unlink(temp_path)
+                else:
+                    raise Exception(f"Texture {tex_name} was not found in {zip}")
+
     def load_screen_textures(self, screen_name: str) -> None:
         self.unload_textures()
         screen_path = self.graphics_path / screen_name
@@ -72,51 +121,18 @@ class TextureWrapper:
         for zip in screen_path.iterdir():
             if zip.is_dir() or zip.suffix != ".zip":
                 continue
-            with zipfile.ZipFile(zip, 'r') as zip_ref:
-                if 'texture.json' not in zip_ref.namelist():
-                    raise Exception(f"texture.json file missing from {zip}")
-
-                with zip_ref.open('texture.json') as json_file:
-                    tex_mapping_data = json.loads(json_file.read().decode('utf-8'))
-                    self.textures[zip.stem] = dict()
-
-                for tex_name in tex_mapping_data:
-                    if f"{tex_name}/" in zip_ref.namelist():
-                        tex_mapping = tex_mapping_data[tex_name]
-
-                        with tempfile.TemporaryDirectory() as temp_dir:
-                            zip_ref.extractall(temp_dir, members=[name for name in zip_ref.namelist()
-                                                                if name.startswith(tex_name)])
-
-                            extracted_path = Path(temp_dir) / tex_name
-                            if extracted_path.is_dir():
-                                frames = [ray.load_texture(str(frame)) for frame in sorted(extracted_path.iterdir(),
-                                          key=lambda x: int(x.stem)) if frame.is_file()]
-                            else:
-                                frames = [ray.load_texture(str(extracted_path))]
-                        self.textures[zip.stem][tex_name] = Texture(tex_name, frames, tex_mapping)
-                        self._read_tex_obj_data(tex_mapping, self.textures[zip.stem][tex_name])
-                    elif f"{tex_name}.png" in zip_ref.namelist():
-                        tex_mapping = tex_mapping_data[tex_name]
-
-                        png_filename = f"{tex_name}.png"
-                        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-                            temp_file.write(zip_ref.read(png_filename))
-                            temp_path = temp_file.name
-
-                        try:
-                            tex = ray.load_texture(temp_path)
-                            self.textures[zip.stem][tex_name] = Texture(tex_name, tex, tex_mapping)
-                            self._read_tex_obj_data(tex_mapping, self.textures[zip.stem][tex_name])
-                        finally:
-                            os.unlink(temp_path)
-                    else:
-                        raise Exception(f"Texture {tex_name} was not found in {zip}")
+            self.load_zip(screen_name, zip.name)
 
 
-    def draw_texture(self, subset: str, texture: str, color: ray.Color=ray.WHITE, frame: int = 0, scale: float = 1.0, center: bool = False, mirror: str = '', x: float = 0, y: float = 0, x2: float = 0, y2: float = 0, origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0) -> None:
+    def draw_texture(self, subset: str, texture: str, color: ray.Color=ray.WHITE, frame: int = 0, scale: float = 1.0, center: bool = False,
+                            mirror: str = '', x: float = 0, y: float = 0, x2: float = 0, y2: float = 0,
+                            origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0, fade: float = 1.1) -> None:
         mirror_x = -1 if mirror == 'horizontal' else 1
         mirror_y = -1 if mirror == 'vertical' else 1
+        if fade != 1.1:
+            final_color = ray.fade(color, fade)
+        else:
+            final_color = color
         tex_object = self.textures[subset][texture]
         source_rect = ray.Rectangle(0, 0, tex_object.width * mirror_x, tex_object.height * mirror_y)
         if center:
@@ -128,10 +144,10 @@ class TextureWrapper:
                 raise Exception("Texture was marked as multiframe but is only 1 texture")
             if frame >= len(tex_object.texture):
                 raise Exception(f"Frame {frame} not available in iterable texture {tex_object.name}")
-            ray.draw_texture_pro(tex_object.texture[frame], source_rect, dest_rect, origin, rotation, color)
+            ray.draw_texture_pro(tex_object.texture[frame], source_rect, dest_rect, origin, rotation, final_color)
         else:
             if isinstance(tex_object.texture, list):
                 raise Exception("Texture is multiframe but was called as 1 texture")
-            ray.draw_texture_pro(tex_object.texture, source_rect, dest_rect, origin, rotation, color)
+            ray.draw_texture_pro(tex_object.texture, source_rect, dest_rect, origin, rotation, final_color)
 
 tex = TextureWrapper()

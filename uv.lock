@@ -314,9 +314,6 @@ requires-dist = [
     { name = "tomlkit", specifier = ">=0.13.3" },
 ]
 
-[package.metadata.requires-dev]
-dev = []
-
 [[package]]
 name = "python-dotenv"
 version = "1.1.0"

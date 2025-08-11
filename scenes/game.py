@@ -45,7 +45,6 @@ class GameScreen:
         self.sound_restart = audio.load_sound(sounds_dir / 'song_select' / 'Skip.ogg')
         self.sound_balloon_pop = audio.load_sound(sounds_dir / "balloon_pop.wav")
         self.sound_result_transition = audio.load_sound(sounds_dir / "result" / "VO_RESULT [1].ogg")
-        self.sounds = [self.sound_don, self.sound_kat, self.sound_balloon_pop, self.sound_result_transition]
 
     def init_tja(self, song: Path, difficulty: int):
         if song == Path(''):
@@ -82,8 +81,7 @@ class GameScreen:
                 subtitle = self.tja.metadata.subtitle.get(global_data.config['general']['language'].lower(), '')
             else:
                 subtitle = ''
-            self.transition = Transition(session_data.song_title, subtitle)
-            self.transition.is_second = True
+            self.transition = Transition(session_data.song_title, subtitle, is_second=True)
             self.transition.start()
 
     def on_screen_end(self, next_screen):
@@ -241,13 +239,6 @@ class Player:
 
         self.autoplay_hit_side = 'L'
         self.last_subdivision = -1
-
-        self.model = ray.load_model("model/mikudon.obj")
-        self.model_position = ray.Vector3(-475.0, 160.0, -180.0)
-        self.model_scale = 850.0
-        self.model_rotation_y = 30.0  # Face towards camera (rotate 180 degrees on Y-axis)
-        self.model_rotation_x = 0.0    # No up/down tilt
-        self.model_rotation_z = 0.0
 
     def get_result_score(self):
         return self.score, self.good_count, self.ok_count, self.bad_count, self.total_drumroll, self.max_combo
@@ -657,17 +648,6 @@ class Player:
         #ray.draw_circle(game_screen.width//2, game_screen.height, 300, ray.ORANGE)
 
     def draw_3d(self):
-        '''
-        rotation_axis = ray.Vector3(0.0, 1.0, 0.0)  # Y-axis for horizontal rotation
-        ray.draw_model_ex(
-            self.model,
-            self.model_position,
-            rotation_axis,
-            self.model_rotation_y,
-            ray.Vector3(self.model_scale, self.model_scale, self.model_scale),
-            ray.WHITE
-        )
-        '''
         pass
 
 class Judgement:
@@ -729,53 +709,47 @@ class Judgement:
 class LaneHitEffect:
     def __init__(self, type: str):
         self.type = type
-        self.color = ray.fade(ray.WHITE, 0.5)
         self.fade = tex.get_animation(0, is_copy=True)
         self.fade.start()
         self.is_finished = False
 
     def update(self, current_ms: float):
         self.fade.update(current_ms)
-        fade_opacity = self.fade.attribute
-        self.color = ray.fade(ray.WHITE, fade_opacity)
         if self.fade.is_finished:
             self.is_finished = True
 
     def draw(self):
         if self.type == 'GOOD':
-            tex.draw_texture('lane', 'lane_hit_effect', frame=2, color=self.color)
+            tex.draw_texture('lane', 'lane_hit_effect', frame=2, fade=self.fade.attribute)
         elif self.type == 'DON':
-            tex.draw_texture('lane', 'lane_hit_effect', frame=0, color=self.color)
+            tex.draw_texture('lane', 'lane_hit_effect', frame=0, fade=self.fade.attribute)
         elif self.type == 'KAT':
-            tex.draw_texture('lane', 'lane_hit_effect', frame=1, color=self.color)
+            tex.draw_texture('lane', 'lane_hit_effect', frame=1, fade=self.fade.attribute)
 
 class DrumHitEffect:
     def __init__(self, type: str, side: str):
         self.type = type
         self.side = side
-        self.color = ray.fade(ray.WHITE, 1)
         self.is_finished = False
         self.fade = tex.get_animation(1, is_copy=True)
         self.fade.start()
 
     def update(self, current_ms: float):
         self.fade.update(current_ms)
-        fade_opacity = self.fade.attribute
-        self.color = ray.fade(ray.WHITE, fade_opacity)
         if self.fade.is_finished:
             self.is_finished = True
 
     def draw(self):
         if self.type == 'DON':
             if self.side == 'L':
-                tex.draw_texture('lane', 'drum_don_l', color=self.color)
+                tex.draw_texture('lane', 'drum_don_l', fade=self.fade.attribute)
             elif self.side == 'R':
-                tex.draw_texture('lane', 'drum_don_r', color=self.color)
+                tex.draw_texture('lane', 'drum_don_r', fade=self.fade.attribute)
         elif self.type == 'KAT':
             if self.side == 'L':
-                tex.draw_texture('lane', 'drum_kat_l', color=self.color)
+                tex.draw_texture('lane', 'drum_kat_l', fade=self.fade.attribute)
             elif self.side == 'R':
-                tex.draw_texture('lane', 'drum_kat_r', color=self.color)
+                tex.draw_texture('lane', 'drum_kat_r', fade=self.fade.attribute)
 
 class GaugeHitEffect:
     def __init__(self, note_type: int, big: bool):
@@ -820,7 +794,7 @@ class GaugeHitEffect:
         origin = ray.Vector2(dest_width / 2, dest_height / 2)
         rotation = self.rotation.attribute*100
         tex.draw_texture('gauge', 'hit_effect', frame=self.texture_change.attribute, x2=-152 + (152 * self.resize.attribute), y2=-152 + (152 * self.resize.attribute), color=ray.fade(texture_color, self.fade_out.attribute), origin=origin, rotation=rotation, center=True)
-        tex.draw_texture('notes', str(self.note_type), x=1158, y=101, color=ray.fade(ray.WHITE, self.fade_out.attribute))
+        tex.draw_texture('notes', str(self.note_type), x=1158, y=101, fade=self.fade_out.attribute)
         if self.is_big:
             tex.draw_texture('gauge', 'hit_effect_circle_big', color=self.color)
         else:
@@ -1154,7 +1128,7 @@ class SongInfo:
             self.fade.restart()
 
     def draw(self):
-        tex.draw_texture('song_info', 'song_num', color=ray.fade(ray.WHITE, self.fade.attribute), frame=global_data.songs_played % 4)
+        tex.draw_texture('song_info', 'song_num', fade=self.fade.attribute, frame=global_data.songs_played % 4)
 
         text_x = 1252 - self.song_title.texture.width
         text_y = 50 - self.song_title.texture.height//2
@@ -1187,7 +1161,6 @@ class ResultTransition:
             x += 256
 
 class Gauge:
-    GAUGE_MAX = 87
     def __init__(self, difficulty: int, level: int, total_notes: int):
         self.gauge_length = 0
         self.previous_length = 0
@@ -1300,16 +1273,16 @@ class Gauge:
                 tex.draw_texture('gauge', 'bar', x=i*8)
         if gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
-                tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute-1, color=ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
-            tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute, color=ray.fade(ray.WHITE, self.rainbow_fade_in.attribute))
+                tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute-1, fade=self.rainbow_fade_in.attribute)
+            tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute, fade=self.rainbow_fade_in.attribute)
         if self.gauge_update_anim is not None and gauge_length < 88 and gauge_length > self.previous_length:
             if gauge_length == 69:
-                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*8, color=ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
             elif gauge_length > 69:
-                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, color=ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
+                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
             else:
-                tex.draw_texture('gauge', 'bar_fade', x=gauge_length*8, color=ray.fade(ray.WHITE, self.gauge_update_anim.attribute))
-        tex.draw_texture('gauge', 'overlay', color=ray.fade(ray.WHITE, 0.15))
+                tex.draw_texture('gauge', 'bar_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
+        tex.draw_texture('gauge', 'overlay', fade=0.15)
         if gauge_length >= 69:
             tex.draw_texture('gauge', 'clear')
             tex.draw_texture('gauge', 'tamashii')

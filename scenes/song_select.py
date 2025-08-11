@@ -63,7 +63,6 @@ class SongSelectScreen:
             self.game_transition = None
             self.texture_index = 9
             self.last_texture_index = 9
-            self.default_texture = self.texture_index
             self.demo_song = None
             self.navigator.reset_items()
             self.navigator.get_current_item().box.get_scores()
@@ -297,8 +296,7 @@ class SongSelectScreen:
         width = tex.textures['box']['background'].width
         for i in range(0, width * 4, width):
             tex.draw_texture('box', 'background', frame=self.last_texture_index, x=i - int(self.background_move.attribute))
-            reverse_color = ray.fade(ray.WHITE, 1 - self.background_fade_change.attribute)
-            tex.draw_texture('box', 'background', frame=self.texture_index, x=i - int(self.background_move.attribute), color=reverse_color)
+            tex.draw_texture('box', 'background', frame=self.texture_index, x=i - int(self.background_move.attribute), fade=1 - self.background_fade_change.attribute)
 
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
             self.navigator.genre_bg.draw(95)
@@ -314,11 +312,9 @@ class SongSelectScreen:
 
         if self.selected_song and self.state == State.SONG_SELECTED:
             self.draw_selector()
-            fade = ray.fade(ray.WHITE, self.text_fade_in.attribute)
-            tex.draw_texture('global', 'difficulty_select', color=fade)
+            tex.draw_texture('global', 'difficulty_select', fade=self.text_fade_in.attribute)
         else:
-            fade = ray.fade(ray.WHITE, self.text_fade_out.attribute)
-            tex.draw_texture('global', 'song_select', color=fade)
+            tex.draw_texture('global', 'song_select', fade=self.text_fade_out.attribute)
 
         tex.draw_texture('global', 'footer')
 
@@ -365,9 +361,6 @@ class SongBox:
         self.move = None
         self.wait = 0
         self.is_dir = is_dir
-        self.is_genre_start = 0
-        self.is_genre_end = False
-        self.genre_distance = 0
         self.tja_count = tja_count
         self.tja_count_text = None
         self.tja = tja
@@ -642,7 +635,7 @@ class YellowBox:
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*60), color=color)
             elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == 1:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*60), color=color)
-            tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*60), color=ray.fade(ray.WHITE, min(fade, 0.25)))
+            tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*60), fade=min(fade, 0.25))
 
         if self.tja.ex_data.new_audio:
             tex.draw_texture('yellow_box', 'ex_data_new_audio', color=color)
@@ -656,7 +649,7 @@ class YellowBox:
         for i in range(4):
             tex.draw_texture('yellow_box', 'difficulty_bar', frame=i, x=(i*60), color=color)
             if i not in self.tja.metadata.course_data:
-                tex.draw_texture('yellow_box', 'difficulty_bar_shadow', frame=i, x=(i*60), color=ray.fade(ray.WHITE, min(fade, 0.25)))
+                tex.draw_texture('yellow_box', 'difficulty_bar_shadow', frame=i, x=(i*60), fade=min(fade, 0.25))
 
         for diff in self.tja.metadata.course_data:
             if diff >= 4:
@@ -667,23 +660,22 @@ class YellowBox:
     def _draw_tja_data_diff(self, is_ura: bool):
         if self.tja is None:
             return
-        color = ray.fade(ray.WHITE, self.fade_in.attribute)
-        tex.draw_texture('diff_select', 'back', color=color)
+        tex.draw_texture('diff_select', 'back', fade=self.fade_in.attribute)
 
         for i in range(4):
             if i == 3 and is_ura:
-                tex.draw_texture('diff_select', 'diff_tower', frame=4, x=(i*115), color=color)
-                tex.draw_texture('diff_select', 'ura_oni_plate', color=color)
+                tex.draw_texture('diff_select', 'diff_tower', frame=4, x=(i*115), fade=self.fade_in.attribute)
+                tex.draw_texture('diff_select', 'ura_oni_plate', fade=self.fade_in.attribute)
             else:
-                tex.draw_texture('diff_select', 'diff_tower', frame=i, x=(i*115), color=color)
+                tex.draw_texture('diff_select', 'diff_tower', frame=i, x=(i*115), fade=self.fade_in.attribute)
             if i not in self.tja.metadata.course_data:
-                tex.draw_texture('diff_select', 'diff_tower_shadow', frame=i, x=(i*115), color=ray.fade(ray.WHITE, min(self.fade_in.attribute, 0.25)))
+                tex.draw_texture('diff_select', 'diff_tower_shadow', frame=i, x=(i*115), fade=min(self.fade_in.attribute, 0.25))
 
         for course in self.tja.metadata.course_data:
             if (course == 4 and not is_ura) or (course == 3 and is_ura):
                 continue
             for j in range(self.tja.metadata.course_data[course].level):
-                tex.draw_texture('yellow_box', 'star_ura', x=min(course, 3)*115, y=(j*-20), color=color)
+                tex.draw_texture('yellow_box', 'star_ura', x=min(course, 3)*115, y=(j*-20), fade=self.fade_in.attribute)
 
     def _draw_text(self, song_box):
         if not isinstance(self.right_out, MoveAnimation):
@@ -724,10 +716,9 @@ class YellowBox:
             fade = self.fade.attribute
             if fade_override is not None:
                 fade = min(self.fade.attribute, fade_override)
-            color = ray.fade(ray.WHITE, fade)
             if self.is_back:
-                tex.draw_texture('box', 'back_graphic', color=color)
-            self._draw_tja_data(song_box, color, fade)
+                tex.draw_texture('box', 'back_graphic', fade=fade)
+            self._draw_tja_data(song_box, ray.fade(ray.WHITE, fade), fade)
 
         self._draw_text(song_box)
 
@@ -745,10 +736,9 @@ class GenreBG:
         self.end_position = self.end_box.position
         self.fade_in.update(current_ms)
     def draw(self, y):
-        color = ray.fade(ray.WHITE, self.fade_in.attribute)
         offset = -150 if self.start_box.is_open else 0
 
-        tex.draw_texture('box', 'folder_background_edge', frame=self.end_box.texture_index, x=self.start_position+offset, y=y, mirror="horizontal", color=color)
+        tex.draw_texture('box', 'folder_background_edge', frame=self.end_box.texture_index, x=self.start_position+offset, y=y, mirror="horizontal", fade=self.fade_in.attribute)
         extra_distance = 155 if self.end_box.is_open or self.start_box.is_open else 0
         if self.start_position >= -56 and self.end_position < self.start_position:
             x2 = self.start_position + 1336
@@ -759,16 +749,16 @@ class GenreBG:
             x2 = min(self.end_position+75, 1280) + extra_distance
             tex.draw_texture('box', 'folder_background', x=-18, y=y, x2=x2, frame=self.end_box.texture_index)
         offset = 150 if self.end_box.is_open else 0
-        tex.draw_texture('box', 'folder_background_edge', x=self.end_position+80+offset, y=y, color=color, frame=self.end_box.texture_index)
+        tex.draw_texture('box', 'folder_background_edge', x=self.end_position+80+offset, y=y, fade=self.fade_in.attribute, frame=self.end_box.texture_index)
 
         if ((self.start_position <= 594 and self.end_position >= 594) or
             ((self.start_position <= 594 or self.end_position >= 594) and (self.start_position > self.end_position))):
             dest_width = min(300, self.title.texture.width)
-            tex.draw_texture('box', 'folder_header', x=-(dest_width//2), y=y, x2=dest_width, color=color, frame=self.end_box.texture_index)
-            tex.draw_texture('box', 'folder_header_edge', x=-(dest_width//2), y=y, color=color, frame=self.end_box.texture_index, mirror="horizontal")
-            tex.draw_texture('box', 'folder_header_edge', x=(dest_width//2), y=y, color=color, frame=self.end_box.texture_index)
+            tex.draw_texture('box', 'folder_header', x=-(dest_width//2), y=y, x2=dest_width, fade=self.fade_in.attribute, frame=self.end_box.texture_index)
+            tex.draw_texture('box', 'folder_header_edge', x=-(dest_width//2), y=y, fade=self.fade_in.attribute, frame=self.end_box.texture_index, mirror="horizontal")
+            tex.draw_texture('box', 'folder_header_edge', x=(dest_width//2), y=y, fade=self.fade_in.attribute, frame=self.end_box.texture_index)
             dest = ray.Rectangle((1280//2) - (dest_width//2), y-60, dest_width, self.title.texture.height)
-            self.title.draw(self.title.default_src, dest, ray.Vector2(0, 0), 0, color)
+            self.title.draw(self.title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.fade_in.attribute))
 
 class UraSwitchAnimation:
     def __init__(self) -> None:
@@ -785,7 +775,7 @@ class UraSwitchAnimation:
         self.texture_change.update(current_ms)
         self.fade_out.update(current_ms)
     def draw(self):
-        tex.draw_texture('diff_select', 'ura_switch', frame=self.texture_change.attribute, color=ray.fade(ray.WHITE, self.fade_out.attribute))
+        tex.draw_texture('diff_select', 'ura_switch', frame=self.texture_change.attribute, fade=self.fade_out.attribute)
 
 class FileSystemItem:
     GENRE_MAP = {
@@ -801,7 +791,6 @@ class FileSystemItem:
     """Base class for files and directories in the navigation system"""
     def __init__(self, path: Path, name: str):
         self.path = path
-        self.selected = False
 
 class Directory(FileSystemItem):
     """Represents a directory in the navigation system"""
@@ -1188,10 +1177,6 @@ class FileNavigator:
             else:
                 item.box.target_position = position
 
-    def set_base_positions(self):
-        """Set initial positions for all items"""
-        self.calculate_box_positions()
-
     def load_root_directories(self):
         """Load the pre-generated root directory items"""
         self.items = self.root_items.copy()
@@ -1338,24 +1323,3 @@ class FileNavigator:
     def reset_items(self):
         for item in self.items:
             item.box.reset()
-
-    def regenerate_objects(self):
-        """Regenerate all objects (useful if files have changed on disk)"""
-        print("Regenerating all objects...")
-
-        # Clear existing objects
-        self.all_directories.clear()
-        self.all_song_files.clear()
-        self.directory_contents.clear()
-        self.root_items.clear()
-        self.directory_crowns.clear()  # Clear crown cache
-        self.crown_cache_dirty.clear()  # Clear dirty flags
-
-        # Regenerate everything
-        self._generate_all_objects()
-
-        # Reset navigation state
-        self.current_dir = Path()
-        self.current_root_dir = Path()
-        self.history.clear()
-        self.load_root_directories()

@@ -4,6 +4,7 @@ from pathlib import Path
 import pyray as ray
 
 from libs.animation import Animation
+from libs.texture import TextureWrapper
 from libs.utils import load_all_textures_from_zip
 
 
@@ -11,10 +12,12 @@ class Background:
     def __init__(self, screen_width: int, screen_height: int):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.donbg = DonBG.create(self.screen_width, self.screen_height, random.randint(1, 6), 1)
+        self.tex_wrapper = TextureWrapper()
+        self.tex_wrapper.load_animations('background')
+        self.donbg = DonBG.create(self.tex_wrapper, self.screen_width, self.screen_height, random.randint(1, 6), 1)
         self.bg_normal = BGNormal.create(self.screen_width, self.screen_height, random.randint(1, 5))
         self.bg_fever = BGFever.create(self.screen_width, self.screen_height, 4)
-        self.footer = Footer(self.screen_width, self.screen_height, random.randint(1, 3))
+        self.footer = Footer(self.tex_wrapper, random.randint(0, 2))
         self.is_clear = False
     def update(self, current_time_ms: float, is_clear: bool):
         if not self.is_clear and is_clear:
@@ -27,27 +30,27 @@ class Background:
         self.bg_normal.draw()
         if self.is_clear:
             self.bg_fever.draw()
-        self.footer.draw()
+        self.footer.draw(self.tex_wrapper)
         self.donbg.draw()
 
     def unload(self):
         self.donbg.unload()
         self.bg_normal.unload()
         self.bg_fever.unload()
-        self.footer.unload()
 
 class DonBG:
 
     @staticmethod
-    def create(screen_width: int, screen_height: int, index: int, player_num: int):
+    def create(tex: TextureWrapper, screen_width: int, screen_height: int, index: int, player_num: int):
         map = [None, DonBG1, DonBG2, DonBG3, DonBG4, DonBG5, DonBG6]
         selected_obj = map[index]
-        return selected_obj(index, screen_width, screen_height, player_num)
+        return selected_obj(tex, index, screen_width, screen_height, player_num)
 
 class DonBGBase:
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
         self.screen_width = screen_width
         self.screen_height = screen_height
+        #tex.load_zip('background', f'donbg/{index}_{player_num}')
         self.player_num = player_num
         self.name = 'donbg_a_' + str(index).zfill(2)
         self.textures = (load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.name}_{self.player_num}p.zip')))
@@ -73,8 +76,8 @@ class DonBGBase:
                 ray.unload_texture(texture)
 
 class DonBG1(DonBGBase):
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
-        super().__init__(index, screen_width, screen_height, player_num)
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
+        super().__init__(tex, index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1000, start_position=0, total_distance=20, reverse_delay=0)
         self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
@@ -100,8 +103,8 @@ class DonBG1(DonBGBase):
             ray.draw_texture(texture, i + int(self.move.attribute * (texture.width/top_texture.width)*3), int(self.overlay_move.attribute) + 105, color)
 
 class DonBG2(DonBGBase):
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
-        super().__init__(index, screen_width, screen_height, player_num)
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
+        super().__init__(tex, index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1500, start_position=0, total_distance=20, reverse_delay=0)
         self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
@@ -123,8 +126,8 @@ class DonBG2(DonBGBase):
             ray.draw_texture(texture, i + int(self.move.attribute), int(self.overlay_move.attribute) - 25, color)
 
 class DonBG3(DonBGBase):
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
-        super().__init__(index, screen_width, screen_height, player_num)
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
+        super().__init__(tex, index, screen_width, screen_height, player_num)
         duration = 266
         bounce_distance = 40
         self.bounce_up = Animation.create_move(duration, total_distance=-bounce_distance, ease_out='quadratic')
@@ -162,8 +165,8 @@ class DonBG3(DonBGBase):
             ray.draw_texture(texture, i + int(self.move.attribute*2), int(self.bounce_up.attribute) - int(self.bounce_down.attribute) - 25 + int(self.overlay_move.attribute) + int(self.overlay_move_2.attribute), color)
 
 class DonBG4(DonBGBase):
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
-        super().__init__(index, screen_width, screen_height, player_num)
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
+        super().__init__(tex, index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1500, start_position=0, total_distance=20, reverse_delay=0)
         self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
@@ -186,8 +189,8 @@ class DonBG4(DonBGBase):
             ray.draw_texture(texture, i + int(self.move.attribute), int(self.overlay_move.attribute) - 25, color)
 
 class DonBG5(DonBGBase):
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
-        super().__init__(index, screen_width, screen_height, player_num)
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
+        super().__init__(tex, index, screen_width, screen_height, player_num)
         duration = 266
         bounce_distance = 40
         self.bounce_up = Animation.create_move(duration, total_distance=-bounce_distance, ease_out='quadratic')
@@ -221,8 +224,8 @@ class DonBG5(DonBGBase):
             ray.draw_texture(texture, i + int((self.move.attribute * (texture.width/top_texture.width))*2), int(self.bounce_up.attribute) - int(self.bounce_down.attribute) - int(self.adjust.attribute), color)
 
 class DonBG6(DonBGBase):
-    def __init__(self, index: int, screen_width: int, screen_height: int, player_num: int):
-        super().__init__(index, screen_width, screen_height, player_num)
+    def __init__(self, tex: TextureWrapper, index: int, screen_width: int, screen_height: int, player_num: int):
+        super().__init__(tex, index, screen_width, screen_height, player_num)
         self.overlay_move = Animation.create_move(1000, start_position=0, total_distance=20, reverse_delay=0)
         self.overlay_move.start()
     def update(self, current_time_ms: float, is_clear: bool):
@@ -498,14 +501,8 @@ class BGFever4(BGFeverBase):
         ray.draw_texture(self.textures[self.name][2], self.textures[self.name][2].width -int(self.horizontal_move.attribute), y, ray.WHITE)
 
 class Footer:
-    def __init__(self, screen_width: int, screen_height: int, index: int):
-        self.screen_width = screen_width
-        self.screen_height = screen_height
-        self.name = 'dodai_a_' + str(index).zfill(2)
-        self.textures = (load_all_textures_from_zip(Path(f'Graphics/lumendata/enso_original/{self.name}.zip')))
-    def unload(self):
-        for texture_group in self.textures:
-            for texture in self.textures[texture_group]:
-                ray.unload_texture(texture)
-    def draw(self):
-        ray.draw_texture(self.textures[self.name][0], 0, self.screen_height - self.textures[self.name][0].height + 20, ray.WHITE)
+    def __init__(self, tex: TextureWrapper, index: int):
+        self.index = index
+        tex.load_zip('background', 'footer')
+    def draw(self, tex: TextureWrapper):
+        tex.draw_texture('footer', str(self.index))

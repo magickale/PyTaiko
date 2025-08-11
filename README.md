@@ -24,6 +24,35 @@ Linux:
 ```
     Run PyTaiko.bin for Debian based systems, otherwise run python
 ```
+Nix OS:
+Use the provided shell.nix code and run with python:
+```
+{ pkgs ? import <nixpkgs> {} }:
+
+(pkgs.buildFHSEnv {
+  name = "PyTaiko-env";
+  targetPkgs = pkgs: (with pkgs; [
+    python3Full
+    gcc
+    libGL
+    uv
+    patchelf
+    portaudio
+    zlib
+    python312Packages.pyaudio
+    python312Packages.nuitka
+    python312Packages.numpy
+
+          alsa-lib
+          xorg.libX11 xorg.libxcb xorg.libXcomposite
+          xorg.libXdamage xorg.libXext xorg.libXfixes
+          xorg.libXrender xorg.libxshmfence xorg.libXtst
+          xorg.libXi
+          xorg.xcbutilkeysyms
+  ]);
+  runScript = "bash";
+}).env
+```
 
 ## Roadmap
 
@@ -33,8 +62,11 @@ Ask me
 ## Known Issues
 
 - Everything
-- See linear page.
+
+
 ## Run Locally
+
+If not installed, install [uv](https://docs.astral.sh/uv/)
 
 Clone the project
 
@@ -54,7 +86,21 @@ Start the game
   uv run PyTaiko.py
 ```
 
+## Compilation
+Windows/Mac OS:
+```
+uv add nuitka
+uv run nuitka --mode=app --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow --assume-yes-for-downloads PyTaiko.py
+```
+Linux:
+Install portaudio with `sudo apt install portaudio19-dev`
 
+Arch Linux only:
+Install [patchelf](https://github.com/NixOS/patchelf)
+Run this command
+```
+sudo ln -s /lib/libatomic.so /lib/libatomic.a
+```
 
 ## FAQ
 

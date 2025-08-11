@@ -197,11 +197,6 @@ def is_r_kat_pressed() -> bool:
 
     return False
 
-def draw_scaled_texture(texture: ray.Texture, x: int, y: int, scale: float, color: ray.Color) -> None:
-    src_rect = ray.Rectangle(0, 0, texture.width, texture.height)
-    dst_rect = ray.Rectangle(x, y, texture.width*scale, texture.height*scale)
-    ray.draw_texture_pro(texture, src_rect, dst_rect, ray.Vector2(0, 0), 0, color)
-
 @dataclass
 class SessionData:
     selected_difficulty: int = 0

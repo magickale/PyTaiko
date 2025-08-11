@@ -182,10 +182,10 @@ class ResultScreen:
 
     def draw_bottom_textures(self):
         if self.state == State.FAIL:
-            tex.draw_texture('background', 'gradient_fail', color=ray.fade(ray.WHITE, min(0.4, self.fade_in_bottom.attribute)))
+            tex.draw_texture('background', 'gradient_fail', fade=min(0.4, self.fade_in_bottom.attribute))
         else:
             ray.begin_shader_mode(self.alpha_shader)
-            tex.draw_texture('background', 'gradient_clear', color=ray.fade(ray.WHITE, self.fade_in_bottom.attribute))
+            tex.draw_texture('background', 'gradient_clear', fade=self.fade_in_bottom.attribute)
             ray.end_shader_mode()
         self.bottom_characters.draw()
 
@@ -259,7 +259,7 @@ class Crown:
         if self.resize.is_finished:
             scale = self.resize_fix.attribute
         tex.draw_texture('crown', crown_name, scale=scale, center=True)
-        tex.draw_texture('crown', 'crown_fade', color=ray.fade(ray.WHITE, self.white_fadein.attribute))
+        tex.draw_texture('crown', 'crown_fade', fade=self.white_fadein.attribute)
         if self.gleam.attribute >= 0:
             tex.draw_texture('crown', 'gleam', frame=self.gleam.attribute)
 
@@ -352,12 +352,11 @@ class FadeIn:
 
     def draw(self):
         x = 0
-        color = ray.fade(ray.WHITE, self.fadein.attribute)
         while x < 1280:
-            tex.draw_texture('background', 'background_1p', x=x, y=-360, color=color)
-            tex.draw_texture('background', 'background_1p', x=x, y=360, color=color)
-            tex.draw_texture('background', 'footer_1p', x=x, y=-77, color=color)
-            tex.draw_texture('background', 'footer_1p', x=x, y=653, color=color)
+            tex.draw_texture('background', 'background_1p', x=x, y=-360, fade=self.fadein.attribute)
+            tex.draw_texture('background', 'background_1p', x=x, y=360, fade=self.fadein.attribute)
+            tex.draw_texture('background', 'footer_1p', x=x, y=-77, fade=self.fadein.attribute)
+            tex.draw_texture('background', 'footer_1p', x=x, y=653, fade=self.fadein.attribute)
             x += 256
 
 class ScoreAnimator:
@@ -403,35 +402,34 @@ class Gauge:
         self.is_finished = self.gauge_fade_in.is_finished
 
     def draw(self):
-        color = ray.fade(ray.WHITE, self.gauge_fade_in.attribute)
         scale = 10/11
-        tex.draw_texture('gauge', 'unfilled', scale=scale, color=color)
+        tex.draw_texture('gauge', 'unfilled', scale=scale, fade=self.gauge_fade_in.attribute)
         gauge_length = int(self.gauge_length)
         if gauge_length == 87:
             if 0 < self.rainbow_animation.attribute < 8:
-                tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute-1, scale=scale, color=color)
-            tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute, scale=scale, color=color)
+                tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute-1, scale=scale, fade=self.gauge_fade_in.attribute)
+            tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute, scale=scale, fade=self.gauge_fade_in.attribute)
         else:
             for i in range(gauge_length+1):
                 width = int(i * 7.2)
                 if i == 69:
-                    tex.draw_texture('gauge', 'bar_clear_transition', x=width, scale=scale, color=color)
+                    tex.draw_texture('gauge', 'bar_clear_transition', x=width, scale=scale, fade=self.gauge_fade_in.attribute)
                 elif i > 69:
                     if i % 5 == 0:
-                        tex.draw_texture('gauge', 'bar_clear_top', x=width, scale=scale, color=color)
-                        tex.draw_texture('gauge', 'bar_clear_bottom', x=width, scale=scale, color=color)
-                    tex.draw_texture('gauge', 'bar_clear_top', x=width+1, scale=scale, color=color)
-                    tex.draw_texture('gauge', 'bar_clear_bottom', x=width+1, scale=scale, color=color)
+                        tex.draw_texture('gauge', 'bar_clear_top', x=width, scale=scale, fade=self.gauge_fade_in.attribute)
+                        tex.draw_texture('gauge', 'bar_clear_bottom', x=width, scale=scale, fade=self.gauge_fade_in.attribute)
+                    tex.draw_texture('gauge', 'bar_clear_top', x=width+1, scale=scale, fade=self.gauge_fade_in.attribute)
+                    tex.draw_texture('gauge', 'bar_clear_bottom', x=width+1, scale=scale, fade=self.gauge_fade_in.attribute)
                 else:
                     if i % 5 == 0:
-                        tex.draw_texture('gauge', 'bar', x=width, scale=scale, color=color)
-                    tex.draw_texture('gauge', 'bar', x=width+1, scale=scale, color=color)
-        tex.draw_texture('gauge', 'overlay', scale=scale, color=ray.fade(ray.WHITE, min(0.15, self.gauge_fade_in.attribute)))
-        tex.draw_texture('gauge', 'footer', scale=scale, color=color)
+                        tex.draw_texture('gauge', 'bar', x=width, scale=scale, fade=self.gauge_fade_in.attribute)
+                    tex.draw_texture('gauge', 'bar', x=width+1, scale=scale, fade=self.gauge_fade_in.attribute)
+        tex.draw_texture('gauge', 'overlay', scale=scale, fade=min(0.15, self.gauge_fade_in.attribute))
+        tex.draw_texture('gauge', 'footer', scale=scale, fade=self.gauge_fade_in.attribute)
 
         if gauge_length >= 69:
-            tex.draw_texture('gauge', 'clear', scale=scale, color=color)
-            tex.draw_texture('gauge', 'tamashii', scale=scale, color=color)
+            tex.draw_texture('gauge', 'clear', scale=scale, fade=self.gauge_fade_in.attribute)
+            tex.draw_texture('gauge', 'tamashii', scale=scale, fade=self.gauge_fade_in.attribute)
         else:
-            tex.draw_texture('gauge', 'clear_dark', scale=scale, color=color)
-            tex.draw_texture('gauge', 'tamashii_dark', scale=scale, color=color)
+            tex.draw_texture('gauge', 'clear_dark', scale=scale, fade=self.gauge_fade_in.attribute)
+            tex.draw_texture('gauge', 'tamashii_dark', scale=scale, fade=self.gauge_fade_in.attribute)
