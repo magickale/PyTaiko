@@ -118,7 +118,7 @@ class ResultScreen:
 
         self.fade_in.update(get_current_ms())
         if self.fade_in.is_finished and self.gauge is None:
-            self.gauge = Gauge(session_data.result_gauge_length)
+            self.gauge = Gauge(str(global_data.player_num), session_data.result_gauge_length)
             self.bottom_characters.start()
 
         self.bottom_characters.update(self.state)
@@ -192,10 +192,10 @@ class ResultScreen:
     def draw(self):
         x = 0
         while x < self.width:
-            tex.draw_texture('background', 'background_1p', x=x, y=-360)
-            tex.draw_texture('background', 'background_1p', x=x, y=360)
-            tex.draw_texture('background', 'footer_1p', x=x, y=-77)
-            tex.draw_texture('background', 'footer_1p', x=x, y=653)
+            tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=-360)
+            tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=360)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=-77)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=653)
             x += 256
 
         tex.draw_texture('background', 'result_text')
@@ -353,10 +353,10 @@ class FadeIn:
     def draw(self):
         x = 0
         while x < 1280:
-            tex.draw_texture('background', 'background_1p', x=x, y=-360, fade=self.fadein.attribute)
-            tex.draw_texture('background', 'background_1p', x=x, y=360, fade=self.fadein.attribute)
-            tex.draw_texture('background', 'footer_1p', x=x, y=-77, fade=self.fadein.attribute)
-            tex.draw_texture('background', 'footer_1p', x=x, y=653, fade=self.fadein.attribute)
+            tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=-360, fade=self.fadein.attribute)
+            tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=360, fade=self.fadein.attribute)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=-77, fade=self.fadein.attribute)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=653, fade=self.fadein.attribute)
             x += 256
 
 class ScoreAnimator:
@@ -380,7 +380,8 @@ class ScoreAnimator:
         return int(''.join([str(item[0]) for item in self.current_score_list]))
 
 class Gauge:
-    def __init__(self, gauge_length):
+    def __init__(self, player_num: str, gauge_length: int):
+        self.player_num = player_num
         self.gauge_length = gauge_length
         self.rainbow_animation = tex.get_animation(16)
         self.gauge_fade_in = tex.get_animation(17)
@@ -403,7 +404,7 @@ class Gauge:
 
     def draw(self):
         scale = 10/11
-        tex.draw_texture('gauge', 'unfilled', scale=scale, fade=self.gauge_fade_in.attribute)
+        tex.draw_texture('gauge', f'{self.player_num}p_unfilled', scale=scale, fade=self.gauge_fade_in.attribute)
         gauge_length = int(self.gauge_length)
         if gauge_length == 87:
             if 0 < self.rainbow_animation.attribute < 8:
@@ -422,8 +423,8 @@ class Gauge:
                     tex.draw_texture('gauge', 'bar_clear_bottom', x=width+1, scale=scale, fade=self.gauge_fade_in.attribute)
                 else:
                     if i % 5 == 0:
-                        tex.draw_texture('gauge', 'bar', x=width, scale=scale, fade=self.gauge_fade_in.attribute)
-                    tex.draw_texture('gauge', 'bar', x=width+1, scale=scale, fade=self.gauge_fade_in.attribute)
+                        tex.draw_texture('gauge', f'{self.player_num}p_bar', x=width, scale=scale, fade=self.gauge_fade_in.attribute)
+                    tex.draw_texture('gauge', f'{self.player_num}p_bar', x=width+1, scale=scale, fade=self.gauge_fade_in.attribute)
         tex.draw_texture('gauge', 'overlay', scale=scale, fade=min(0.15, self.gauge_fade_in.attribute))
         tex.draw_texture('gauge', 'footer', scale=scale, fade=self.gauge_fade_in.attribute)
 

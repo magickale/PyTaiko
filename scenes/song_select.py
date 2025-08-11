@@ -251,6 +251,7 @@ class SongSelectScreen:
                 self.background_fade_change.start()
             if self.background_fade_change.is_finished:
                 self.last_texture_index = self.texture_index
+                self.background_fade_change.reset()
 
         if self.game_transition is not None:
             self.game_transition.update(get_current_ms())
@@ -285,18 +286,18 @@ class SongSelectScreen:
 
     def draw_selector(self):
         if self.selected_difficulty == -1:
-            tex.draw_texture('diff_select', '1p_outline_back')
+            tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline_back')
         else:
             difficulty = min(3, self.selected_difficulty)
-            tex.draw_texture('diff_select', '1p_balloon', x=(difficulty * 115))
-            tex.draw_texture('diff_select', '1p_outline', x=(difficulty * 115))
+            tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=(difficulty * 115))
+            tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline', x=(difficulty * 115))
 
     def draw(self):
         # Draw file/directory list
         width = tex.textures['box']['background'].width
         for i in range(0, width * 4, width):
-            tex.draw_texture('box', 'background', frame=self.last_texture_index, x=i - int(self.background_move.attribute))
-            tex.draw_texture('box', 'background', frame=self.texture_index, x=i - int(self.background_move.attribute), fade=1 - self.background_fade_change.attribute)
+            tex.draw_texture('box', 'background', frame=self.last_texture_index, x=i-self.background_move.attribute)
+            tex.draw_texture('box', 'background', frame=self.texture_index, x=i-self.background_move.attribute, fade=1 - self.background_fade_change.attribute)
 
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
             self.navigator.genre_bg.draw(95)

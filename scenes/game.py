@@ -66,17 +66,17 @@ class GameScreen:
                     self.song_music = None
             self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
 
-        self.player_1 = Player(self, 1, difficulty)
+        self.player_1 = Player(self, global_data.player_num, difficulty)
 
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
             tex.load_screen_textures('game')
-            self.background = Background(self.width, self.height)
+            self.background = Background(self.width, self.height, global_data.player_num)
             self.load_sounds()
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
             self.song_info = SongInfo(session_data.song_title, 'TEST')
-            self.result_transition = ResultTransition()
+            self.result_transition = ResultTransition(global_data.player_num)
             if self.tja is not None:
                 subtitle = self.tja.metadata.subtitle.get(global_data.config['general']['language'].lower(), '')
             else:
@@ -187,7 +187,7 @@ class Player:
 
     def __init__(self, game_screen: GameScreen, player_number: int, difficulty: int):
 
-        self.player_number = player_number
+        self.player_number = str(player_number)
         self.difficulty = difficulty
         self.visual_offset = global_data.config["general"]["visual_offset"]
 
@@ -234,7 +234,7 @@ class Player:
             stars = game_screen.tja.metadata.course_data[self.difficulty].level
         else:
             stars = 0
-        self.gauge = Gauge(self.difficulty, stars, self.total_notes)
+        self.gauge = Gauge(self.player_number, self.difficulty, stars, self.total_notes)
         self.gauge_hit_effect: list[GaugeHitEffect] = []
 
         self.autoplay_hit_side = 'L'
@@ -344,18 +344,18 @@ class Player:
             if self.combo > self.max_combo:
                 self.max_combo = self.combo
 
-        self.draw_arc_list.append(NoteArc(note.type, get_current_ms(), self.player_number, note.type == 3 or note.type == 4) or note.type == 7)
+        self.draw_arc_list.append(NoteArc(note.type, get_current_ms(), 1, note.type == 3 or note.type == 4) or note.type == 7)
 
         if note in self.current_notes_draw:
             index = self.current_notes_draw.index(note)
             self.current_notes_draw.pop(index)
 
     def check_drumroll(self, drum_type: int):
-        self.draw_arc_list.append(NoteArc(drum_type, get_current_ms(), self.player_number, drum_type == 3 or drum_type == 4))
+        self.draw_arc_list.append(NoteArc(drum_type, get_current_ms(), 1, drum_type == 3 or drum_type == 4))
         self.curr_drumroll_count += 1
         self.total_drumroll += 1
         self.score += 100
-        self.base_score_list.append(ScoreCounterAnimation(100))
+        self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100))
         if not isinstance(self.current_notes_draw[0], Drumroll):
             return
         self.current_notes_draw[0].color = max(0, 255 - (self.curr_drumroll_count * 10))
@@ -368,7 +368,7 @@ class Player:
         self.curr_balloon_count += 1
         self.total_drumroll += 1
         self.score += 100
-        self.base_score_list.append(ScoreCounterAnimation(100))
+        self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100))
         if self.curr_balloon_count == note.count:
             self.is_balloon = False
             note.popped = True
@@ -410,7 +410,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect('GOOD')
                 self.good_count += 1
                 self.score += self.base_score
-                self.base_score_list.append(ScoreCounterAnimation(self.base_score))
+                self.base_score_list.append(ScoreCounterAnimation(self.player_number, self.base_score))
                 self.note_correct(curr_note)
                 self.gauge.add_good()
 
@@ -418,7 +418,7 @@ class Player:
                 self.draw_judge_list.append(Judgement('OK', big, ms_display=game_screen.current_ms - curr_note.hit_ms))
                 self.ok_count += 1
                 self.score += 10 * math.floor(self.base_score / 2 / 10)
-                self.base_score_list.append(ScoreCounterAnimation(10 * math.floor(self.base_score / 2 / 10)))
+                self.base_score_list.append(ScoreCounterAnimation(self.player_number, 10 * math.floor(self.base_score / 2 / 10)))
                 self.note_correct(curr_note)
                 self.gauge.add_ok()
 
@@ -624,7 +624,7 @@ class Player:
             anim.draw()
         self.draw_bars(game_screen)
         self.draw_notes(game_screen)
-        tex.draw_texture('lane', 'lane_cover')
+        tex.draw_texture('lane', f'{self.player_number}p_lane_cover')
         tex.draw_texture('lane', 'drum')
         if global_data.config["general"]["autoplay"]:
             tex.draw_texture('lane', 'auto_icon')
@@ -632,7 +632,7 @@ class Player:
             anim.draw()
         self.combo_display.draw()
         tex.draw_texture('lane', 'lane_score_cover')
-        tex.draw_texture('lane', '1p_icon')
+        tex.draw_texture('lane', f'{self.player_number}p_icon')
         tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty)
         if self.drumroll_counter is not None:
             self.drumroll_counter.draw()
@@ -1057,7 +1057,7 @@ class ScoreCounter:
             tex.draw_texture('lane', 'score_number', frame=int(counter[i]), x=start_x + (i * margin), y=y - self.stretch.attribute, y2=self.stretch.attribute)
 
 class ScoreCounterAnimation:
-    def __init__(self, counter: int):
+    def __init__(self, player_num: str, counter: int):
         self.counter = counter
         self.fade_animation_1 = Animation.create_fade(50, initial_opacity=0.0, final_opacity=1.0)
         self.fade_animation_1.start()
@@ -1072,7 +1072,10 @@ class ScoreCounterAnimation:
         self.move_animation_4 = Animation.create_move(80, delay=366.74, total_distance=10, start_position=148)
         self.move_animation_4.start()
 
-        self.color = ray.fade(ray.Color(254, 102, 0, 255), 1.0)
+        if player_num == '2':
+            self.color = ray.fade(ray.Color(84, 250, 238, 255), 1.0)
+        else:
+            self.color = ray.fade(ray.Color(254, 102, 0, 255), 1.0)
         self.is_finished = False
         self.y_pos_list = []
 
@@ -1085,9 +1088,9 @@ class ScoreCounterAnimation:
         self.fade_animation_2.update(current_ms)
 
         if self.fade_animation_1.is_finished:
-            self.color = ray.fade(ray.Color(254, 102, 0, 255), self.fade_animation_2.attribute)
+            self.color = ray.fade(self.color, self.fade_animation_2.attribute)
         else:
-            self.color = ray.fade(ray.Color(254, 102, 0, 255), self.fade_animation_1.attribute)
+            self.color = ray.fade(self.color, self.fade_animation_1.attribute)
         if self.fade_animation_2.is_finished:
             self.is_finished = True
         self.y_pos_list = []
@@ -1136,7 +1139,8 @@ class SongInfo:
         self.song_title.draw(self.song_title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade.attribute))
 
 class ResultTransition:
-    def __init__(self):
+    def __init__(self, player_num: int):
+        self.player_num = player_num
         self.move = global_data.tex.get_animation(5)
         self.move.reset()
         self.is_finished = False
@@ -1154,14 +1158,15 @@ class ResultTransition:
         x = 0
         screen_width = 1280
         while x < screen_width:
-            global_data.tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
-            global_data.tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=720 - self.move.attribute)
-            global_data.tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-432 + self.move.attribute)
-            global_data.tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=1008 - self.move.attribute)
+            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
+            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
+            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
+            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
             x += 256
 
 class Gauge:
-    def __init__(self, difficulty: int, level: int, total_notes: int):
+    def __init__(self, player_num: str, difficulty: int, level: int, total_notes: int):
+        self.player_num = player_num
         self.gauge_length = 0
         self.previous_length = 0
         self.total_notes = total_notes
@@ -1212,12 +1217,11 @@ class Gauge:
                 {"clear_rate": 61.428, "ok_multiplier": 0.5, "bad_multiplier": -2.0},
             ]
         ]
-        self.gauge_update_anim = None
+        self.gauge_update_anim = tex.get_animation(10)
         self.rainbow_fade_in = None
         self.rainbow_animation = None
 
     def add_good(self):
-        self.gauge_update_anim = Animation.create_fade(450)
         self.gauge_update_anim.start()
         self.previous_length = int(self.gauge_length)
         self.gauge_length += (1 / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
@@ -1225,7 +1229,6 @@ class Gauge:
             self.gauge_length = 87
 
     def add_ok(self):
-        self.gauge_update_anim = Animation.create_fade(450)
         self.gauge_update_anim.start()
         self.previous_length = int(self.gauge_length)
         self.gauge_length += ((1 * self.table[self.difficulty][self.level]["ok_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
@@ -1242,11 +1245,7 @@ class Gauge:
         if self.gauge_length == 87 and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
             self.rainbow_fade_in.start()
-
-        if self.gauge_update_anim is not None:
-            self.gauge_update_anim.update(current_ms)
-            if self.gauge_update_anim.is_finished:
-                self.gauge_update_anim = None
+        self.gauge_update_anim.update(current_ms)
 
         if self.rainbow_fade_in is not None:
             self.rainbow_fade_in.update(current_ms)
@@ -1261,7 +1260,7 @@ class Gauge:
 
     def draw(self):
         tex.draw_texture('gauge', 'border')
-        tex.draw_texture('gauge', 'unfilled')
+        tex.draw_texture('gauge', f'{self.player_num}p_unfilled')
         gauge_length = int(self.gauge_length)
         for i in range(gauge_length):
             if i == 68:
@@ -1270,7 +1269,7 @@ class Gauge:
                 tex.draw_texture('gauge', 'bar_clear_top', x=i*8)
                 tex.draw_texture('gauge', 'bar_clear_bottom', x=i*8)
             else:
-                tex.draw_texture('gauge', 'bar', x=i*8)
+                tex.draw_texture('gauge', f'{self.player_num}p_bar', x=i*8)
         if gauge_length == 87 and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
                 tex.draw_texture('gauge', 'rainbow', frame=self.rainbow_animation.attribute-1, fade=self.rainbow_fade_in.attribute)
@@ -1281,7 +1280,7 @@ class Gauge:
             elif gauge_length > 69:
                 tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
             else:
-                tex.draw_texture('gauge', 'bar_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
+                tex.draw_texture('gauge', f'{self.player_num}p_bar_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
         tex.draw_texture('gauge', 'overlay', fade=0.15)
         if gauge_length >= 69:
             tex.draw_texture('gauge', 'clear')

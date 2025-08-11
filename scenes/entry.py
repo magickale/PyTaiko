@@ -7,6 +7,7 @@ from libs.texture import tex
 from libs.utils import (
     OutlinedText,
     get_current_ms,
+    global_data,
     is_l_don_pressed,
     is_l_kat_pressed,
     is_r_don_pressed,
@@ -57,6 +58,7 @@ class EntryScreen:
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
+        global_data.player_num = round((self.side/3) + 1)
         audio.stop_sound(self.bgm)
         tex.unload_textures()
         audio.unload_all_sounds()
