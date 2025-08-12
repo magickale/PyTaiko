@@ -111,7 +111,7 @@ def main():
     ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     ray.gen_texture_mipmaps(target.texture)
     ray.rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
-    ray.set_exit_key(ray.KeyboardKey.KEY_A)
+    ray.set_exit_key(ord(global_data.config["keys"]["exit_key"]))
 
     while not ray.window_should_close():
         if ray.is_key_pressed(ray.KeyboardKey.KEY_F11):
