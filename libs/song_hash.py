@@ -1,5 +1,6 @@
 import csv
 import json
+import sqlite3
 import sys
 import time
 from collections import deque
@@ -28,7 +29,6 @@ def build_song_hashes(output_dir=Path("cache")):
         output_dir.mkdir()
     song_hashes: dict[str, list[dict]] = dict()
     path_to_hash: dict[str, str] = dict()  # New index for O(1) path lookups
-
     output_path = Path(output_dir / "song_hashes.json")
     index_path = Path(output_dir / "path_to_hash.json")
 
@@ -36,7 +36,6 @@ def build_song_hashes(output_dir=Path("cache")):
     if output_path.exists():
         with open(output_path, "r", encoding="utf-8") as f:
             song_hashes = json.load(f, cls=DiffHashesDecoder)
-
     if index_path.exists():
         with open(index_path, "r", encoding="utf-8") as f:
             path_to_hash = json.load(f)
@@ -59,21 +58,17 @@ def build_song_hashes(output_dir=Path("cache")):
         all_tja_files.extend(root_path.rglob("*.tja"))
 
     global_data.total_songs = len(all_tja_files)
-
     files_to_process = []
 
     for tja_path in all_tja_files:
         tja_path_str = str(tja_path)
         current_modified = tja_path.stat().st_mtime
-
         if current_modified <= saved_timestamp:
             current_hash = path_to_hash.get(tja_path_str)
             if current_hash is not None:
                 global_data.song_paths[tja_path] = current_hash
             continue
-
         current_hash = path_to_hash.get(tja_path_str)
-
         if current_hash is None:
             files_to_process.append(tja_path)
         else:
@@ -82,15 +77,19 @@ def build_song_hashes(output_dir=Path("cache")):
                 del song_hashes[current_hash]
             del path_to_hash[tja_path_str]
 
+    # Prepare database connection for updates
+    db_path = Path("scores.db")
+    db_updates = []  # Store updates to batch process later
+
     # Process only files that need updating
     song_count = 0
     total_songs = len(files_to_process)
     if total_songs > 0:
         global_data.total_songs = total_songs
+
     for tja_path in files_to_process:
         tja_path_str = str(tja_path)
         current_modified = tja_path.stat().st_mtime
-
         tja = TJAParser(tja_path)
         all_notes = deque()
         all_bars = deque()
@@ -106,7 +105,6 @@ def build_song_hashes(output_dir=Path("cache")):
             continue
 
         hash_val = tja.hash_note_data(all_notes, all_bars)
-
         if hash_val not in song_hashes:
             song_hashes[hash_val] = []
 
@@ -121,16 +119,48 @@ def build_song_hashes(output_dir=Path("cache")):
         # Update both indexes
         path_to_hash[tja_path_str] = hash_val
         global_data.song_paths[tja_path] = hash_val
+
+        # Prepare database updates for each difficulty
+        en_name = tja.metadata.title.get('en', '') if isinstance(tja.metadata.title, dict) else str(tja.metadata.title)
+        jp_name = tja.metadata.title.get('jp', '') if isinstance(tja.metadata.title, dict) else ''
+
+        for diff, diff_hash in diff_hashes.items():
+            db_updates.append((diff_hash, en_name, jp_name, diff))
+
         song_count += 1
         global_data.song_progress = song_count / total_songs
+
+    # Update database with new difficulty hashes
+    if db_updates and db_path.exists():
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            for diff_hash, en_name, jp_name, diff in db_updates:
+                # Update existing entries that match by name and difficulty
+                cursor.execute("""
+                    UPDATE scores
+                    SET hash = ?
+                    WHERE (en_name = ? AND jp_name = ?) AND diff = ?
+                """, (diff_hash, en_name, jp_name, diff))
+                if cursor.rowcount > 0:
+                    print(f"Updated {cursor.rowcount} entries for {en_name} ({diff})")
+
+            conn.commit()
+            conn.close()
+            print(f"Database update completed. Processed {len(db_updates)} difficulty hash updates.")
+
+        except sqlite3.Error as e:
+            print(f"Database error: {e}")
+        except Exception as e:
+            print(f"Error updating database: {e}")
+    elif db_updates:
+        print(f"Warning: scores.db not found, skipping {len(db_updates)} database updates")
 
     # Save both files
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(song_hashes, f, indent=2, ensure_ascii=False)
-
     with open(index_path, "w", encoding="utf-8") as f:
         json.dump(path_to_hash, f, indent=2, ensure_ascii=False)
-
     with open(output_dir / 'timestamp.txt', 'w') as f:
         f.write(str(current_timestamp))
 

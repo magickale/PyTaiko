@@ -240,6 +240,7 @@ for file in Path('cache/image').iterdir():
 
 class OutlinedText:
     def __init__(self, text: str, font_size: int, color: ray.Color, outline_color: ray.Color, outline_thickness=5.0, vertical=False):
+        self.text = text
         self.hash = self._hash_text(text, font_size, color, vertical)
         if self.hash in text_cache:
             self.texture = ray.load_texture(f'cache/image/{self.hash}.png')

@@ -40,11 +40,13 @@ class Note:
         return self.hit_ms == other.hit_ms
 
     def _get_hash_data(self) -> bytes:
-        """Get deterministic byte representation for hashing"""
+        hash_fields = ['type', 'hit_ms', 'load_ms']
         field_values = []
-        for f in sorted([f.name for f in fields(self)]):
-            value = getattr(self, f, None)
-            field_values.append((f, value))
+
+        for field_name in sorted(hash_fields):
+            value = getattr(self, field_name, None)
+            field_values.append((field_name, value))
+
         field_values.append(('__class__', self.__class__.__name__))
         hash_string = str(field_values)
         return hash_string.encode('utf-8')

@@ -1,3 +1,4 @@
+import random
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -25,6 +26,7 @@ from libs.utils import (
 class State:
     BROWSING = 0
     SONG_SELECTED = 1
+    DIFF_SORTING = 2
 
 class SongSelectScreen:
     BOX_CENTER = 444
@@ -43,36 +45,42 @@ class SongSelectScreen:
         self.sound_kat = audio.load_sound(sounds_dir / "inst_00_katsu.wav")
         self.sound_skip = audio.load_sound(sounds_dir / 'song_select' / 'Skip.ogg')
         self.sound_ura_switch = audio.load_sound(sounds_dir / 'song_select' / 'SE_SELECT [4].ogg')
+        self.sound_add_favorite = audio.load_sound(sounds_dir / 'song_select' / 'add_favorite.ogg')
         audio.set_sound_volume(self.sound_ura_switch, 0.25)
+        audio.set_sound_volume(self.sound_add_favorite, 3.0)
         self.sound_bgm = audio.load_sound(sounds_dir / "song_select" / "JINGLE_GENRE [1].ogg")
 
     def on_screen_start(self):
         if not self.screen_init:
             tex.load_screen_textures('song_select')
             self.load_sounds()
-            self.selected_song = None
-            self.selected_difficulty = -1
             self.background_move = tex.get_animation(0)
-            self.background_move.start()
             self.move_away = tex.get_animation(1)
             self.diff_fade_out = tex.get_animation(2)
-            self.state = State.BROWSING
             self.text_fade_out = tex.get_animation(3)
             self.text_fade_in = tex.get_animation(4)
             self.background_fade_change = tex.get_animation(5)
+            self.background_move.start()
+            self.state = State.BROWSING
+            self.selected_difficulty = -1
+            self.selected_song = None
             self.game_transition = None
+            self.demo_song = None
+            self.diff_sort_selector = None
             self.texture_index = 9
             self.last_texture_index = 9
-            self.demo_song = None
-            self.navigator.reset_items()
-            self.navigator.get_current_item().box.get_scores()
-            self.screen_init = True
             self.last_moved = get_current_ms()
             self.ura_toggle = 0
-            self.ura_switch_animation = UraSwitchAnimation()
             self.is_ura = False
+            self.screen_init = True
+            self.ura_switch_animation = UraSwitchAnimation()
+
             if str(global_data.selected_song) in self.navigator.all_song_files:
                 self.navigator.mark_crowns_dirty_for_song(self.navigator.all_song_files[str(global_data.selected_song)])
+
+            self.navigator.reset_items()
+            self.navigator.get_current_item().box.get_scores()
+            self.navigator.add_recent()
 
     def on_screen_end(self, next_screen):
         self.screen_init = False
@@ -124,6 +132,9 @@ class SongSelectScreen:
             if selected_item is not None and selected_item.box.is_back:
                 self.navigator.go_back()
                 #audio.play_sound(self.sound_cancel)
+            elif isinstance(selected_item, Directory) and selected_item.collection == Directory.COLLECTIONS[3]:
+                self.state = State.DIFF_SORTING
+                self.diff_sort_selector = DiffSortSelect()
             else:
                 selected_song = self.navigator.select_current_item()
                 if selected_song:
@@ -135,6 +146,11 @@ class SongSelectScreen:
                     self.diff_fade_out.start()
                     self.text_fade_out.start()
                     self.text_fade_in.start()
+
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_SPACE):
+            success = self.navigator.add_favorite()
+            if success:
+                audio.play_sound(self.sound_add_favorite)
 
     def handle_input_selected(self):
         # Handle song selection confirmation or cancel
@@ -163,6 +179,34 @@ class SongSelectScreen:
         if (ray.is_key_pressed(ray.KeyboardKey.KEY_TAB) and
             self.selected_difficulty in [3, 4]):
             self._toggle_ura_mode()
+
+    def handle_input_diff_sort(self):
+        if self.diff_sort_selector is None:
+            raise Exception("Diff sort selector was not able to be created")
+        if is_l_kat_pressed():
+            self.diff_sort_selector.input_left()
+            audio.play_sound(self.sound_kat)
+        if is_r_kat_pressed():
+            self.diff_sort_selector.input_right()
+            audio.play_sound(self.sound_kat)
+        if is_l_don_pressed() or is_r_don_pressed():
+            diff, level = self.diff_sort_selector.input_select()
+            if diff == -2:
+                audio.play_sound(self.sound_don)
+                return
+            elif diff == -1:
+                self.diff_sort_selector = None
+                self.state = State.BROWSING
+                if level == 0:
+                    audio.play_sound(self.sound_don)
+                    self.navigator.select_current_item()
+            else:
+                self.diff_sort_selector = None
+                self.state = State.BROWSING
+                audio.play_sound(self.sound_don)
+                self.navigator.diff_sort_diff = diff
+                self.navigator.diff_sort_level = level
+                self.navigator.select_current_item()
 
     def _cancel_selection(self):
         """Reset to browsing state"""
@@ -229,6 +273,8 @@ class SongSelectScreen:
             self.handle_input_browsing()
         elif self.state == State.SONG_SELECTED:
             self.handle_input_selected()
+        elif self.state == State.DIFF_SORTING:
+            self.handle_input_diff_sort()
 
     def update(self):
         self.on_screen_start()
@@ -265,6 +311,9 @@ class SongSelectScreen:
 
         if self.navigator.genre_bg is not None:
             self.navigator.genre_bg.update(get_current_ms())
+
+        if self.diff_sort_selector is not None:
+            self.diff_sort_selector.update(get_current_ms())
 
         for song in self.navigator.items:
             song.box.update(self.state == State.SONG_SELECTED)
@@ -311,13 +360,19 @@ class SongSelectScreen:
 
         self.ura_switch_animation.draw()
 
-        if self.selected_song and self.state == State.SONG_SELECTED:
+        tex.draw_texture('global', 'footer')
+
+        if self.diff_sort_selector is not None:
+            self.diff_sort_selector.draw()
+
+        if (self.selected_song and self.state == State.SONG_SELECTED):
             self.draw_selector()
+            tex.draw_texture('global', 'difficulty_select', fade=self.text_fade_in.attribute)
+        elif self.state == State.DIFF_SORTING:
             tex.draw_texture('global', 'difficulty_select', fade=self.text_fade_in.attribute)
         else:
             tex.draw_texture('global', 'song_select', fade=self.text_fade_out.attribute)
 
-        tex.draw_texture('global', 'footer')
 
         if self.game_transition is not None:
             self.game_transition.draw()
@@ -335,6 +390,11 @@ class SongBox:
         6: ray.Color(134, 88, 0, 255),
         7: ray.Color(79, 40, 134, 255),
         8: ray.Color(148, 24, 0, 255),
+        9: ray.Color(101, 0, 82, 255),
+        10: ray.Color(140, 39, 92, 255),
+        11: ray.Color(151, 57, 30, 255),
+        12: ray.Color(35, 123, 103, 255),
+        13: ray.Color(25, 68, 137, 255),
         14: ray.Color(157, 13, 31, 255)
     }
     def __init__(self, name: str, texture_index: int, is_dir: bool, tja: Optional[TJAParser] = None,
@@ -461,11 +521,13 @@ class SongBox:
 
     def _draw_closed(self, x: int, y: int):
         tex.draw_texture('box', 'folder_texture_left', frame=self.texture_index, x=x)
-        offset = 1 if self.texture_index == 3 or self.texture_index >= 9 else 0
+        offset = 1 if self.texture_index == 3 or self.texture_index >= 9 and self.texture_index not in {10,11,12} else 0
         tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x, x2=32, y=offset)
         tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x)
         if self.texture_index == 9:
             tex.draw_texture('box', 'genre_overlay', x=x, y=y)
+        elif self.texture_index == 14:
+            tex.draw_texture('box', 'diff_overlay', x=x, y=y)
         if not self.is_back and self.is_dir:
             tex.draw_texture('box', 'folder_clip', frame=self.texture_index, x=x - (1 - offset), y=y)
 
@@ -505,12 +567,14 @@ class SongBox:
             self.hori_name.draw(self.hori_name.default_src, dest, ray.Vector2(0, 0), 0, color)
 
         tex.draw_texture('box', 'folder_texture_left', frame=self.texture_index, x=x - self.open_anim.attribute)
-        offset = 1 if self.texture_index == 3 or self.texture_index >= 9 else 0
+        offset = 1 if self.texture_index == 3 or self.texture_index >= 9 and self.texture_index not in {10,11,12} else 0
         tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x - self.open_anim.attribute, y=offset, x2=324)
         tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x + self.open_anim.attribute)
 
         if self.texture_index == 9:
             tex.draw_texture('box', 'genre_overlay_large', x=x, y=y, color=color)
+        elif self.texture_index == 14:
+            tex.draw_texture('box', 'diff_overlay_large', x=x, y=y, color=color)
         color = ray.WHITE
         if fade_override is not None:
             color = ray.fade(ray.WHITE, min(0.5, fade_override))
@@ -780,6 +844,122 @@ class UraSwitchAnimation:
     def draw(self):
         tex.draw_texture('diff_select', 'ura_switch', frame=self.texture_change.attribute, fade=self.fade_out.attribute)
 
+class DiffSortSelect:
+    def __init__(self):
+        self.selected_box = -1
+        self.selected_level = 1
+        self.in_level_select = False
+        self.confirmation = False
+        self.confirm_index = 1
+        self.num_boxes = 6
+        self.limits = [5, 7, 8, 10]
+
+    def update(self, current_ms):
+        pass
+
+    def get_random_sort(self):
+        diff = random.randint(0, 4)
+        if diff == 0:
+            level = random.randint(1, 5)
+        elif diff == 1:
+            level = random.randint(1, 7)
+        elif diff == 2:
+            level = random.randint(1, 8)
+        elif diff == 3:
+            level = random.randint(1, 10)
+        else:
+            level = random.choice([1, 5, 6, 7, 8, 9, 10])
+        return diff, level
+
+    def input_select(self):
+        if self.confirmation:
+            if self.confirm_index == 0:
+                self.confirmation = False
+                return (-2, -1)
+            elif self.confirm_index == 1:
+                return self.selected_box, self.selected_level
+            elif self.confirm_index == 2:
+                self.confirmation = False
+                self.in_level_select = False
+                return (-2, -1)
+        elif self.in_level_select:
+            self.confirmation = True
+            self.confirm_index = 1
+            return (-2, -1)
+        if self.selected_box == -1:
+            return (-1, -1)
+        elif self.selected_box == 5:
+            return (-1, 0)
+        elif self.selected_box == 4:
+            return self.get_random_sort()
+        self.in_level_select = True
+        self.selected_level = min(self.selected_level, self.limits[self.selected_box])
+        return (-2, -1)
+
+    def input_left(self):
+        if self.confirmation:
+            self.confirm_index = max(self.confirm_index - 1, 0)
+        elif self.in_level_select:
+            self.selected_level = max(self.selected_level - 1, 1)
+        else:
+            self.selected_box = max(self.selected_box - 1, -1)
+
+    def input_right(self):
+        if self.confirmation:
+            self.confirm_index = min(self.confirm_index + 1, 2)
+        elif self.in_level_select:
+            self.selected_level = min(self.selected_level + 1, self.limits[self.selected_box])
+        else:
+            self.selected_box = min(self.selected_box + 1, self.num_boxes - 1)
+
+    def draw_diff_select(self):
+        tex.draw_texture('diff_sort', 'background')
+
+        tex.draw_texture('diff_sort', 'back')
+        for i in range(self.num_boxes):
+            if i == self.selected_box:
+                tex.draw_texture('diff_sort', 'box_highlight', x=(100*i))
+                tex.draw_texture('diff_sort', 'box_text_highlight', x=(100*i), frame=i)
+            else:
+                tex.draw_texture('diff_sort', 'box', x=(100*i))
+                tex.draw_texture('diff_sort', 'box_text', x=(100*i), frame=i)
+        if self.selected_box == -1:
+            tex.draw_texture('diff_sort', 'back_outline')
+        else:
+            tex.draw_texture('diff_sort', 'box_outline', x=(100*self.selected_box))
+
+        for i in range(self.num_boxes):
+            if i < 4:
+                tex.draw_texture('diff_sort', 'box_diff', x=(100*i), frame=i)
+
+    def draw_level_select(self):
+        tex.draw_texture('diff_sort', 'background')
+        tex.draw_texture('diff_sort', 'star_select_text')
+        tex.draw_texture('diff_sort', 'star_limit', frame=self.selected_box)
+        tex.draw_texture('diff_sort', 'level_box')
+        tex.draw_texture('diff_sort', 'diff', frame=self.selected_box)
+        tex.draw_texture('diff_sort', 'star_num', frame=self.selected_level)
+        for i in range(self.selected_level):
+            tex.draw_texture('diff_sort', 'star', x=(i*40.5))
+
+        if self.confirmation:
+            for i in range(3):
+                if i == self.confirm_index:
+                    tex.draw_texture('diff_sort', 'small_box_highlight', x=(i*245))
+                    tex.draw_texture('diff_sort', 'small_box_text_highlight', x=(i*245), frame=i)
+                else:
+                    tex.draw_texture('diff_sort', 'small_box', x=(i*245))
+                    tex.draw_texture('diff_sort', 'small_box_text', x=(i*245), frame=i)
+        else:
+            tex.draw_texture('diff_sort', 'pongos')
+
+    def draw(self):
+        ray.draw_rectangle(0, 0, 1280, 720, ray.fade(ray.BLACK, 0.6))
+        if self.in_level_select:
+            self.draw_level_select()
+        else:
+            self.draw_diff_select()
+
 class FileSystemItem:
     GENRE_MAP = {
         'J-POP': 1,
@@ -790,11 +970,15 @@ class FileSystemItem:
         'クラシック': 6,
         'ゲームミュージック': 7,
         'ナムコオリジナル': 8,
+        'RECOMMENDED': 10,
+        'FAVORITE': 11,
+        'RECENT': 12,
         'DIFFICULTY': 14
     }
     """Base class for files and directories in the navigation system"""
     def __init__(self, path: Path, name: str):
         self.path = path
+        self.name = name
 
 class Directory(FileSystemItem):
     """Represents a directory in the navigation system"""
@@ -856,7 +1040,12 @@ class FileNavigator:
         self.current_root_dir = Path()
         self.items: list[Directory | SongFile] = []
         self.new_items: list[Directory | SongFile] = []
+        self.favorite_folder: Optional[Directory] = None
+        self.in_favorites = False
+        self.recent_folder: Optional[Directory] = None
         self.selected_index = 0
+        self.diff_sort_diff = 4
+        self.diff_sort_level = 10
         self.history = []
         self.box_open = False
         self.genre_bg = None
@@ -915,6 +1104,10 @@ class FileNavigator:
                 box_texture=box_texture,
                 collection=collection
             )
+            if directory_obj.collection == Directory.COLLECTIONS[2]:
+                self.favorite_folder = directory_obj
+            elif directory_obj.collection == Directory.COLLECTIONS[1]:
+                self.recent_folder = directory_obj
             self.all_directories[dir_key] = directory_obj
 
             # Generate content list for this directory
@@ -979,7 +1172,7 @@ class FileNavigator:
                         self.root_items.append(self.all_song_files[song_key])
 
     def _count_tja_files(self, folder_path: Path):
-        """Count TJA files in directory (matching original logic)"""
+        """Count TJA files in directory"""
         tja_count = 0
 
         # Find all song_list.txt files recursively
@@ -988,16 +1181,10 @@ class FileNavigator:
         if song_list_files:
             # Process all song_list.txt files found
             for song_list_path in song_list_files:
-                try:
-                    with open(song_list_path, 'r', encoding='utf-8-sig') as song_list_file:
-                        tja_count += len([line for line in song_list_file.readlines() if line.strip()])
-                except (IOError, UnicodeDecodeError) as e:
-                    # Handle potential file reading errors
-                    print(f"Warning: Could not read {song_list_path}: {e}")
-                    continue
-        else:
-            # Fallback: Use recursive counting of .tja files
-            tja_count = sum(1 for _ in folder_path.rglob("*.tja"))
+                with open(song_list_path, 'r', encoding='utf-8-sig') as song_list_file:
+                    tja_count += len([line for line in song_list_file.readlines() if line.strip()])
+        # Fallback: Use recursive counting of .tja files
+        tja_count += sum(1 for _ in folder_path.rglob("*.tja"))
 
         return tja_count
 
@@ -1046,41 +1233,35 @@ class FileNavigator:
         """Find TJA files only in the specified directory, not recursively in subdirectories with box.def"""
         tja_files: list[Path] = []
 
-        try:
-            for path in directory.iterdir():
-                if path.is_file() and path.suffix.lower() == ".tja":
-                    tja_files.append(path)
-                elif path.is_dir():
-                    # Only recurse into subdirectories that don't have box.def
-                    sub_dir_has_box_def = (path / "box.def").exists()
-                    if not sub_dir_has_box_def:
-                        tja_files.extend(self._find_tja_files_in_directory_only(path))
-        except (PermissionError, OSError):
-            pass
+        for path in directory.iterdir():
+            if path.is_file() and path.suffix.lower() == ".tja":
+                tja_files.append(path)
+            elif path.is_dir():
+                # Only recurse into subdirectories that don't have box.def
+                sub_dir_has_box_def = (path / "box.def").exists()
+                if not sub_dir_has_box_def:
+                    tja_files.extend(self._find_tja_files_in_directory_only(path))
 
         return tja_files
 
     def _find_tja_files_recursive(self, directory: Path, box_def_dirs_only=True):
         tja_files: list[Path] = []
 
-        try:
-            has_box_def = (directory / "box.def").exists()
-            # Fixed: Only skip if box_def_dirs_only is True AND has_box_def AND it's not the directory we're currently processing
-            # During object generation, we want to get files from directories with box.def
-            if box_def_dirs_only and has_box_def and directory != self.current_dir:
-                # This logic should only apply during navigation, not during object generation
-                # During object generation, we want to collect all TJA files
-                return []
+        has_box_def = (directory / "box.def").exists()
+        # Fixed: Only skip if box_def_dirs_only is True AND has_box_def AND it's not the directory we're currently processing
+        # During object generation, we want to get files from directories with box.def
+        if box_def_dirs_only and has_box_def and directory != self.current_dir:
+            # This logic should only apply during navigation, not during object generation
+            # During object generation, we want to collect all TJA files
+            return []
 
-            for path in directory.iterdir():
-                if path.is_file() and path.suffix.lower() == ".tja":
-                    tja_files.append(path)
-                elif path.is_dir():
-                    sub_dir_has_box_def = (path / "box.def").exists()
-                    if not sub_dir_has_box_def:
-                        tja_files.extend(self._find_tja_files_recursive(path, box_def_dirs_only))
-        except (PermissionError, OSError):
-            pass
+        for path in directory.iterdir():
+            if path.is_file() and path.suffix.lower() == ".tja":
+                tja_files.append(path)
+            elif path.is_dir():
+                sub_dir_has_box_def = (path / "box.def").exists()
+                if not sub_dir_has_box_def:
+                    tja_files.extend(self._find_tja_files_recursive(path, box_def_dirs_only))
 
         return tja_files
 
@@ -1137,7 +1318,7 @@ class FileNavigator:
                         for i in range(len(value)):
                             song = value[i]
                             if (song["title"]["en"] == title and
-                                song["subtitle"]["en"][2:] == subtitle and
+                                song["subtitle"]["en"] == subtitle and
                                 Path(song["file_path"]).exists()):
                                 hash_val = key
                                 tja_files.append(Path(global_data.song_hashes[hash_val][i]["file_path"]))
@@ -1151,6 +1332,7 @@ class FileNavigator:
         if file_updated:
             with open(path / 'song_list.txt', 'w', encoding='utf-8-sig') as song_list:
                 for line in updated_lines:
+                    print("updated", line)
                     song_list.write(line + '\n')
 
         return tja_files
@@ -1197,6 +1379,7 @@ class FileNavigator:
         """Load pre-generated items for the current directory"""
         has_children = any(item.is_dir() and (item / "box.def").exists() for item in self.current_dir.iterdir())
         self.genre_bg = None
+        self.in_favorites = False
         if has_children:
             self.items = []
             if not self.box_open:
@@ -1222,6 +1405,21 @@ class FileNavigator:
             if isinstance(selected_item, Directory):
                 if selected_item.collection == Directory.COLLECTIONS[0]:
                     content_items = self.new_items
+                elif selected_item.collection == Directory.COLLECTIONS[1]:
+                    if self.recent_folder is None:
+                        raise Exception("tried to enter recent folder without recents")
+                    self._generate_objects_recursive(self.recent_folder.path)
+                    selected_item.box.tja_count_text = None
+                    selected_item.box.tja_count = self._count_tja_files(self.recent_folder.path)
+                    content_items = self.directory_contents[dir_key]
+                elif selected_item.collection == Directory.COLLECTIONS[2]:
+                    if self.favorite_folder is None:
+                        raise Exception("tried to enter favorite folder without favorites")
+                    self._generate_objects_recursive(self.favorite_folder.path)
+                    selected_item.box.tja_count_text = None
+                    selected_item.box.tja_count = self._count_tja_files(self.favorite_folder.path)
+                    content_items = self.directory_contents[dir_key]
+                    self.in_favorites = True
                 elif selected_item.collection == Directory.COLLECTIONS[3]:
                     content_items = []
                     parent_dir = selected_item.path.parent
@@ -1230,11 +1428,20 @@ class FileNavigator:
                             sibling_key = str(sibling_path)
                             if sibling_key in self.directory_contents:
                                 for item in self.directory_contents[sibling_key]:
-                                    if isinstance(item, SongFile):
-                                        if 3 in item.tja.metadata.course_data and item.tja.metadata.course_data[3].level == 10:
-                                            item.box.texture_index = 14
-                                            content_items.append(item)
-
+                                    if isinstance(item, SongFile) and item:
+                                        if self.diff_sort_diff in item.tja.metadata.course_data and item.tja.metadata.course_data[self.diff_sort_diff].level == self.diff_sort_level:
+                                            if item not in content_items:
+                                                content_items.append(item)
+                elif selected_item.collection == Directory.COLLECTIONS[4]:
+                    parent_dir = selected_item.path.parent
+                    temp_items = []
+                    for sibling_path in parent_dir.iterdir():
+                        if sibling_path.is_dir() and sibling_path != selected_item.path:
+                            sibling_key = str(sibling_path)
+                            if sibling_key in self.directory_contents:
+                                for item in self.directory_contents[sibling_key]:
+                                    temp_items.append(item)
+                    content_items = random.sample(temp_items, 10)
             i = 1
             for item in content_items:
                 if isinstance(item, SongFile):
@@ -1242,8 +1449,9 @@ class FileNavigator:
                         back_dir = Directory(self.current_dir.parent, "", 17, back=True)
                         self.items.insert(self.selected_index+i, back_dir)
                         i += 1
-
                 if not has_children:
+                    if selected_item is not None:
+                        item.box.texture_index = selected_item.box.texture_index
                     self.items.insert(self.selected_index+i, item)
                 else:
                     self.items.append(item)
@@ -1341,3 +1549,54 @@ class FileNavigator:
     def reset_items(self):
         for item in self.items:
             item.box.reset()
+
+    def add_recent(self):
+        song = self.get_current_item()
+        if isinstance(song, Directory):
+            return
+        if self.recent_folder is None:
+            return
+
+        recents_path = self.recent_folder.path / 'song_list.txt'
+        new_entry = f'{song.hash}|{song.tja.metadata.title["en"]}|{song.tja.metadata.subtitle["en"]}\n'
+        existing_entries = []
+        if recents_path.exists():
+            with open(recents_path, 'r', encoding='utf-8-sig') as song_list:
+                existing_entries = song_list.readlines()
+        existing_entries = [entry for entry in existing_entries if not entry.startswith(f'{song.hash}|')]
+        all_entries = [new_entry] + existing_entries
+        recent_entries = all_entries[:25]
+        with open(recents_path, 'w', encoding='utf-8-sig') as song_list:
+            song_list.writelines(recent_entries)
+
+        print("Added recent: ", song.hash, song.tja.metadata.title['en'], song.tja.metadata.subtitle['en'])
+
+    def add_favorite(self) -> bool:
+        song = self.get_current_item()
+        if isinstance(song, Directory):
+            return False
+        if self.favorite_folder is None:
+            return False
+        favorites_path = self.favorite_folder.path / 'song_list.txt'
+        lines = []
+        with open(favorites_path, 'r', encoding='utf-8-sig') as song_list:
+            for line in song_list:
+                line = line.strip()
+                if not line:  # Skip empty lines
+                    continue
+                hash, title, subtitle = line.split('|')
+                if song.hash == hash or (song.tja.metadata.title['en'] == title and song.tja.metadata.subtitle['en'] == subtitle):
+                    if not self.in_favorites:
+                        return False
+                else:
+                    lines.append(line)
+        if self.in_favorites:
+            with open(favorites_path, 'w', encoding='utf-8-sig') as song_list:
+                for line in lines:
+                    song_list.write(line + '\n')
+            print("Removed favorite:", song.hash, song.tja.metadata.title['en'], song.tja.metadata.subtitle['en'])
+        else:
+            with open(favorites_path, 'a', encoding='utf-8-sig') as song_list:
+                song_list.write(f'{song.hash}|{song.tja.metadata.title['en']}|{song.tja.metadata.subtitle['en']}\n')
+            print("Added favorite: ", song.hash, song.tja.metadata.title['en'], song.tja.metadata.subtitle['en'])
+        return True

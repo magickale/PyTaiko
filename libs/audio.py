@@ -828,7 +828,7 @@ class AudioEngine:
 
     def set_sound_volume(self, sound: str, volume: float) -> None:
         if sound in self.sounds:
-            self.sounds[sound].volume = max(0.0, min(1.0, volume))
+            self.sounds[sound].volume = max(0.0, volume)
 
     def set_sound_pan(self, sound: str, pan: float) -> None:
         if sound in self.sounds:
