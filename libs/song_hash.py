@@ -6,8 +6,6 @@ import time
 from collections import deque
 from pathlib import Path
 
-from git import Repo
-
 from libs.tja import TJAParser
 from libs.utils import get_config, global_data
 
