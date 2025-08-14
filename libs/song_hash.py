@@ -50,11 +50,13 @@ def build_song_hashes(output_dir=Path("cache")):
     all_tja_files: list[Path] = []
     for root_dir in tja_paths:
         root_path = Path(root_dir)
+        '''
         if (root_path / '.git').exists():
             repo = Repo(root_path)
             origin = repo.remotes.origin
             origin.pull()
             print('Pulled latest from', root_path)
+        '''
         all_tja_files.extend(root_path.rglob("*.tja"))
 
     global_data.total_songs = len(all_tja_files)

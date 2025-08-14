@@ -610,7 +610,9 @@ class YellowBox:
         self.tja = tja
         self.subtitle = None
         if self.tja is not None:
-            self.subtitle = OutlinedText(self.tja.metadata.subtitle.get(global_data.config['general']['language'], ''), 30, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)
+            subtitle_text = self.tja.metadata.subtitle.get(global_data.config['general']['language'], '')
+            font_size = 30 if len(subtitle_text) < 30 else 20
+            self.subtitle = OutlinedText(subtitle_text, font_size, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)
 
         self.left_out = tex.get_animation(9)
         self.right_out = tex.get_animation(10)
@@ -759,7 +761,7 @@ class YellowBox:
         if self.subtitle is not None:
             texture = self.subtitle.texture
             y = self.bottom_y - min(texture.height, 410) + 10 + self.top_y_out.attribute - self.top_y_out.start_position
-            dest = ray.Rectangle(x - 22, y, texture.width, min(texture.height, 410))
+            dest = ray.Rectangle(x - 15, y, texture.width, min(texture.height, 410))
             self.subtitle.draw(self.subtitle.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
 
     def _draw_yellow_box(self):
