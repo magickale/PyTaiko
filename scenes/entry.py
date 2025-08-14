@@ -30,8 +30,8 @@ class EntryScreen:
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "inst_00_don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "inst_00_katsu.wav")
+        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
+        self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "ka.wav")
         self.bgm = audio.load_sound(sounds_dir / "entry" / "JINGLE_ENTRY [1].ogg")
 
     def on_screen_start(self):

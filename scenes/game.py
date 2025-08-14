@@ -40,8 +40,15 @@ class GameScreen:
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "inst_00_don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "inst_00_katsu.wav")
+        if global_data.hit_sound == -1:
+            self.sound_don = audio.load_sound(Path('none.wav'))
+            self.sound_kat = audio.load_sound(Path('none.wav'))
+        if global_data.hit_sound == 0:
+            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.wav")
+            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.wav")
+        else:
+            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.ogg")
+            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.ogg")
         self.sound_restart = audio.load_sound(sounds_dir / 'song_select' / 'Skip.ogg')
         self.sound_balloon_pop = audio.load_sound(sounds_dir / "balloon_pop.wav")
         self.sound_kusudama_pop = audio.load_sound(sounds_dir / "kusudama_pop.ogg")
@@ -489,8 +496,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(note_type)
                 self.draw_drum_hit_list.append(DrumHitEffect(note_type, side))
 
-                if global_data.config["general"]["sfx"]:
-                    audio.play_sound(sound)
+                audio.play_sound(sound)
 
                 self.check_note(game_screen, 1 if note_type == 'DON' else 2)
                 self.input_log[game_screen.current_ms] = (note_type, side)

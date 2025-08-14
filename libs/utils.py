@@ -225,6 +225,7 @@ class GlobalData:
     song_paths: dict[Path, str] = field(default_factory=lambda: dict()) #path to hash
     song_progress: float = 0.0
     total_songs: int = 0
+    hit_sound: int = 0
     player_num: int = 1
 
 global_data = GlobalData()

@@ -41,8 +41,8 @@ class SongSelectScreen:
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "inst_00_don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "inst_00_katsu.wav")
+        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
+        self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "ka.wav")
         self.sound_skip = audio.load_sound(sounds_dir / 'song_select' / 'Skip.ogg')
         self.sound_ura_switch = audio.load_sound(sounds_dir / 'song_select' / 'SE_SELECT [4].ogg')
         self.sound_add_favorite = audio.load_sound(sounds_dir / 'song_select' / 'add_favorite.ogg')
@@ -60,13 +60,18 @@ class SongSelectScreen:
             self.text_fade_out = tex.get_animation(3)
             self.text_fade_in = tex.get_animation(4)
             self.background_fade_change = tex.get_animation(5)
+            self.diff_selector_move_1 = tex.get_animation(26)
+            self.diff_selector_move_2 = tex.get_animation(27)
+            self.diff_select_move_right = False
             self.background_move.start()
             self.state = State.BROWSING
-            self.selected_difficulty = -1
+            self.selected_difficulty = -3
+            self.prev_diff = -3
             self.selected_song = None
             self.game_transition = None
             self.demo_song = None
             self.diff_sort_selector = None
+            self.neiro_selector = None
             self.texture_index = 9
             self.last_texture_index = 9
             self.last_moved = get_current_ms()
@@ -156,9 +161,24 @@ class SongSelectScreen:
 
     def handle_input_selected(self):
         # Handle song selection confirmation or cancel
+        if self.neiro_selector is not None:
+            if is_l_kat_pressed() or is_r_kat_pressed():
+                if is_l_kat_pressed():
+                    self.neiro_selector.move_left()
+                elif is_r_kat_pressed():
+                    self.neiro_selector.move_right()
+            if is_l_don_pressed() or is_r_don_pressed():
+                audio.play_sound(self.sound_don)
+                self.neiro_selector.confirm()
+            return
         if is_l_don_pressed() or is_r_don_pressed():
-            if self.selected_difficulty == -1:
+            if self.selected_difficulty == -3:
                 self._cancel_selection()
+            elif self.selected_difficulty == -2:
+                pass
+            elif self.selected_difficulty == -1:
+                audio.play_sound(self.sound_don)
+                self.neiro_selector = NeiroSelector()
             else:
                 self._confirm_selection()
 
@@ -234,30 +254,55 @@ class SongSelectScreen:
 
     def _navigate_difficulty_left(self, diffs):
         """Navigate difficulty selection leftward"""
+        self.diff_select_move_right = False
         if self.is_ura and self.selected_difficulty == 4:
+            self.diff_selector_move_1.start()
+            self.prev_diff = self.selected_difficulty
             self.selected_difficulty = 2
-        elif self.selected_difficulty == -1:
+        elif self.selected_difficulty == -1 or self.selected_difficulty == -2:
+            self.diff_selector_move_2.start()
+            self.prev_diff = self.selected_difficulty
+            self.selected_difficulty -= 1
+        elif self.selected_difficulty == -3:
             pass
         elif self.selected_difficulty not in diffs:
+            self.prev_diff = self.selected_difficulty
+            self.diff_selector_move_1.start()
             self.selected_difficulty = min(diffs)
         elif self.selected_difficulty == min(diffs):
+            self.diff_selector_move_2.start()
+            self.prev_diff = self.selected_difficulty
             self.selected_difficulty = -1
         else:
+            self.diff_selector_move_1.start()
+            self.prev_diff = self.selected_difficulty
             self.selected_difficulty = diffs[diffs.index(self.selected_difficulty) - 1]
 
     def _navigate_difficulty_right(self, diffs):
         """Navigate difficulty selection rightward"""
+        self.diff_select_move_right = True
         if self.is_ura and self.selected_difficulty == 2:
+            self.prev_diff = self.selected_difficulty
             self.selected_difficulty = 4
+            self.diff_selector_move_1.start()
 
         if (self.selected_difficulty in [3, 4] and 4 in diffs):
             self.ura_toggle = (self.ura_toggle + 1) % 10
             if self.ura_toggle == 0:
                 self._toggle_ura_mode()
-        elif self.selected_difficulty not in diffs:
+        elif self.selected_difficulty == -1:
+            self.prev_diff = self.selected_difficulty
             self.selected_difficulty = min(diffs)
+            self.diff_selector_move_2.start()
+            self.diff_selector_move_1.start()
+        elif self.selected_difficulty == -2 or self.selected_difficulty == -3:
+            self.prev_diff = self.selected_difficulty
+            self.selected_difficulty += 1
+            self.diff_selector_move_2.start()
         elif self.selected_difficulty < max(diffs):
+            self.prev_diff = self.selected_difficulty
             self.selected_difficulty = diffs[diffs.index(self.selected_difficulty) + 1]
+            self.diff_selector_move_1.start()
 
     def _toggle_ura_mode(self):
         """Toggle between ura and normal mode"""
@@ -284,6 +329,8 @@ class SongSelectScreen:
         self.text_fade_out.update(get_current_ms())
         self.text_fade_in.update(get_current_ms())
         self.ura_switch_animation.update(get_current_ms())
+        self.diff_selector_move_1.update(get_current_ms())
+        self.diff_selector_move_2.update(get_current_ms())
 
         if self.text_fade_out.is_finished:
             self.selected_song = True
@@ -314,6 +361,11 @@ class SongSelectScreen:
         if self.diff_sort_selector is not None:
             self.diff_sort_selector.update(get_current_ms())
 
+        if self.neiro_selector is not None:
+            self.neiro_selector.update(get_current_ms())
+            if self.neiro_selector.is_finished:
+                self.neiro_selector = None
+
         for song in self.navigator.items:
             song.box.update(self.state == State.SONG_SELECTED)
             song.box.is_open = song.box.position == SongSelectScreen.BOX_CENTER + 150
@@ -333,12 +385,36 @@ class SongSelectScreen:
             return self.on_screen_end('ENTRY')
 
     def draw_selector(self):
-        if self.selected_difficulty == -1:
-            tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline_back')
+        fade = 0.5 if self.neiro_selector is not None else 1.0
+        direction = 1 if self.diff_select_move_right else -1
+        if self.selected_difficulty <= -1 or self.prev_diff == -1:
+            if self.prev_diff == -1 and self.selected_difficulty == 0:
+                if not self.diff_selector_move_2.is_finished:
+                    tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
+                    tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline_back', x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
+                else:
+                    difficulty = min(3, self.selected_difficulty)
+                    tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=(difficulty * 115), fade=fade)
+                    tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline', x=(difficulty * 115))
+            elif not self.diff_selector_move_2.is_finished:
+                tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline_back', x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
+                if self.selected_difficulty != -3:
+                    tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
+            else:
+                tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline_back', x=((self.selected_difficulty+3) * 70))
+                if self.selected_difficulty != -3:
+                    tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=((self.selected_difficulty+3) * 70) - 220, fade=fade)
         else:
-            difficulty = min(3, self.selected_difficulty)
-            tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=(difficulty * 115))
-            tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline', x=(difficulty * 115))
+            if self.prev_diff == -1:
+                return
+            if not self.diff_selector_move_1.is_finished:
+                difficulty = min(3, self.prev_diff)
+                tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction), fade=fade)
+                tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline', x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction))
+            else:
+                difficulty = min(3, self.selected_difficulty)
+                tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=(difficulty * 115), fade=fade)
+                tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline', x=(difficulty * 115))
 
     def draw(self):
         width = tex.textures['box']['background'].width
@@ -371,6 +447,8 @@ class SongSelectScreen:
         else:
             tex.draw_texture('global', 'song_select', fade=self.text_fade_out.attribute)
 
+        if self.neiro_selector is not None:
+            self.neiro_selector.draw()
 
         if self.game_transition is not None:
             self.game_transition.draw()
@@ -728,6 +806,9 @@ class YellowBox:
         if self.tja is None:
             return
         tex.draw_texture('diff_select', 'back', fade=self.fade_in.attribute)
+        tex.draw_texture('diff_select', 'option', fade=self.fade_in.attribute)
+        tex.draw_texture('diff_select', 'disable', fade=min(0.5, self.fade_in.attribute))
+        tex.draw_texture('diff_select', 'neiro', fade=self.fade_in.attribute)
 
         for i in range(4):
             if i == 3 and is_ura:
@@ -995,6 +1076,113 @@ class DiffSortSelect:
             self.draw_level_select()
         else:
             self.draw_diff_select()
+
+class NeiroSelector:
+    def __init__(self):
+        self.selected_sound = global_data.hit_sound
+        with open(Path("Sounds") / 'hit_sounds' / 'neiro_list.txt', encoding='utf-8-sig') as neiro_list:
+            self.sounds = neiro_list.readlines()
+            self.sounds.append('無音')
+        self.load_sound()
+        self.is_finished = False
+        self.is_confirmed = False
+        self.move = tex.get_animation(28)
+        self.move.start()
+        self.blue_arrow_fade = tex.get_animation(29)
+        self.blue_arrow_move = tex.get_animation(30)
+        self.blue_arrow_move.start()
+        self.blue_arrow_fade.start()
+        self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.move_sideways = tex.get_animation(31)
+        self.fade_sideways = tex.get_animation(32)
+        self.direction = -1
+
+    def load_sound(self):
+        if self.selected_sound == len(self.sounds):
+            return
+        if self.selected_sound == 0:
+            self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.wav")
+        else:
+            self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.ogg")
+
+    def move_left(self):
+        self.selected_sound = (self.selected_sound - 1) % len(self.sounds)
+        audio.unload_sound(self.curr_sound)
+        self.load_sound()
+        self.move_sideways.start()
+        self.fade_sideways.start()
+        self.text_2.unload()
+        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.direction = -1
+        if self.selected_sound == len(self.sounds):
+            return
+        audio.play_sound(self.curr_sound)
+
+    def move_right(self):
+        self.selected_sound = (self.selected_sound + 1) % len(self.sounds)
+        audio.unload_sound(self.curr_sound)
+        self.load_sound()
+        self.move_sideways.start()
+        self.fade_sideways.start()
+        self.text_2.unload()
+        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.direction = 1
+        if self.selected_sound == len(self.sounds):
+            return
+        audio.play_sound(self.curr_sound)
+
+    def confirm(self):
+        if self.selected_sound == len(self.sounds):
+            global_data.hit_sound = -1
+        else:
+            global_data.hit_sound = self.selected_sound
+        self.is_confirmed = True
+        self.move.restart()
+
+    def update(self, current_ms):
+        self.move.update(current_ms)
+        self.blue_arrow_fade.update(current_ms)
+        self.blue_arrow_move.update(current_ms)
+        self.move_sideways.update(current_ms)
+        self.fade_sideways.update(current_ms)
+        if self.move_sideways.is_finished:
+            self.text.unload()
+            self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        if self.blue_arrow_fade.is_finished:
+            self.blue_arrow_fade.restart()
+        if self.blue_arrow_move.is_finished:
+            self.blue_arrow_move.restart()
+        self.is_finished = self.move.is_finished and self.is_confirmed
+
+    def draw(self):
+        if self.is_confirmed:
+            y = -370 + self.move.attribute
+        else:
+            y = -self.move.attribute
+        tex.draw_texture('neiro', 'background', y=y)
+        tex.draw_texture('neiro', f'{global_data.player_num}p', y=y)
+        tex.draw_texture('neiro', 'divisor', y=y)
+        tex.draw_texture('neiro', 'music_note', y=y, x=(self.move_sideways.attribute*self.direction), fade=self.fade_sideways.attribute)
+        tex.draw_texture('neiro', 'music_note', y=y, x=(self.direction*-100) + (self.move_sideways.attribute*self.direction), fade=1 - self.fade_sideways.attribute)
+        tex.draw_texture('neiro', 'blue_arrow', y=y, x=-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
+        tex.draw_texture('neiro', 'blue_arrow', y=y, x=200 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
+
+        counter = str(self.selected_sound+1)
+        total_width = len(counter) * 20
+        for i in range(len(counter)):
+            tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * 20), y=y)
+
+        counter = str(len(self.sounds))
+        total_width = len(counter) * 20
+        for i in range(len(counter)):
+            tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * 20) + 60, y=y)
+
+        dest = ray.Rectangle(235 - (self.text.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text.texture.width, self.text.texture.height)
+        self.text.draw(self.text.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.fade_sideways.attribute))
+
+        dest = ray.Rectangle((self.direction*-100) + 235 - (self.text_2.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text_2.texture.width, self.text_2.texture.height)
+        self.text_2.draw(self.text_2.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
 
 class FileSystemItem:
     GENRE_MAP = {

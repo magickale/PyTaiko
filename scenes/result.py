@@ -1,5 +1,4 @@
 from pathlib import Path
-import sqlite3
 
 import pyray as ray
 from raylib import SHADER_UNIFORM_FLOAT
@@ -34,8 +33,8 @@ class ResultScreen:
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "inst_00_don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "inst_00_katsu.wav")
+        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
+        self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "ka.wav")
         self.sound_num_up = audio.load_sound(sounds_dir / "result" / "SE_RESULT [4].ogg")
         self.bgm = audio.load_sound(sounds_dir / "result" / "JINGLE_SEISEKI [1].ogg")
 

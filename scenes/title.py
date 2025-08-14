@@ -30,7 +30,7 @@ class TitleScreen:
     def load_sounds(self):
         sounds_dir = Path("Sounds")
         title_dir = sounds_dir / "title"
-        self.sound_don = audio.load_sound(sounds_dir / "inst_00_don.wav")
+        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
         self.sound_bachi_swipe = audio.load_sound(title_dir / "SE_ATTRACT_2.ogg")
         self.sound_bachi_hit = audio.load_sound(title_dir / "SE_ATTRACT_3.ogg")
         self.sound_warning_message = audio.load_sound(title_dir / "VO_ATTRACT_3.ogg")

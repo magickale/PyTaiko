@@ -3,7 +3,6 @@ fps_counter = false
 judge_offset = 0
 visual_offset = 0
 autoplay = false
-sfx = true
 language = "ja"
 hard_judge = 108
 
