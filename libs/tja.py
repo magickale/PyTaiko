@@ -177,12 +177,27 @@ def calculate_base_score(play_note_list: deque[Note | Drumroll | Balloon]) -> in
     total_score = (1000000 - (balloon_count * 100) - (drumroll_sec * 1692.0079999994086)) / total_notes
     return math.ceil(total_score / 10) * 10
 
+def test_encodings(file_path):
+    encodings = ['utf-8-sig', 'shift-jis', 'utf-8']
+    final_encoding = None
+
+    for encoding in encodings:
+        try:
+            _ = file_path.read_text(encoding=encoding).splitlines()
+            final_encoding = encoding
+            break
+        except UnicodeDecodeError:
+            continue
+    return final_encoding
+
+
 class TJAParser:
     DIFFS = {0: "easy", 1: "normal", 2: "hard", 3: "oni", 4: "edit", 5: "tower", 6: "dan"}
     def __init__(self, path: Path, start_delay: int = 0, distance: int = 866):
         self.file_path: Path = path
 
-        lines = self.file_path.read_text(encoding='utf-8-sig').splitlines()
+        encoding = test_encodings(self.file_path)
+        lines = self.file_path.read_text(encoding=encoding).splitlines()
         self.data = [cleaned for line in lines
                      if (cleaned := strip_comments(line).strip())]
 
@@ -218,7 +233,7 @@ class TJAParser:
             elif item.startswith('OFFSET'):
                 self.metadata.offset = float(item.split(':')[1])
             elif item.startswith('DEMOSTART'):
-                self.metadata.demostart = float(item.split(':')[1])
+                self.metadata.demostart = float(item.split(':')[1]) if item.split(':')[1] != '' else 0
             elif item.startswith('BGMOVIE'):
                 self.metadata.bgmovie = self.file_path.parent / item.split(':')[1].strip()
             elif item.startswith('MOVIEOFFSET'):
@@ -262,6 +277,9 @@ class TJAParser:
                         continue
                     self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('BALLOON'):
+                    if item.find(':') == -1:
+                        self.metadata.course_data[current_diff].balloon = []
+                        continue
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
                         continue
@@ -270,12 +288,16 @@ class TJAParser:
                     score_init = item.split(':')[1]
                     if score_init == '':
                         continue
-                    self.metadata.course_data[current_diff].scoreinit = [int(x) for x in score_init.split(',')]
+                    try:
+                        self.metadata.course_data[current_diff].scoreinit = [int(x) for x in score_init.split(',') if x != '']
+                    except Exception as e:
+                        print("Failed to parse SCOREINIT: ", e)
+                        self.metadata.course_data[current_diff].scoreinit = [0, 0]
                 elif item.startswith('SCOREDIFF'):
                     score_diff = item.split(':')[1]
                     if score_diff == '':
                         continue
-                    self.metadata.course_data[current_diff].scorediff = int(score_diff)
+                    self.metadata.course_data[current_diff].scorediff = int(float(score_diff))
         for region_code in self.metadata.title:
             if '-New Audio-' in self.metadata.title[region_code] or '-新曲-' in self.metadata.title[region_code]:
                 self.metadata.title[region_code] = self.metadata.title[region_code].strip('-New Audio-')

@@ -9,7 +9,7 @@ import pyray as ray
 from libs.animation import Animation, MoveAnimation
 from libs.audio import audio
 from libs.texture import tex
-from libs.tja import TJAParser
+from libs.tja import TJAParser, test_encodings
 from libs.transition import Transition
 from libs.utils import (
     OutlinedText,
@@ -1253,20 +1253,16 @@ class FileNavigator:
         self.all_directories: dict[str, Directory] = {}  # path -> Directory
         self.all_song_files: dict[str, SongFile] = {}    # path -> SongFile
         self.directory_contents: dict[str, list[Union[Directory, SongFile]]] = {}  # path -> list of items
-        self.root_items: list[Union[Directory, SongFile]] = []
 
         # OPTION 2: Lazy crown calculation with caching
         self.directory_crowns: dict[str, dict] = dict()  # path -> crown list
         self.crown_cache_dirty: set[str] = set()  # directories that need crown recalculation
 
-        # Navigation state
-        self.in_root_selection = True
-        self.current_dir = Path()
-        self.current_root_dir = Path()
+        # Navigation state - simplified without root-specific state
+        self.current_dir = Path()  # Empty path represents virtual root
         self.items: list[Directory | SongFile] = []
         self.new_items: list[Directory | SongFile] = []
         self.favorite_folder: Optional[Directory] = None
-        self.in_favorites = False
         self.recent_folder: Optional[Directory] = None
         self.selected_index = 0
         self.diff_sort_diff = 4
@@ -1278,45 +1274,77 @@ class FileNavigator:
 
         # Generate all objects upfront
         self._generate_all_objects()
-        self.load_root_directories()
+        self._create_virtual_root()
+        self.load_current_directory()
+
+    def _create_virtual_root(self):
+        """Create a virtual root directory containing all root directories"""
+        virtual_root_items = []
+
+        for root_path in self.root_dirs:
+            if not root_path.exists():
+                continue
+
+            root_key = str(root_path)
+            if root_key in self.all_directories:
+                # Root has box.def, add the directory itself
+                virtual_root_items.append(self.all_directories[root_key])
+            else:
+                # Root doesn't have box.def, add its immediate children with box.def
+                for child_path in sorted(root_path.iterdir()):
+                    if child_path.is_dir():
+                        child_key = str(child_path)
+                        if child_key in self.all_directories:
+                            virtual_root_items.append(self.all_directories[child_key])
+
+                # Also add direct TJA files from root
+                all_tja_files = self._find_tja_files_recursive(root_path)
+                for tja_path in sorted(all_tja_files):
+                    song_key = str(tja_path)
+                    if song_key in self.all_song_files:
+                        virtual_root_items.append(self.all_song_files[song_key])
+
+        # Store virtual root contents (empty path key represents root)
+        self.directory_contents["."] = virtual_root_items
 
     def _generate_all_objects(self):
         """Generate all Directory and SongFile objects in advance"""
         print("Generating all Directory and SongFile objects...")
 
-        # First, generate objects for each root directory
+        # Generate objects for each root directory
         for root_path in self.root_dirs:
             if not root_path.exists():
                 print(f"Root directory does not exist: {root_path}")
                 continue
 
-            self._generate_objects_recursive(root_path, is_root=True)
+            self._generate_objects_recursive(root_path)
 
         print(f"Object generation complete. "
                     f"Directories: {len(self.all_directories)}, "
                     f"Songs: {len(self.all_song_files)}")
 
-    def _generate_objects_recursive(self, dir_path: Path, is_root=False):
-            """Recursively generate Directory and SongFile objects for a directory"""
-            if not dir_path.is_dir():
-                return
+    def _generate_objects_recursive(self, dir_path: Path):
+        """Recursively generate Directory and SongFile objects for a directory"""
+        if not dir_path.is_dir():
+            return
 
-            dir_key = str(dir_path)
+        dir_key = str(dir_path)
 
-            # Check for box.def
-            has_box_def = (dir_path / "box.def").exists()
+        # Check for box.def
+        has_box_def = (dir_path / "box.def").exists()
 
+        # Only create Directory objects for directories with box.def
+        if has_box_def:
             # Parse box.def if it exists
             name = dir_path.name if dir_path.name else str(dir_path)
             texture_index = 9
             box_texture = None
             collection = None
 
-            if has_box_def:
-                name, texture_index, collection = self._parse_box_def(dir_path)
-                box_png_path = dir_path / "box.png"
-                if box_png_path.exists():
-                    box_texture = str(box_png_path)
+            name, texture_index, collection = self._parse_box_def(dir_path)
+            box_png_path = dir_path / "box.png"
+            if box_png_path.exists():
+                box_texture = str(box_png_path)
 
             # Count TJA files for this directory
             tja_count = self._count_tja_files(dir_path)
@@ -1380,25 +1408,189 @@ class FileNavigator:
             # OPTION 2: Mark directory for lazy crown calculation
             self.crown_cache_dirty.add(dir_key)
 
-            # If this is a root directory, add to root items
-            if is_root:
-                if has_box_def:
-                    self.root_items.append(directory_obj)
+        else:
+            # For directories without box.def, still process their children
+            for item_path in dir_path.iterdir():
+                if item_path.is_dir():
+                    self._generate_objects_recursive(item_path)
+
+            # Create SongFile objects for TJA files in non-boxed directories
+            tja_files = self._find_tja_files_in_directory_only(dir_path)
+            for tja_path in sorted(tja_files):
+                song_key = str(tja_path)
+                if song_key not in self.all_song_files:
+                    try:
+                        song_obj = SongFile(tja_path, tja_path.name, 9)
+                        self.song_count += 1
+                        global_data.song_progress = self.song_count / global_data.total_songs
+                        self.all_song_files[song_key] = song_obj
+                    except Exception as e:
+                        print(f"Error creating SongFile for {tja_path}: {e}")
+                        continue
+
+    def is_at_root(self) -> bool:
+        """Check if currently at the virtual root"""
+        return self.current_dir == Path()
+
+    def load_current_directory(self, selected_item: Optional[Directory] = None):
+        """Load pre-generated items for the current directory (unified for root and subdirs)"""
+        dir_key = str(self.current_dir)
+
+        # Determine if current directory has child directories with box.def
+        has_children = False
+        if self.is_at_root():
+            has_children = True  # Root always has "children" (the root directories)
+        else:
+            has_children = any(item.is_dir() and (item / "box.def").exists()
+                             for item in self.current_dir.iterdir())
+
+        self.genre_bg = None
+        self.in_favorites = False
+
+        if has_children:
+            self.items = []
+            if not self.box_open:
+                self.selected_index = 0
+
+        start_box = None
+        end_box = None
+
+        # Add back navigation item (only if not at root)
+        if not self.is_at_root():
+            back_dir = Directory(self.current_dir.parent, "", 17, back=True)
+            if not has_children:
+                start_box = back_dir.box
+            self.items.insert(self.selected_index, back_dir)
+
+        # Add pre-generated content for this directory
+        if dir_key in self.directory_contents:
+            content_items = self.directory_contents[dir_key]
+
+            # Handle special collections (same logic as before)
+            if isinstance(selected_item, Directory):
+                if selected_item.collection == Directory.COLLECTIONS[0]:
+                    content_items = self.new_items
+                elif selected_item.collection == Directory.COLLECTIONS[1]:
+                    if self.recent_folder is None:
+                        raise Exception("tried to enter recent folder without recents")
+                    self._generate_objects_recursive(self.recent_folder.path)
+                    selected_item.box.tja_count_text = None
+                    selected_item.box.tja_count = self._count_tja_files(self.recent_folder.path)
+                    content_items = self.directory_contents[dir_key]
+                elif selected_item.collection == Directory.COLLECTIONS[2]:
+                    if self.favorite_folder is None:
+                        raise Exception("tried to enter favorite folder without favorites")
+                    self._generate_objects_recursive(self.favorite_folder.path)
+                    selected_item.box.tja_count_text = None
+                    selected_item.box.tja_count = self._count_tja_files(self.favorite_folder.path)
+                    content_items = self.directory_contents[dir_key]
+                    self.in_favorites = True
+                elif selected_item.collection == Directory.COLLECTIONS[3]:
+                    content_items = []
+                    parent_dir = selected_item.path.parent
+                    for sibling_path in parent_dir.iterdir():
+                        if sibling_path.is_dir() and sibling_path != selected_item.path:
+                            sibling_key = str(sibling_path)
+                            if sibling_key in self.directory_contents:
+                                for item in self.directory_contents[sibling_key]:
+                                    if isinstance(item, SongFile) and item:
+                                        if self.diff_sort_diff in item.tja.metadata.course_data and item.tja.metadata.course_data[self.diff_sort_diff].level == self.diff_sort_level:
+                                            if item not in content_items:
+                                                content_items.append(item)
+                elif selected_item.collection == Directory.COLLECTIONS[4]:
+                    parent_dir = selected_item.path.parent
+                    temp_items = []
+                    for sibling_path in parent_dir.iterdir():
+                        if sibling_path.is_dir() and sibling_path != selected_item.path:
+                            sibling_key = str(sibling_path)
+                            if sibling_key in self.directory_contents:
+                                for item in self.directory_contents[sibling_key]:
+                                    temp_items.append(item)
+                    content_items = random.sample(temp_items, 10)
+
+            i = 1
+            for item in content_items:
+                if isinstance(item, SongFile):
+                    if i % 10 == 0 and i != 0:
+                        back_dir = Directory(self.current_dir.parent, "", 17, back=True)
+                        self.items.insert(self.selected_index+i, back_dir)
+                        i += 1
+                if not has_children:
+                    if selected_item is not None:
+                        item.box.texture_index = selected_item.box.texture_index
+                    self.items.insert(self.selected_index+i, item)
                 else:
-                    # For roots without box.def, add their TJA files directly
-                    all_tja_files = self._find_tja_files_recursive(dir_path)
-                    for tja_path in sorted(all_tja_files):
-                        song_key = str(tja_path)
-                        if song_key not in self.all_song_files:
-                            try:
-                                song_obj = SongFile(tja_path, tja_path.name, 9)
-                                self.song_count += 1
-                                global_data.song_progress = self.song_count / global_data.total_songs
-                                self.all_song_files[song_key] = song_obj
-                            except Exception as e:
-                                print(f"Error creating SongFile for {tja_path}: {e}")
-                                continue
-                        self.root_items.append(self.all_song_files[song_key])
+                    self.items.append(item)
+                i += 1
+
+            if not has_children:
+                self.box_open = True
+                end_box = content_items[-1].box
+                if selected_item in self.items:
+                    self.items.remove(selected_item)
+
+        # Calculate crowns for directories
+        for item in self.items:
+            if isinstance(item, Directory):
+                item_key = str(item.path)
+                if item_key in self.directory_contents:  # Only for real directories
+                    item.box.crown = self._get_directory_crowns_cached(item_key)
+                else:
+                    # Navigation items (back/to_root)
+                    item.box.crown = dict()
+
+        self.calculate_box_positions()
+
+        if (not has_children and start_box is not None
+            and end_box is not None and selected_item is not None
+            and selected_item.box.hori_name is not None):
+            hori_name = selected_item.box.hori_name
+            diff_sort = None
+            if selected_item.collection == Directory.COLLECTIONS[3]:
+                diff_sort = self.diff_sort_level
+                diffs = ['かんたん', 'ふつう', 'むずかしい', 'おに']
+                hori_name = OutlinedText(diffs[min(3, self.diff_sort_diff)], 40, ray.WHITE, ray.BLACK, outline_thickness=5)
+            self.genre_bg = GenreBG(start_box, end_box, hori_name, diff_sort)
+
+    def select_current_item(self):
+        """Select the currently highlighted item"""
+        if not self.items or self.selected_index >= len(self.items):
+            return
+
+        selected_item = self.items[self.selected_index]
+
+        if isinstance(selected_item, Directory):
+            if self.box_open:
+                self.go_back()
+                return
+
+            if selected_item.back:
+                # Handle back navigation
+                if self.current_dir.parent == Path():
+                    # Going back to root
+                    self.current_dir = Path()
+                else:
+                    self.current_dir = self.current_dir.parent
+            else:
+                # Save current state to history
+                self.history.append((self.current_dir, self.selected_index))
+                self.current_dir = selected_item.path
+
+            self.load_current_directory(selected_item=selected_item)
+
+        elif isinstance(selected_item, SongFile):
+            return selected_item
+
+    def go_back(self):
+        """Navigate back to the previous directory"""
+        if self.history:
+            previous_dir, previous_index = self.history.pop()
+            self.current_dir = previous_dir
+            self.selected_index = previous_index
+            self.load_current_directory()
+            self.box_open = False
+
+    # ... (rest of the methods remain the same: navigate_left, navigate_right, etc.)
 
     def _count_tja_files(self, folder_path: Path):
         """Count TJA files in directory"""
@@ -1427,6 +1619,7 @@ class FileNavigator:
             self.crown_cache_dirty.discard(dir_key)
 
         return self.directory_crowns.get(dir_key, dict())
+
     def _calculate_directory_crowns(self, dir_key: str, tja_files: list):
         """Pre-calculate crowns for a directory"""
         all_scores = dict()
@@ -1454,8 +1647,6 @@ class FileNavigator:
         if (directory / 'song_list.txt').exists():
             return self._read_song_list(directory)
         else:
-            # For directories with box.def, we want their direct TJA files
-            # Set box_def_dirs_only=False to ensure we get files from this directory
             return self._find_tja_files_in_directory_only(directory)
 
     def _find_tja_files_in_directory_only(self, directory: Path):
@@ -1477,11 +1668,7 @@ class FileNavigator:
         tja_files: list[Path] = []
 
         has_box_def = (directory / "box.def").exists()
-        # Fixed: Only skip if box_def_dirs_only is True AND has_box_def AND it's not the directory we're currently processing
-        # During object generation, we want to get files from directories with box.def
         if box_def_dirs_only and has_box_def and directory != self.current_dir:
-            # This logic should only apply during navigation, not during object generation
-            # During object generation, we want to collect all TJA files
             return []
 
         for path in directory.iterdir():
@@ -1499,9 +1686,10 @@ class FileNavigator:
         texture_index = 9
         name = path.name
         collection = None
+        encoding = test_encodings(path / "box.def")
 
         try:
-            with open(path / "box.def", 'r', encoding='utf-8') as box_def:
+            with open(path / "box.def", 'r', encoding=encoding) as box_def:
                 for line in box_def:
                     line = line.strip()
                     if line.startswith("#GENRE:"):
@@ -1593,126 +1781,6 @@ class FileNavigator:
             else:
                 item.box.target_position = position
 
-    def load_root_directories(self):
-        """Load the pre-generated root directory items"""
-        self.items = self.root_items.copy()
-        self.in_root_selection = True
-        self.current_dir = Path()
-        self.current_root_dir = Path()
-
-        # Reset selection
-        self.selected_index = 0 if self.items else -1
-        self.calculate_box_positions()
-
-    def load_current_directory(self, selected_item: Optional[Directory]=None):
-        """Load pre-generated items for the current directory"""
-        has_children = any(item.is_dir() and (item / "box.def").exists() for item in self.current_dir.iterdir())
-        self.genre_bg = None
-        self.in_favorites = False
-        if has_children:
-            self.items = []
-            if not self.box_open:
-                self.selected_index = 0
-
-        dir_key = str(self.current_dir)
-        start_box = None
-        end_box = None
-
-        # Add back/to_root navigation items
-        if self.current_dir != self.current_root_dir:
-            back_dir = Directory(self.current_dir.parent, "", 17, back=True)
-            if not has_children:
-                start_box = back_dir.box
-            self.items.insert(self.selected_index, back_dir)
-        elif not self.in_root_selection:
-            to_root_dir = Directory(Path(), "", 17, to_root=True)
-            self.items.append(to_root_dir)
-
-        # Add pre-generated content for this directory
-        if dir_key in self.directory_contents:
-            content_items = self.directory_contents[dir_key]
-            if isinstance(selected_item, Directory):
-                if selected_item.collection == Directory.COLLECTIONS[0]:
-                    content_items = self.new_items
-                elif selected_item.collection == Directory.COLLECTIONS[1]:
-                    if self.recent_folder is None:
-                        raise Exception("tried to enter recent folder without recents")
-                    self._generate_objects_recursive(self.recent_folder.path)
-                    selected_item.box.tja_count_text = None
-                    selected_item.box.tja_count = self._count_tja_files(self.recent_folder.path)
-                    content_items = self.directory_contents[dir_key]
-                elif selected_item.collection == Directory.COLLECTIONS[2]:
-                    if self.favorite_folder is None:
-                        raise Exception("tried to enter favorite folder without favorites")
-                    self._generate_objects_recursive(self.favorite_folder.path)
-                    selected_item.box.tja_count_text = None
-                    selected_item.box.tja_count = self._count_tja_files(self.favorite_folder.path)
-                    content_items = self.directory_contents[dir_key]
-                    self.in_favorites = True
-                elif selected_item.collection == Directory.COLLECTIONS[3]:
-                    content_items = []
-                    parent_dir = selected_item.path.parent
-                    for sibling_path in parent_dir.iterdir():
-                        if sibling_path.is_dir() and sibling_path != selected_item.path:
-                            sibling_key = str(sibling_path)
-                            if sibling_key in self.directory_contents:
-                                for item in self.directory_contents[sibling_key]:
-                                    if isinstance(item, SongFile) and item:
-                                        if self.diff_sort_diff in item.tja.metadata.course_data and item.tja.metadata.course_data[self.diff_sort_diff].level == self.diff_sort_level:
-                                            if item not in content_items:
-                                                content_items.append(item)
-                elif selected_item.collection == Directory.COLLECTIONS[4]:
-                    parent_dir = selected_item.path.parent
-                    temp_items = []
-                    for sibling_path in parent_dir.iterdir():
-                        if sibling_path.is_dir() and sibling_path != selected_item.path:
-                            sibling_key = str(sibling_path)
-                            if sibling_key in self.directory_contents:
-                                for item in self.directory_contents[sibling_key]:
-                                    temp_items.append(item)
-                    content_items = random.sample(temp_items, 10)
-            i = 1
-            for item in content_items:
-                if isinstance(item, SongFile):
-                    if i % 10 == 0 and i != 0:
-                        back_dir = Directory(self.current_dir.parent, "", 17, back=True)
-                        self.items.insert(self.selected_index+i, back_dir)
-                        i += 1
-                if not has_children:
-                    if selected_item is not None:
-                        item.box.texture_index = selected_item.box.texture_index
-                    self.items.insert(self.selected_index+i, item)
-                else:
-                    self.items.append(item)
-                i += 1
-
-            if not has_children:
-                self.box_open = True
-                end_box = content_items[-1].box
-                if selected_item in self.items:
-                    self.items.remove(selected_item)
-        # OPTIMIZED: Use cached crowns (calculated on-demand)
-        for item in self.items:
-            if isinstance(item, Directory):
-                item_key = str(item.path)
-                if item_key in self.directory_contents:  # Only for real directories
-                    item.box.crown = self._get_directory_crowns_cached(item_key)
-                else:
-                    # Navigation items (back/to_root)
-                    item.box.crown = dict()
-
-        self.calculate_box_positions()
-        if (not has_children and start_box is not None
-            and end_box is not None and selected_item is not None
-            and selected_item.box.hori_name is not None):
-            hori_name = selected_item.box.hori_name
-            diff_sort = None
-            if selected_item.collection == Directory.COLLECTIONS[3]:
-                diff_sort = self.diff_sort_level
-                diffs = ['かんたん', 'ふつう', 'むずかしい', 'おに']
-                hori_name = OutlinedText(diffs[min(3, self.diff_sort_diff)], 40, ray.WHITE, ray.BLACK, outline_thickness=5)
-            self.genre_bg = GenreBG(start_box, end_box, hori_name, diff_sort)
-
     def mark_crowns_dirty_for_song(self, song_file: SongFile):
         """Mark directories as needing crown recalculation when a song's score changes"""
         song_path = song_file.path
@@ -1735,45 +1803,6 @@ class FileNavigator:
         if self.items:
             self.selected_index = (self.selected_index + 1) % len(self.items)
             self.calculate_box_positions()
-
-    def select_current_item(self):
-        """Select the currently highlighted item"""
-        if not self.items or self.selected_index >= len(self.items):
-            return
-
-        selected_item = self.items[self.selected_index]
-
-        if isinstance(selected_item, Directory):
-            if self.box_open:
-                self.go_back()
-            if selected_item.to_root:
-                self.load_root_directories()
-            else:
-                # Save current state to history
-                if self.current_dir is not None:
-                    self.history.append((self.current_dir, self.selected_index, self.in_root_selection, self.current_root_dir))
-                self.current_dir = selected_item.path
-                if self.in_root_selection:
-                    self.current_root_dir = selected_item.path
-                    self.in_root_selection = False
-                self.load_current_directory(selected_item=selected_item)
-
-        elif isinstance(selected_item, SongFile):
-            return selected_item
-
-    def go_back(self):
-        """Navigate back to the previous directory"""
-        if self.history:
-            previous_dir, previous_index, previous_in_root, previous_root_dir = self.history.pop()
-            self.current_dir = previous_dir
-            self.selected_index = previous_index
-            self.in_root_selection = previous_in_root
-            self.current_root_dir = previous_root_dir
-            if self.in_root_selection:
-                self.load_root_directories()
-            else:
-                self.load_current_directory()
-                self.box_open = False
 
     def get_current_item(self):
         """Get the currently selected item"""
