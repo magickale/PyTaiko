@@ -84,7 +84,8 @@ class SongSelectScreen:
                 self.navigator.mark_crowns_dirty_for_song(self.navigator.all_song_files[str(global_data.selected_song)])
 
             self.navigator.reset_items()
-            self.navigator.get_current_item().box.get_scores()
+            curr_item = self.navigator.get_current_item()
+            curr_item.box.get_scores()
             self.navigator.add_recent()
 
     def on_screen_end(self, next_screen):
@@ -520,6 +521,7 @@ class SongBox:
         if self.hori_name is not None:
             self.hori_name.unload()
             self.hori_name = None
+        self.is_open = False
 
     def get_scores(self):
         if self.tja is None:
@@ -1390,7 +1392,7 @@ class FileNavigator:
             tja_files = self._get_tja_files_for_directory(dir_path)
 
             # Create SongFile objects
-            for i, tja_path in enumerate(sorted(tja_files)):
+            for i, tja_path in enumerate(tja_files):
                 song_key = str(tja_path)
                 if song_key not in self.all_song_files:
                     song_obj = SongFile(tja_path, tja_path.name, texture_index)
@@ -1416,7 +1418,7 @@ class FileNavigator:
 
             # Create SongFile objects for TJA files in non-boxed directories
             tja_files = self._find_tja_files_in_directory_only(dir_path)
-            for tja_path in sorted(tja_files):
+            for tja_path in tja_files:
                 song_key = str(tja_path)
                 if song_key not in self.all_song_files:
                     try:
@@ -1481,6 +1483,8 @@ class FileNavigator:
                     if self.favorite_folder is None:
                         raise Exception("tried to enter favorite folder without favorites")
                     self._generate_objects_recursive(self.favorite_folder.path)
+                    tja_files = self._get_tja_files_for_directory(self.favorite_folder.path)
+                    self._calculate_directory_crowns(dir_key, tja_files)
                     selected_item.box.tja_count_text = None
                     selected_item.box.tja_count = self._count_tja_files(self.favorite_folder.path)
                     content_items = self.directory_contents[dir_key]
@@ -1625,7 +1629,7 @@ class FileNavigator:
         all_scores = dict()
         crowns = dict()
 
-        for tja_path in sorted(tja_files):
+        for tja_path in tja_files:
             song_key = str(tja_path)
             if song_key in self.all_song_files:
                 song_obj = self.all_song_files[song_key]
@@ -1727,7 +1731,7 @@ class FileNavigator:
 
                 if hash_val in global_data.song_hashes:
                     file_path = Path(global_data.song_hashes[hash_val][0]["file_path"])
-                    if file_path.exists():
+                    if file_path.exists() and file_path not in tja_files:
                         tja_files.append(file_path)
                 else:
                     # Try to find by title and subtitle

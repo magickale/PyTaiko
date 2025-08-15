@@ -812,7 +812,10 @@ class AudioEngine:
             del self.sounds[sound]
 
     def unload_all_sounds(self) -> None:
-        self.sounds.clear()
+        sounds_to_clear = list(self.sounds.keys())
+        for key in sounds_to_clear:
+            if key in self.sounds:
+                del self.sounds[key]
 
     def normalize_sound(self, sound: str, rms: float) -> None:
         if sound in self.sounds:

@@ -219,7 +219,7 @@ class TJAParser:
                 if item[len('SUBTITLE')] != ':':
                     region_code = (item[len('SUBTITLE'):len('SUBTITLE')+2]).lower()
                 self.metadata.subtitle[region_code] = ''.join(item.split(':')[1:])
-                if '限定' in self.metadata.subtitle:
+                if 'ja' in self.metadata.subtitle and '限定' in self.metadata.subtitle['ja']:
                     self.ex_data.limited_time = True
             elif item.startswith('TITLE'):
                 region_code = 'en'
@@ -300,12 +300,12 @@ class TJAParser:
                     self.metadata.course_data[current_diff].scorediff = int(float(score_diff))
         for region_code in self.metadata.title:
             if '-New Audio-' in self.metadata.title[region_code] or '-新曲-' in self.metadata.title[region_code]:
-                self.metadata.title[region_code] = self.metadata.title[region_code].strip('-New Audio-')
-                self.metadata.title[region_code] = self.metadata.title[region_code].strip('-新曲-')
+                self.metadata.title[region_code] = self.metadata.title[region_code].replace('-New Audio-', '')
+                self.metadata.title[region_code] = self.metadata.title[region_code].replace('-新曲-', '')
                 self.ex_data.new_audio = True
             elif '-Old Audio-' in self.metadata.title[region_code] or '-旧曲-' in self.metadata.title[region_code]:
-                self.metadata.title[region_code] = self.metadata.title[region_code].strip('-Old Audio-')
-                self.metadata.title[region_code] = self.metadata.title[region_code].strip('-旧曲-')
+                self.metadata.title[region_code] = self.metadata.title[region_code].replace('-Old Audio-', '')
+                self.metadata.title[region_code] = self.metadata.title[region_code].replace('-旧曲-', '')
                 self.ex_data.old_audio = True
             elif '限定' in self.metadata.title[region_code]:
                 self.ex_data.limited_time = True
