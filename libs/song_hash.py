@@ -67,7 +67,7 @@ def build_song_hashes(output_dir=Path("cache")):
             current_hash = path_to_hash.get(tja_path_str)
             if current_hash is not None:
                 global_data.song_paths[tja_path] = current_hash
-            continue
+                continue
         current_hash = path_to_hash.get(tja_path_str)
         if current_hash is None:
             files_to_process.append(tja_path)
@@ -76,6 +76,7 @@ def build_song_hashes(output_dir=Path("cache")):
             if current_hash in song_hashes:
                 del song_hashes[current_hash]
             del path_to_hash[tja_path_str]
+
 
     # Prepare database connection for updates
     db_path = Path("scores.db")

@@ -397,9 +397,9 @@ class TJAParser:
             notes_minus_2 = play_note_list[-2]
 
             consecutive_ones = (
-                notes_minus_4.type == '1' and
-                notes_minus_3.type == '1' and
-                notes_minus_2.type == '1'
+                notes_minus_4.type == 1 and
+                notes_minus_3.type == 1 and
+                notes_minus_2.type == 1
             )
 
             if consecutive_ones:
@@ -414,7 +414,7 @@ class TJAParser:
                         spacing_after = play_note_list[-1].hit_ms - play_note_list[-2].hit_ms >= (ms_per_measure / 8)
 
                         if spacing_before and spacing_after:
-                            play_note_list[-3].moji = se_notes[play_note_list[-3].moji][2]
+                            play_note_list[-3].moji = se_notes[1][2]
                     else:
                         play_note_list[-3].moji = se_notes[play_note_list[-3].moji][2]
 

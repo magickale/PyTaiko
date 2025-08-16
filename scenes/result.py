@@ -55,18 +55,18 @@ class ResultScreen:
             self.state = None
             self.high_score_indicator = None
             self.score_animator = ScoreAnimator(session_data.result_score)
-            self.score = -1
-            self.good = -1
-            self.ok = -1
-            self.bad = -1
-            self.max_combo = -1
-            self.total_drumroll = -1
+            self.score = ''
+            self.good = ''
+            self.ok = ''
+            self.bad = ''
+            self.max_combo = ''
+            self.total_drumroll = ''
             self.update_list = [['score', session_data.result_score],
                 ['good', session_data.result_good],
                 ['ok', session_data.result_ok],
                 ['bad', session_data.result_bad],
-                ['total_drumroll', session_data.result_total_drumroll],
-                ['max_combo', session_data.result_max_combo]]
+                ['max_combo', session_data.result_max_combo],
+                ['total_drumroll', session_data.result_total_drumroll]]
             self.update_index = 0
             self.is_skipped = False
             self.start_ms = get_current_ms()
@@ -163,27 +163,27 @@ class ResultScreen:
             self.crown.update(get_current_ms())
 
     def draw_score_info(self):
-        if self.good > -1:
+        if self.good:
             for i in range(len(str(self.good))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.good)[::-1][i]), x=943-(i*24), y=186)
-        if self.ok > -1:
+        if self.ok:
             for i in range(len(str(self.ok))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.ok)[::-1][i]), x=943-(i*24), y=227)
-        if self.bad > -1:
+        if self.bad:
             for i in range(len(str(self.bad))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.bad)[::-1][i]), x=943-(i*24), y=267)
-        if self.max_combo > -1:
+        if self.max_combo:
             for i in range(len(str(self.max_combo))):
-                tex.draw_texture('score', 'judge_num', frame=int(str(self.max_combo)[::-1][i]), x=1217-(i*24), y=227)
-        if self.total_drumroll > -1:
+                tex.draw_texture('score', 'judge_num', frame=int(str(self.max_combo)[::-1][i]), x=1217-(i*24), y=186)
+        if self.total_drumroll:
             for i in range(len(str(self.total_drumroll))):
-                tex.draw_texture('score', 'judge_num', frame=int(str(self.total_drumroll)[::-1][i]), x=1217-(i*24), y=186)
+                tex.draw_texture('score', 'judge_num', frame=int(str(self.total_drumroll)[::-1][i]), x=1217-(i*24), y=227)
 
     def draw_total_score(self):
         if not self.fade_in.is_finished:
             return
         tex.draw_texture('score', 'score_shinuchi')
-        if self.score > -1:
+        if self.score:
             for i in range(len(str(self.score))):
                 tex.draw_texture('score', 'score_num', x=-(i*21), frame=int(str(self.score)[::-1][i]))
 
@@ -376,10 +376,10 @@ class ScoreAnimator:
         self.digit_index = len(self.target_score) - 1
         self.is_finished = False
 
-    def next_score(self):
+    def next_score(self) -> str:
         if self.digit_index == -1:
             self.is_finished = True
-            return int(''.join([str(item[0]) for item in self.current_score_list]))
+            return str(int(''.join([str(item[0]) for item in self.current_score_list])))
         curr_digit, counter = self.current_score_list[self.digit_index]
         if counter < 9:
             self.current_score_list[self.digit_index][1] += 1
@@ -387,7 +387,13 @@ class ScoreAnimator:
         else:
             self.current_score_list[self.digit_index][0] = int(self.target_score[self.digit_index])
             self.digit_index -= 1
-        return int(''.join([str(item[0]) for item in self.current_score_list]))
+        ret_val = ''.join([str(item[0]) for item in self.current_score_list])
+        if int(ret_val) == 0:
+            if not (len(self.target_score) - self.digit_index) > (len(self.target_score)):
+                return '0' * (len(self.target_score) - self.digit_index)
+            else:
+                return '0'
+        return str(int(ret_val))
 
 class HighScoreIndicator:
     def __init__(self, old_score: int, new_score: int):

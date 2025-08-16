@@ -149,6 +149,9 @@ class SongSelectScreen:
                     self.state = State.SONG_SELECTED
                     if 4 not in selected_song.tja.metadata.course_data:
                         self.is_ura = False
+                    elif (4 in selected_song.tja.metadata.course_data and
+                          3 not in selected_song.tja.metadata.course_data):
+                        self.is_ura = True
                     audio.play_sound(self.sound_don)
                     self.move_away.start()
                     self.diff_fade_out.start()
@@ -259,7 +262,10 @@ class SongSelectScreen:
         if self.is_ura and self.selected_difficulty == 4:
             self.diff_selector_move_1.start()
             self.prev_diff = self.selected_difficulty
-            self.selected_difficulty = 2
+            if len(diffs) == 1:
+                self.selected_difficulty = -1
+            else:
+                self.selected_difficulty = diffs[-2]
         elif self.selected_difficulty == -1 or self.selected_difficulty == -2:
             self.diff_selector_move_2.start()
             self.prev_diff = self.selected_difficulty
@@ -287,7 +293,7 @@ class SongSelectScreen:
             self.selected_difficulty = 4
             self.diff_selector_move_1.start()
 
-        if (self.selected_difficulty in [3, 4] and 4 in diffs):
+        if (self.selected_difficulty in [3, 4] and 4 in diffs and 3 in diffs):
             self.ura_toggle = (self.ura_toggle + 1) % 10
             if self.ura_toggle == 0:
                 self._toggle_ura_mode()
@@ -389,7 +395,7 @@ class SongSelectScreen:
         fade = 0.5 if self.neiro_selector is not None else 1.0
         direction = 1 if self.diff_select_move_right else -1
         if self.selected_difficulty <= -1 or self.prev_diff == -1:
-            if self.prev_diff == -1 and self.selected_difficulty == 0:
+            if self.prev_diff == -1 and self.selected_difficulty >= 0:
                 if not self.diff_selector_move_2.is_finished:
                     tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_balloon', x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
                     tex.draw_texture('diff_select', f'{str(global_data.player_num)}p_outline_back', x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
@@ -1512,6 +1518,9 @@ class FileNavigator:
                                     temp_items.append(item)
                     content_items = random.sample(temp_items, 10)
 
+            if content_items == []:
+                self.go_back()
+                return
             i = 1
             for item in content_items:
                 if isinstance(item, SongFile):
