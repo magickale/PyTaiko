@@ -416,7 +416,7 @@ class TJAParser:
                         if spacing_before and spacing_after:
                             play_note_list[-3].moji = se_notes[1][2]
                     else:
-                        play_note_list[-3].moji = se_notes[play_note_list[-3].moji][2]
+                        play_note_list[-3].moji = se_notes[1][2]
 
     def notes_to_position(self, diff: int):
         play_note_list: list[Note | Drumroll | Balloon] = []

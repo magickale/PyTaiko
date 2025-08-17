@@ -292,4 +292,4 @@ def get_japanese_songs_for_version(csv_file_path, version_column):
 
 
 if len(sys.argv) > 1:
-    get_japanese_songs_for_version("full.csv", sys.argv[1])
+    get_japanese_songs_for_version(sys.argv[1], sys.argv[2])

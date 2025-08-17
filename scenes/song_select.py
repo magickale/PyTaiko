@@ -109,7 +109,6 @@ class SongSelectScreen:
     def handle_input_browsing(self):
         if ray.is_key_pressed(ray.KeyboardKey.KEY_LEFT_CONTROL) or (is_l_kat_pressed() and get_current_ms() <= self.last_moved + 50):
             self.reset_demo_music()
-            self.wait = get_current_ms()
             for _ in range(10):
                 self.navigator.navigate_left()
             audio.play_sound(self.sound_skip)
@@ -431,6 +430,8 @@ class SongSelectScreen:
 
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
             self.navigator.genre_bg.draw(95)
+        self.ura_switch_animation.draw()
+
         for item in self.navigator.items:
             box = item.box
             if -156 <= box.position <= self.screen_width + 144:
@@ -439,10 +440,10 @@ class SongSelectScreen:
                 else:
                     box.draw(box.position + int(self.move_away.attribute), 95, self.is_ura, fade_override=self.diff_fade_out.attribute)
 
-        self.ura_switch_animation.draw()
-
         tex.draw_texture('global', 'footer')
 
+        if self.state == State.BROWSING:
+            self.navigator.get_current_item().box.draw_score_history()
         if self.diff_sort_selector is not None:
             self.diff_sort_selector.draw()
 
@@ -508,6 +509,8 @@ class SongBox:
         self.is_dir = is_dir
         self.tja_count = tja_count
         self.tja_count_text = None
+        self.score_history = None
+        self.history_wait = 0
         self.tja = tja
         self.hash = dict()
 
@@ -583,6 +586,12 @@ class SongBox:
         if self.yellow_box is not None:
             self.yellow_box.update(is_diff_select)
 
+        if self.history_wait == 0:
+            self.history_wait = get_current_ms()
+
+        if self.score_history is None and {k: v for k, v in self.scores.items() if v is not None}:
+            self.score_history = ScoreHistory(self.scores, get_current_ms())
+
         if not is_open_prev and self.is_open:
             if self.black_name is None:
                 self.black_name = OutlinedText(self.text_name, 40, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)
@@ -594,6 +603,8 @@ class SongBox:
                 self.open_anim.start()
                 self.open_fade.start()
             self.wait = get_current_ms()
+            if get_current_ms() >= self.history_wait + 3000:
+                self.history_wait = get_current_ms()
         if self.tja_count is not None and self.tja_count > 0 and self.tja_count_text is None:
             self.tja_count_text = OutlinedText(str(self.tja_count), 35, ray.WHITE, ray.BLACK, outline_thickness=5)#, horizontal_spacing=1.2)
         if self.box_texture is None and self.box_texture_path is not None:
@@ -604,6 +615,9 @@ class SongBox:
 
         if self.name is None:
             self.name = OutlinedText(self.text_name, 40, ray.WHITE, SongBox.OUTLINE_MAP.get(self.name_texture_index, ray.Color(101, 0, 82, 255)), outline_thickness=5, vertical=True)
+
+        if self.score_history is not None:
+            self.score_history.update(get_current_ms())
 
 
     def _draw_closed(self, x: int, y: int):
@@ -679,6 +693,10 @@ class SongBox:
         elif self.box_texture is not None:
             ray.draw_texture(self.box_texture, (x+48) - (self.box_texture.width//2), (y+240) - (self.box_texture.height//2), color)
 
+    def draw_score_history(self):
+        if self.is_open and get_current_ms() >= self.wait + 83.33:
+            if self.score_history is not None and get_current_ms() >= self.history_wait + 3000:
+                self.score_history.draw()
     def draw(self, x: int, y: int, is_ura: bool, fade_override=None):
         if self.is_open and get_current_ms() >= self.wait + 83.33:
             if self.yellow_box is not None:
@@ -1191,6 +1209,56 @@ class NeiroSelector:
 
         dest = ray.Rectangle((self.direction*-100) + 235 - (self.text_2.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text_2.texture.width, self.text_2.texture.height)
         self.text_2.draw(self.text_2.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
+
+class ScoreHistory:
+    def __init__(self, scores: dict[int, tuple[int, int, int, int]], current_ms):
+        self.scores = {k: v for k, v in scores.items() if v is not None}
+        self.difficulty_keys = list(self.scores.keys())
+        self.curr_difficulty_index = 0
+        self.curr_difficulty_index = (self.curr_difficulty_index + 1) % len(self.difficulty_keys)
+        self.curr_difficulty = self.difficulty_keys[self.curr_difficulty_index]
+        self.curr_score = self.scores[self.curr_difficulty][0]
+        self.curr_score_su = self.scores[self.curr_difficulty][0]
+        self.last_ms = current_ms
+
+    def update(self, current_ms):
+        if current_ms >= self.last_ms + 1000:
+            self.last_ms = current_ms
+            self.curr_difficulty_index = (self.curr_difficulty_index + 1) % len(self.difficulty_keys)
+            self.curr_difficulty = self.difficulty_keys[self.curr_difficulty_index]
+            self.curr_score = self.scores[self.curr_difficulty][0]
+            self.curr_score_su = self.scores[self.curr_difficulty][0]
+
+    def draw(self):
+        tex.draw_texture('leaderboard','background')
+        tex.draw_texture('leaderboard','title')
+
+        if self.curr_difficulty == 4:
+            tex.draw_texture('leaderboard', 'normal_ura')
+            tex.draw_texture('leaderboard', 'shinuchi_ura')
+        else:
+            tex.draw_texture('leaderboard', 'normal')
+            tex.draw_texture('leaderboard', 'shinuchi')
+
+        color = ray.BLACK
+        if self.curr_difficulty == 4:
+            color = ray.WHITE
+            tex.draw_texture('leaderboard','ura')
+
+        tex.draw_texture('leaderboard', 'pts', color=color)
+        tex.draw_texture('leaderboard', 'pts', y=50)
+
+        tex.draw_texture('leaderboard', 'difficulty', frame=self.curr_difficulty)
+
+        counter = str(self.curr_score)
+        total_width = len(counter) * 14
+        for i in range(len(counter)):
+            tex.draw_texture('leaderboard', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * 14), color=color)
+
+        counter = str(self.curr_score_su)
+        total_width = len(counter) * 14
+        for i in range(len(counter)):
+            tex.draw_texture('leaderboard', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * 14), y=50, color=ray.WHITE)
 
 class FileSystemItem:
     GENRE_MAP = {

@@ -65,14 +65,7 @@ class SettingsScreen:
         step = step_sizes.get(key, 1)
         new_value = current_value + (step * increment)
 
-        # Apply constraints for specific settings
-        if key == 'judge_offset':
-            new_value = max(-50, min(50, new_value))
-        elif key == 'visual_offset':
-            new_value = max(-20, min(20, new_value))
-        elif key == 'buffer_size':
-            new_value = max(1, min(32, new_value))
-        elif key == 'sample_rate':
+        if key == 'sample_rate':
             valid_rates = [-1, 22050, 44100, 48000, 88200, 96000]
             current_idx = valid_rates.index(current_value) if current_value in valid_rates else 2
             new_idx = max(0, min(len(valid_rates) - 1, current_idx + increment))
