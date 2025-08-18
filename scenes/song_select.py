@@ -80,6 +80,9 @@ class SongSelectScreen:
             self.screen_init = True
             self.ura_switch_animation = UraSwitchAnimation()
 
+            if self.navigator.items == []:
+                return self.on_screen_end("ENTRY")
+
             if str(global_data.selected_song) in self.navigator.all_song_files:
                 self.navigator.mark_crowns_dirty_for_song(self.navigator.all_song_files[str(global_data.selected_song)])
 
@@ -90,12 +93,13 @@ class SongSelectScreen:
 
     def on_screen_end(self, next_screen):
         self.screen_init = False
-        global_data.selected_song = self.navigator.get_current_item().path
-        session_data.selected_difficulty = self.selected_difficulty
-        self.reset_demo_music()
-        self.navigator.reset_items()
-        audio.unload_all_sounds()
-        tex.unload_textures()
+        if self.navigator.items != []:
+            global_data.selected_song = self.navigator.get_current_item().path
+            session_data.selected_difficulty = self.selected_difficulty
+            self.reset_demo_music()
+            self.navigator.reset_items()
+            audio.unload_all_sounds()
+            tex.unload_textures()
         return next_screen
 
     def reset_demo_music(self):
@@ -327,7 +331,9 @@ class SongSelectScreen:
             self.handle_input_diff_sort()
 
     def update(self):
-        self.on_screen_start()
+        ret_val = self.on_screen_start()
+        if ret_val is not None:
+            return ret_val
         self.background_move.update(get_current_ms())
         self.move_away.update(get_current_ms())
         self.diff_fade_out.update(get_current_ms())
@@ -442,7 +448,7 @@ class SongSelectScreen:
 
         tex.draw_texture('global', 'footer')
 
-        if self.state == State.BROWSING:
+        if self.state == State.BROWSING and self.navigator.items != []:
             self.navigator.get_current_item().box.draw_score_history()
         if self.diff_sort_selector is not None:
             self.diff_sort_selector.draw()
