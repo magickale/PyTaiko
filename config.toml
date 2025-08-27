@@ -23,7 +23,7 @@ right_don = [17]
 right_kat = [12]
 
 [audio]
-device_type = "Windows WASAPI"
+device_type = "ALSA"
 buffer_size = 64
 sample_rate = -1
 exclusive = false

@@ -85,9 +85,9 @@ class ResultScreen:
 
     def update_score_animation(self):
         if self.is_skipped:
-            setattr(self, self.update_list[self.update_index][0], self.update_list[self.update_index][1])
             if self.update_index == len(self.update_list) - 1:
                 return
+            setattr(self, self.update_list[self.update_index][0], self.update_list[self.update_index][1])
             self.update_index += 1
         elif self.score_delay is not None:
             if get_current_ms() > self.score_delay:
@@ -379,6 +379,8 @@ class ScoreAnimator:
     def next_score(self) -> str:
         if self.digit_index == -1:
             self.is_finished = True
+            if self.target_score == '0':
+                return '0'
             return str(int(''.join([str(item[0]) for item in self.current_score_list])))
         curr_digit, counter = self.current_score_list[self.digit_index]
         if counter < 9:

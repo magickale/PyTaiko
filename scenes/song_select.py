@@ -455,7 +455,6 @@ class SongSelectScreen:
 
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
             self.navigator.genre_bg.draw(95)
-        self.ura_switch_animation.draw()
 
         for item in self.navigator.items:
             box = item.box
@@ -466,6 +465,8 @@ class SongSelectScreen:
                     box.draw(box.position + int(self.move_away.attribute), 95, self.is_ura, fade_override=self.diff_fade_out.attribute)
 
         tex.draw_texture('global', 'footer')
+
+        self.ura_switch_animation.draw()
 
         if self.state == State.BROWSING and self.navigator.items != []:
             self.navigator.get_current_item().box.draw_score_history()
