@@ -28,6 +28,7 @@ class Texture:
         self.y = 0
         self.x2 = self.width
         self.y2 = self.height
+        self.controllable = False
 
 class TextureWrapper:
     def __init__(self):
@@ -62,6 +63,7 @@ class TextureWrapper:
         tex_object.y = tex_mapping.get("y", 0)
         tex_object.x2 = tex_mapping.get("x2", tex_object.width)
         tex_object.y2 = tex_mapping.get("y2", tex_object.height)
+        tex_object.controllable = tex_mapping.get("controllable", False)
 
     def load_animations(self, screen_name: str):
         screen_path = self.graphics_path / screen_name
@@ -123,6 +125,19 @@ class TextureWrapper:
                 continue
             self.load_zip(screen_name, zip.name)
 
+    def control(self, tex_object: Texture):
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_LEFT):
+            tex_object.x -= 1
+            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_RIGHT):
+            tex_object.x += 1
+            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_UP):
+            tex_object.y -= 1
+            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_DOWN):
+            tex_object.y += 1
+            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
 
     def draw_texture(self, subset: str, texture: str, color: ray.Color=ray.WHITE, frame: int = 0, scale: float = 1.0, center: bool = False,
                             mirror: str = '', x: float = 0, y: float = 0, x2: float = 0, y2: float = 0,
@@ -149,5 +164,7 @@ class TextureWrapper:
             if isinstance(tex_object.texture, list):
                 raise Exception("Texture is multiframe but was called as 1 texture")
             ray.draw_texture_pro(tex_object.texture, source_rect, dest_rect, origin, rotation, final_color)
+        if tex_object.controllable:
+            self.control(tex_object)
 
 tex = TextureWrapper()

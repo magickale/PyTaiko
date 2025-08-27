@@ -1,6 +1,6 @@
-from dataclasses import fields
 import random
 import sqlite3
+from dataclasses import fields
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Union
@@ -1258,21 +1258,52 @@ class ModifierSelector:
         self.current_mod_index = 0
         self.is_confirmed = False
         self.is_finished = False
+        self.blue_arrow_fade = tex.get_animation(29)
+        self.blue_arrow_move = tex.get_animation(30)
+        self.blue_arrow_move.start()
+        self.blue_arrow_fade.start()
         self.move = tex.get_animation(28)
         self.move.start()
-        self.text = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, ray.BLACK, outline_thickness=3.5) for mod in self.mods]
+        self.move_sideways = tex.get_animation(31)
+        self.fade_sideways = tex.get_animation(32)
+        self.direction = -1
+        self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, ray.BLACK, outline_thickness=3.5) for mod in self.mods]
         self.text_true = OutlinedText('する', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_false = OutlinedText('じゃない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_false = OutlinedText('しない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
         self.text_speed = OutlinedText(str(global_data.modifiers.speed), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
         self.text_kimagure = OutlinedText('きまぐれ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
         self.text_detarame = OutlinedText('でたらめ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
 
+        # Secondary text objects for animation
+        self.text_true_2 = OutlinedText('する', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_false_2 = OutlinedText('しない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_speed_2 = OutlinedText(str(global_data.modifiers.speed), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_kimagure_2 = OutlinedText('きまぐれ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_detarame_2 = OutlinedText('でたらめ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+
     def update(self, current_ms):
         self.is_finished = self.is_confirmed and self.move.is_finished
         if self.is_finished:
-            for text in self.text:
+            for text in self.text_name:
                 text.unload()
         self.move.update(current_ms)
+        self.blue_arrow_fade.update(current_ms)
+        self.blue_arrow_move.update(current_ms)
+        self.move_sideways.update(current_ms)
+        self.fade_sideways.update(current_ms)
+        if self.move_sideways.is_finished and not self.is_confirmed:
+            current_mod = self.mods[self.current_mod_index]
+            current_value = getattr(global_data.modifiers, current_mod.name)
+
+            if current_mod.name == 'speed':
+                self.text_speed.unload()
+                self.text_speed = OutlinedText(str(current_value), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+
+        if self.blue_arrow_fade.is_finished:
+            self.blue_arrow_fade.restart()
+        if self.blue_arrow_move.is_finished:
+            self.blue_arrow_move.restart()
+
     def confirm(self):
         if self.is_confirmed:
             return
@@ -1280,6 +1311,20 @@ class ModifierSelector:
         if self.current_mod_index == len(self.mods):
             self.is_confirmed = True
             self.move.restart()
+
+    def _start_text_animation(self, direction):
+        self.move_sideways.start()
+        self.fade_sideways.start()
+        self.direction = direction
+
+        # Update secondary text objects for the new values
+        current_mod = self.mods[self.current_mod_index]
+        current_value = getattr(global_data.modifiers, current_mod.name)
+
+        if current_mod.name == 'speed':
+            self.text_speed_2.unload()
+            self.text_speed_2 = OutlinedText(str(current_value), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+
     def left(self):
         if self.is_confirmed:
             return
@@ -1287,12 +1332,14 @@ class ModifierSelector:
         current_value = getattr(global_data.modifiers, current_mod.name)
         if current_mod.type is bool:
             setattr(global_data.modifiers, current_mod.name, not current_value)
+            self._start_text_animation(-1)
         elif current_mod.name == 'speed':
-            setattr(global_data.modifiers, current_mod.name, max(0.1, current_value-0.1))
-            self.text_speed.unload()
-            self.text_speed = OutlinedText(str(global_data.modifiers.speed), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+            setattr(global_data.modifiers, current_mod.name, max(0.1, (current_value*10 - 1))/10)
+            self._start_text_animation(-1)
         elif current_mod.name == 'random':
             setattr(global_data.modifiers, current_mod.name, max(0, current_value-1))
+            self._start_text_animation(-1)
+
     def right(self):
         if self.is_confirmed:
             return
@@ -1300,12 +1347,32 @@ class ModifierSelector:
         current_value = getattr(global_data.modifiers, current_mod.name)
         if current_mod.type is bool:
             setattr(global_data.modifiers, current_mod.name, not current_value)
+            self._start_text_animation(1)
         elif current_mod.name == 'speed':
-            setattr(global_data.modifiers, current_mod.name, current_value+0.1)
-            self.text_speed.unload()
-            self.text_speed = OutlinedText(str(global_data.modifiers.speed), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+            setattr(global_data.modifiers, current_mod.name, (current_value*10 + 1)/10)
+            self._start_text_animation(1)
         elif current_mod.name == 'random':
-            setattr(global_data.modifiers, current_mod.name, min(2, current_value+1))
+            setattr(global_data.modifiers, current_mod.name, (current_value+1) % 3)
+            self._start_text_animation(1)
+
+    def _draw_animated_text(self, text_primary, text_secondary, x, y, should_animate):
+        if should_animate and not self.move_sideways.is_finished:
+            # Draw primary text moving out
+            dest = ray.Rectangle(x + (self.move_sideways.attribute * self.direction), y,
+                               text_primary.texture.width, text_primary.texture.height)
+            text_primary.draw(text_primary.default_src, dest, ray.Vector2(0, 0), 0,
+                            ray.fade(ray.WHITE, self.fade_sideways.attribute))
+
+            # Draw secondary text moving in
+            dest = ray.Rectangle((self.direction * -100) + x + (self.move_sideways.attribute * self.direction), y,
+                               text_secondary.texture.width, text_secondary.texture.height)
+            text_secondary.draw(text_secondary.default_src, dest, ray.Vector2(0, 0), 0,
+                              ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
+        else:
+            # Draw static text
+            dest = ray.Rectangle(x, y, text_primary.texture.width, text_primary.texture.height)
+            text_primary.draw(text_primary.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+
     def draw(self):
         if self.is_confirmed:
             move = self.move.attribute - 370
@@ -1314,6 +1381,7 @@ class ModifierSelector:
         tex.draw_texture('modifier', 'top', y=move)
         tex.draw_texture('modifier', f'{global_data.player_num}p', y=move)
         tex.draw_texture('modifier', 'bottom', y=move + (len(self.mods)*50))
+
         for i in range(len(self.mods)):
             tex.draw_texture('modifier', 'background', y=move + (i*50))
             if i == self.current_mod_index:
@@ -1321,37 +1389,53 @@ class ModifierSelector:
             else:
                 tex.draw_texture('modifier', 'mod_bg', y=move + (i*50))
             tex.draw_texture('modifier', 'mod_box', y=move + (i*50))
-            dest = ray.Rectangle(92, 819 + move + (i*50), self.text[i].texture.width, self.text[i].texture.height)
-            self.text[i].draw(self.text[i].default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+            dest = ray.Rectangle(92, 819 + move + (i*50), self.text_name[i].texture.width, self.text_name[i].texture.height)
+            self.text_name[i].draw(self.text_name[i].default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
 
             current_mod = self.mods[i]
             current_value = getattr(global_data.modifiers, current_mod.name)
+            is_current_mod = (i == self.current_mod_index)
+
             if current_mod.type is bool:
                 if current_value:
                     tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
-                    dest = ray.Rectangle(330 - (self.text_true.texture.width//2), 819 + move + (i*50), self.text_true.texture.width, self.text_true.texture.height)
-                    self.text_true.draw(self.text_true.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+                    x = 330 - (self.text_true.texture.width//2)
+                    y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_true, self.text_true_2, x, y, is_current_mod)
                 else:
-                    dest = ray.Rectangle(330 - (self.text_false.texture.width//2), 819 + move + (i*50), self.text_false.texture.width, self.text_false.texture.height)
-                    self.text_false.draw(self.text_false.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+                    x = 330 - (self.text_false.texture.width//2)
+                    y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_false, self.text_false_2, x, y, is_current_mod)
             elif current_mod.name == 'speed':
-                dest = ray.Rectangle(330 - (self.text_speed.texture.width//2), 819 + move + (i*50), self.text_speed.texture.width, self.text_speed.texture.height)
-                self.text_speed.draw(self.text_speed.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
-                if current_value > 1.0:
-                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
+                x = 330 - (self.text_speed.texture.width//2)
+                y = 819 + move + (i*50)
+                self._draw_animated_text(self.text_speed, self.text_speed_2, x, y, is_current_mod)
+
+                if current_value >= 4.0:
+                    tex.draw_texture('modifier', 'mod_yonbai', y=move + (i*50))
                 elif current_value >= 3.0:
                     tex.draw_texture('modifier', 'mod_sanbai', y=move + (i*50))
-                elif current_value >= 4.0:
-                    tex.draw_texture('modifier', 'mod_yonbai', y=move + (i*50))
+                elif current_value > 1.0:
+                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
             elif current_mod.name == 'random':
                 if current_value == 1:
-                    dest = ray.Rectangle(330 - (self.text_kimagure.texture.width//2), 819 + move + (i*50), self.text_kimagure.texture.width, self.text_kimagure.texture.height)
-                    self.text_kimagure.draw(self.text_kimagure.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+                    x = 330 - (self.text_kimagure.texture.width//2)
+                    y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_kimagure, self.text_kimagure_2, x, y, is_current_mod)
                     tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
                 elif current_value == 2:
-                    dest = ray.Rectangle(330 - (self.text_detarame.texture.width//2), 819 + move + (i*50), self.text_detarame.texture.width, self.text_detarame.texture.height)
-                    self.text_detarame.draw(self.text_detarame.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+                    x = 330 - (self.text_detarame.texture.width//2)
+                    y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_detarame, self.text_detarame_2, x, y, is_current_mod)
                     tex.draw_texture('modifier', 'mod_detarame', y=move + (i*50))
+                else:
+                    x = 330 - (self.text_false.texture.width//2)
+                    y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_false, self.text_false_2, x, y, is_current_mod)
+
+            if i == self.current_mod_index:
+                tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
+                tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=110 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
 
 class ScoreHistory:
     def __init__(self, scores: dict[int, tuple[int, int, int, int]], current_ms):
