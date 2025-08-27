@@ -220,13 +220,20 @@ class Music:
         self.preview = preview  # Preview start time in seconds
         self.is_preview_mode = preview is not None
 
+        # Add preview-specific attributes
+        self.preview_start_frame = 0
+        self.preview_end_frame = 0
+        self.uses_file_streaming = False  # Flag to indicate streaming vs memory loading
+
         self.file_buffer_size = int(target_sample_rate * 5)  # 5 seconds buffer
         self.buffer = None
         self.buffer_position = 0
+        self.buffer_original_frames = 0  # Track original frames for resampling
 
         # Thread-safe updates
         self.lock = Lock()
         self.sound_file = None
+
         if self.file_path.exists():
             self.load_from_file()
         else:
@@ -264,6 +271,7 @@ class Music:
                 self.total_frames = self.data.shape[0]
 
             self.sample_width = 4  # float32
+            self.uses_file_streaming = False
             self._fill_buffer()
             self.valid = True
             print(f"Music loaded from memory: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames")
@@ -279,42 +287,51 @@ class Music:
 
             # Get file properties
             self.channels = self.sound_file.channels
-            self.sample_width = 2 if self.sound_file.subtype in ['PCM_16', 'VORBIS'] else 4  # Most common
+            self.sample_width = 2 if self.sound_file.subtype in ['PCM_16', 'VORBIS'] else 4
             self.sample_rate = self.sound_file.samplerate
             original_total_frames = self.sound_file.frames
 
             if self.is_preview_mode:
-                # Calculate preview start and end frames
-                preview_start_frame = int(self.preview * self.sample_rate)
-                preview_duration_frames = original_total_frames - preview_start_frame
-                preview_end_frame = min(preview_start_frame + preview_duration_frames, original_total_frames)
+                # Calculate preview boundaries but don't load data into memory
+                self.preview_start_frame = int(self.preview * self.sample_rate)
+
+                # For preview, we'll calculate the available frames from the start position
+                available_frames = original_total_frames - self.preview_start_frame
+                self.preview_end_frame = min(self.preview_start_frame + available_frames, original_total_frames)
 
                 # Ensure preview start is within bounds
-                if preview_start_frame >= original_total_frames:
-                    preview_start_frame = max(0, original_total_frames - preview_duration_frames)
-                    preview_end_frame = original_total_frames
+                if self.preview_start_frame >= original_total_frames:
+                    self.preview_start_frame = max(0, original_total_frames - available_frames)
+                    self.preview_end_frame = original_total_frames
+
+                # Set total frames to the preview length
+                self.total_frames = self.preview_end_frame - self.preview_start_frame
 
                 # Seek to preview start position
-                self.sound_file.seek(preview_start_frame)
+                self.sound_file.seek(self.preview_start_frame)
 
-                # Read only the preview segment
-                frames_to_read = preview_end_frame - preview_start_frame
-                self.data = self.sound_file.read(frames_to_read)
+                # Enable file streaming mode (don't load into memory)
+                self.uses_file_streaming = True
+                self.data = None  # Don't store full data in memory
 
-                # Update total frames to reflect the preview segment
-                self.total_frames = len(self.data) if self.data.ndim == 1 else self.data.shape[0]
+                print(f"Preview mode: Streaming {self.total_frames} frames ({self.total_frames/self.sample_rate:.2f}s) starting at {self.preview:.2f}s")
 
-                print(f"Preview mode: Loading {frames_to_read} frames ({frames_to_read/self.sample_rate:.2f}s) starting at {self.preview:.2f}s")
             else:
-                # Load entire file
+                # For non-preview mode, load entire file into memory as before
                 self.data = self.sound_file.read()
                 self.total_frames = original_total_frames
+                self.uses_file_streaming = False
 
-            self.load_from_memory()
+                # Process the loaded data
+                self.load_from_memory()
+                return  # Early return to avoid duplicate processing
+
+            # Initialize buffer for streaming mode
+            self._fill_buffer()
             self.valid = True
 
             if self.is_preview_mode:
-                print(f"Music preview loaded: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames ({self.get_time_length():.2f}s)")
+                print(f"Music preview streaming: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames ({self.get_time_length():.2f}s)")
             else:
                 print(f"Music loaded: {self.channels} channels, {self.sample_rate}Hz, {self.total_frames} frames")
 
@@ -326,28 +343,93 @@ class Music:
             self.valid = False
 
     def _fill_buffer(self) -> bool:
-        """Fill buffer from in-memory data"""
+        """Fill buffer from either memory or file stream"""
         try:
-            if self.data is None:
-                return False
-
-            start_frame = self.position + self.buffer_position
-            end_frame = min(start_frame + self.file_buffer_size, self.total_frames)
-
-            if start_frame >= self.total_frames:
-                return False
-
-            # Extract the chunk of data
-            data_chunk = self.data[start_frame:end_frame]
-
-            self.buffer = data_chunk
-            self.position += self.buffer_position
-            self.buffer_position = 0
-            return True
-
+            if self.uses_file_streaming:
+                return self._fill_buffer_from_file()
+            else:
+                return self._fill_buffer_from_memory()
         except Exception as e:
-            print(f"Error filling buffer from memory: {e}")
+            print(f"Error filling buffer: {e}")
             return False
+
+    def _fill_buffer_from_memory(self) -> bool:
+        """Fill buffer from in-memory data"""
+        if self.data is None:
+            return False
+
+        start_frame = self.position
+        end_frame = min(start_frame + self.file_buffer_size, self.total_frames)
+
+        if start_frame >= self.total_frames:
+            return False
+
+        # Extract the chunk of data
+        data_chunk = self.data[start_frame:end_frame]
+
+        self.buffer = data_chunk
+        self.buffer_position = 0
+        # For memory mode, original frames equals buffer frames since no resampling happens here
+        self.buffer_original_frames = len(data_chunk) if data_chunk.ndim == 1 else data_chunk.shape[0]
+        return True
+
+    def _fill_buffer_from_file(self) -> bool:
+        """Fill buffer by streaming from file"""
+        if not self.sound_file:
+            return False
+
+        # Calculate current absolute position in file (in original sample rate)
+        current_absolute_position = self.preview_start_frame + self.position
+
+        # Check if we've reached the end of the preview
+        if current_absolute_position >= self.preview_end_frame:
+            return False
+
+        # Calculate how many frames to read (respecting preview boundaries)
+        # This is in the original sample rate
+        frames_to_read = min(self.file_buffer_size, self.preview_end_frame - current_absolute_position)
+
+        if frames_to_read <= 0:
+            return False
+
+        # Seek to the correct position
+        self.sound_file.seek(current_absolute_position)
+
+        # Read the data chunk
+        data_chunk = self.sound_file.read(frames_to_read)
+
+        if len(data_chunk) == 0:
+            return False
+
+        # Store the original length before any processing
+        original_frames = len(data_chunk) if data_chunk.ndim == 1 else data_chunk.shape[0]
+
+        # Apply resampling if needed
+        if self.sample_rate != self.target_sample_rate:
+            data_chunk = resample(data_chunk, self.sample_rate, self.target_sample_rate)
+
+        # Apply normalization if needed
+        if self.normalize is not None:
+            current_rms = get_average_volume_rms(data_chunk)
+            if current_rms > 0:
+                target_rms = self.normalize
+                rms_scale_factor = target_rms / current_rms
+                data_chunk *= rms_scale_factor
+
+        # Ensure proper shape
+        if data_chunk.ndim == 1 and self.channels > 1:
+            data_chunk = data_chunk.reshape(-1, self.channels)
+        elif data_chunk.ndim == 2 and self.channels == 1:
+            data_chunk = data_chunk.flatten().reshape(-1, 1)
+
+        self.buffer = data_chunk
+        self.buffer_position = 0
+
+        # Store how many original frames this buffer represents
+        # This is crucial for position tracking when resampling occurs
+        self.buffer_original_frames = original_frames
+
+        return True
 
     def update(self) -> None:
         """Update music stream buffers"""
@@ -359,6 +441,14 @@ class Music:
             if self.buffer is None:
                 return
             if self.buffer_position >= len(self.buffer):
+                # Update position based on original frames consumed
+                if self.uses_file_streaming:
+                    # For file streaming, we need to track position in original sample rate
+                    self.position += self.buffer_original_frames
+                else:
+                    # For memory mode, position is already in target sample rate
+                    self.position += self.buffer_position
+                self.buffer_position = 0
                 self.is_playing = self._fill_buffer()
 
     def play(self) -> None:
@@ -368,10 +458,8 @@ class Music:
             if self.position >= self.total_frames:
                 self.position = 0
                 self.buffer_position = 0
-                if self.sound_file:
-                    # For preview mode, seek to the preview start position
-                    seek_pos = int(self.preview * self.sample_rate) if self.preview is not None else 0
-                    self.sound_file.seek(seek_pos)
+                if self.sound_file and self.uses_file_streaming:
+                    self.sound_file.seek(self.preview_start_frame)
                     self._fill_buffer()
 
             self.is_playing = True
@@ -384,10 +472,8 @@ class Music:
             self.is_paused = False
             self.position = 0
             self.buffer_position = 0
-            if self.sound_file:
-                # For preview mode, seek to the preview start position
-                seek_pos = int(self.preview * self.sample_rate) if self.preview is not None else 0
-                self.sound_file.seek(seek_pos)
+            if self.sound_file and self.uses_file_streaming:
+                self.sound_file.seek(self.preview_start_frame)
                 self._fill_buffer()
 
     def pause(self) -> None:
@@ -413,16 +499,10 @@ class Music:
             # Clamp position to valid range
             frame_position = max(0, min(frame_position, self.total_frames - 1))
 
-            # Update file position if streaming from file
-            if self.sound_file:
-                # For preview mode, add the preview offset
-                actual_file_position = frame_position
-                if self.is_preview_mode and self.preview is not None:
-                    actual_file_position += int(self.preview * self.sample_rate)
-                self.sound_file.seek(actual_file_position)
-
             self.position = frame_position
             self.buffer_position = 0
+
+            # For file streaming, we'll let _fill_buffer handle the seeking
             self._fill_buffer()
 
     def get_time_length(self) -> float:
@@ -455,6 +535,15 @@ class Music:
 
             # Check if we need more data
             if self.buffer_position >= len(self.buffer):
+                # Update position based on what we actually consumed from the original file
+                if self.uses_file_streaming:
+                    # For file streaming, advance by original frames (before resampling)
+                    self.position += self.buffer_original_frames
+                else:
+                    # For memory mode, advance by resampled frames
+                    self.position += self.buffer_position
+                self.buffer_position = 0
+
                 # Try to fill buffer again
                 if not self._fill_buffer():
                     self.is_playing = False
