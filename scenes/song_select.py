@@ -1334,7 +1334,7 @@ class ModifierSelector:
                     self.text_false.draw(self.text_false.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
             elif current_mod.name == 'speed':
                 dest = ray.Rectangle(330 - (self.text_speed.texture.width//2), 819 + move + (i*50), self.text_speed.texture.width, self.text_speed.texture.height)
-                self.text_speed.draw(self.text_speed.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)add
+                self.text_speed.draw(self.text_speed.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
                 if current_value > 1.0:
                     tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
                 elif current_value >= 3.0:
