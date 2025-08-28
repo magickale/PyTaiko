@@ -82,18 +82,18 @@ class Drumroll(Note):
                 setattr(self, field_name, getattr(self._source_note, field_name))
 
     def _get_hash_data(self) -> bytes:
-        """Override to include source note and drumroll-specific data"""
+        """Override to drumroll-specific data"""
+        hash_fields = ['type', 'hit_ms', 'load_ms', 'color']
         field_values = []
-        for f in sorted([f.name for f in fields(Note)]):
-            value = getattr(self, f, None)
-            field_values.append((f, value))
 
-        field_values.append(('color', getattr(self, 'color', None)))
+        for field_name in sorted(hash_fields):
+            value = getattr(self, field_name, None)
+            field_values.append((field_name, value))
+
         field_values.append(('__class__', self.__class__.__name__))
-        field_values.append(('_source_note_hash', self._source_note.get_hash()))
-
         hash_string = str(field_values)
         return hash_string.encode('utf-8')
+
 
 @dataclass
 class Balloon(Note):
@@ -115,15 +115,14 @@ class Balloon(Note):
 
     def _get_hash_data(self) -> bytes:
         """Override to include source note and balloon-specific data"""
+        hash_fields = ['type', 'hit_ms', 'load_ms', 'count']
         field_values = []
-        for f in sorted([f.name for f in fields(Note)]):
-            value = getattr(self, f, None)
-            field_values.append((f, value))
-        field_values.append(('count', getattr(self, 'count', None)))
-        field_values.append(('popped', self.popped))
-        field_values.append(('__class__', self.__class__.__name__))
-        field_values.append(('_source_note_hash', self._source_note.get_hash()))
 
+        for field_name in sorted(hash_fields):
+            value = getattr(self, field_name, None)
+            field_values.append((field_name, value))
+
+        field_values.append(('__class__', self.__class__.__name__))
         hash_string = str(field_values)
         return hash_string.encode('utf-8')
 
@@ -630,7 +629,6 @@ class TJAParser:
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle
         # Bars can be sorted like this because they don't need hit detection
-        print(play_note_list[0])
         return deque(play_note_list), deque(draw_note_list), deque(bar_list)
 
     def hash_note_data(self, play_notes: deque[Note | Drumroll | Balloon], bars: deque[Note]):
