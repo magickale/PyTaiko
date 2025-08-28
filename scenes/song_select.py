@@ -75,8 +75,8 @@ class SongSelectScreen:
             self.diff_sort_selector = None
             self.neiro_selector = None
             self.modifier_selector = None
-            self.texture_index = 9
-            self.last_texture_index = 9
+            self.texture_index = SongBox.DEFAULT_INDEX
+            self.last_texture_index = SongBox.DEFAULT_INDEX
             self.last_moved = get_current_ms()
             self.ura_toggle = 0
             self.is_ura = False
@@ -510,6 +510,8 @@ class SongBox:
         13: ray.Color(25, 68, 137, 255),
         14: ray.Color(157, 13, 31, 255)
     }
+    BACK_INDEX = 17
+    DEFAULT_INDEX = 9
     def __init__(self, name: str, texture_index: int, is_dir: bool, tja: Optional[TJAParser] = None,
         tja_count: Optional[int] = None, box_texture: Optional[str] = None, name_texture_index: Optional[int] = None):
         self.text_name = name
@@ -526,7 +528,7 @@ class SongBox:
         self.start_position = -1
         self.target_position = -1
         self.is_open = False
-        self.is_back = self.texture_index == 17
+        self.is_back = self.texture_index == SongBox.BACK_INDEX
         self.name = None
         self.black_name = None
         self.hori_name = None
@@ -654,7 +656,7 @@ class SongBox:
         offset = 1 if self.texture_index == 3 or self.texture_index >= 9 and self.texture_index not in {10,11,12} else 0
         tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x, x2=32, y=offset)
         tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x)
-        if self.texture_index == 9:
+        if self.texture_index == SongBox.DEFAULT_INDEX:
             tex.draw_texture('box', 'genre_overlay', x=x, y=y)
         elif self.texture_index == 14:
             tex.draw_texture('box', 'diff_overlay', x=x, y=y)
@@ -701,7 +703,7 @@ class SongBox:
         tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x - self.open_anim.attribute, y=offset, x2=(self.open_anim.attribute*2)+32)
         tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x + self.open_anim.attribute)
 
-        if self.texture_index == 9:
+        if self.texture_index == SongBox.DEFAULT_INDEX:
             tex.draw_texture('box', 'genre_overlay_large', x=x, y=y, color=color)
         elif self.texture_index == 14:
             tex.draw_texture('box', 'diff_overlay_large', x=x, y=y, color=color)
@@ -1533,7 +1535,7 @@ class Directory(FileSystemItem):
         if collection in FileSystemItem.GENRE_MAP:
             texture_index = FileSystemItem.GENRE_MAP[collection]
         elif self.to_root or self.back:
-            texture_index = 17
+            texture_index = SongBox.BACK_INDEX
 
         self.box = SongBox(name, texture_index, True, tja_count=tja_count, box_texture=box_texture)
 
@@ -1644,7 +1646,7 @@ class FileNavigator:
         if has_box_def:
             # Parse box.def if it exists
             name = dir_path.name if dir_path.name else str(dir_path)
-            texture_index = 9
+            texture_index = SongBox.DEFAULT_INDEX
             box_texture = None
             collection = None
 
@@ -1704,7 +1706,7 @@ class FileNavigator:
                     self.song_count += 1
                     global_data.song_progress = self.song_count / global_data.total_songs
                     if song_obj.is_recent:
-                        self.new_items.append(SongFile(tja_path, tja_path.name, 9, name_texture_index=texture_index))
+                        self.new_items.append(SongFile(tja_path, tja_path.name, SongBox.DEFAULT_INDEX, name_texture_index=texture_index))
                     self.all_song_files[song_key] = song_obj
 
                 content_items.append(self.all_song_files[song_key])
@@ -1727,7 +1729,7 @@ class FileNavigator:
                 song_key = str(tja_path)
                 if song_key not in self.all_song_files:
                     try:
-                        song_obj = SongFile(tja_path, tja_path.name, 9)
+                        song_obj = SongFile(tja_path, tja_path.name, SongBox.DEFAULT_INDEX)
                         self.song_count += 1
                         global_data.song_progress = self.song_count / global_data.total_songs
                         self.all_song_files[song_key] = song_obj
@@ -1764,7 +1766,7 @@ class FileNavigator:
 
         # Add back navigation item (only if not at root)
         if not self.is_at_root():
-            back_dir = Directory(self.current_dir.parent, "", 17, back=True)
+            back_dir = Directory(self.current_dir.parent, "", SongBox.BACK_INDEX, back=True)
             if not has_children:
                 start_box = back_dir.box
             self.items.insert(self.selected_index, back_dir)
@@ -1817,14 +1819,14 @@ class FileNavigator:
                                     temp_items.append(item)
                     content_items = random.sample(temp_items, 10)
 
-            if content_items == []:
+            if content_items == [] or (selected_item is not None and selected_item.box.texture_index == 13):
                 self.go_back()
                 return
             i = 1
             for item in content_items:
                 if isinstance(item, SongFile):
                     if i % 10 == 0 and i != 0:
-                        back_dir = Directory(self.current_dir.parent, "", 17, back=True)
+                        back_dir = Directory(self.current_dir.parent, "", SongBox.BACK_INDEX, back=True)
                         self.items.insert(self.selected_index+i, back_dir)
                         i += 1
                 if not has_children:
@@ -1995,7 +1997,7 @@ class FileNavigator:
 
     def _parse_box_def(self, path: Path):
         """Parse box.def file for directory metadata"""
-        texture_index = 9
+        texture_index = SongBox.DEFAULT_INDEX
         name = path.name
         collection = None
         encoding = test_encodings(path / "box.def")
@@ -2006,9 +2008,9 @@ class FileNavigator:
                     line = line.strip()
                     if line.startswith("#GENRE:"):
                         genre = line.split(":", 1)[1].strip()
-                        texture_index = FileSystemItem.GENRE_MAP.get(genre, 9)
-                        if texture_index == 9:
-                            texture_index = FileSystemItem.GENRE_MAP_2.get(genre, 9)
+                        texture_index = FileSystemItem.GENRE_MAP.get(genre, SongBox.DEFAULT_INDEX)
+                        if texture_index == SongBox.DEFAULT_INDEX:
+                            texture_index = FileSystemItem.GENRE_MAP_2.get(genre, SongBox.DEFAULT_INDEX)
                     elif line.startswith("#TITLE:"):
                         name = line.split(":", 1)[1].strip()
                     elif line.startswith("#TITLEJA:"):

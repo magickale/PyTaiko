@@ -36,6 +36,12 @@ def read_tjap3_score(input_file: Path):
               int(score_ini['HiScore.Drums']['Clear2']),
               int(score_ini['HiScore.Drums']['Clear3']),
               int(score_ini['HiScore.Drums']['Clear4'])]
+    if score_ini['HiScore.Drums']['PerfectRange'] != 25:
+        return [0],[0]
+    if score_ini['HiScore.Drums']['GoodRange'] != 75:
+        return [0],[0]
+    if score_ini['HiScore.Drums']['PoorRange'] != 108:
+        return [0],[0]
     return scores, clears
 
 def build_song_hashes(output_dir=Path("cache")):

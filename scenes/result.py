@@ -217,8 +217,8 @@ class ResultScreen:
         while x < self.width:
             tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=-360)
             tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=360)
-            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=-77)
-            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=653)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=-72)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=648)
             x += 256
 
         tex.draw_texture('background', 'result_text')
@@ -383,8 +383,8 @@ class FadeIn:
         while x < 1280:
             tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=-360, fade=self.fadein.attribute)
             tex.draw_texture('background', f'background_{str(global_data.player_num)}p', x=x, y=360, fade=self.fadein.attribute)
-            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=-77, fade=self.fadein.attribute)
-            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=653, fade=self.fadein.attribute)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=-72, fade=self.fadein.attribute)
+            tex.draw_texture('background', f'footer_{str(global_data.player_num)}p', x=x, y=648, fade=self.fadein.attribute)
             x += 256
 
 class ScoreAnimator:
