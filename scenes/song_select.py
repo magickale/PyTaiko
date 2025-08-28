@@ -698,7 +698,7 @@ class SongBox:
 
         tex.draw_texture('box', 'folder_texture_left', frame=self.texture_index, x=x - self.open_anim.attribute)
         offset = 1 if self.texture_index == 3 or self.texture_index >= 9 and self.texture_index not in {10,11,12} else 0
-        tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x - self.open_anim.attribute, y=offset, x2=324)
+        tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x - self.open_anim.attribute, y=offset, x2=(self.open_anim.attribute*2)+32)
         tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x + self.open_anim.attribute)
 
         if self.texture_index == 9:
