@@ -81,20 +81,6 @@ class Drumroll(Note):
             if hasattr(self._source_note, field_name):
                 setattr(self, field_name, getattr(self._source_note, field_name))
 
-    def _get_hash_data(self) -> bytes:
-        """Override to drumroll-specific data"""
-        hash_fields = ['type', 'hit_ms', 'load_ms', 'color']
-        field_values = []
-
-        for field_name in sorted(hash_fields):
-            value = getattr(self, field_name, None)
-            field_values.append((field_name, value))
-
-        field_values.append(('__class__', self.__class__.__name__))
-        hash_string = str(field_values)
-        return hash_string.encode('utf-8')
-
-
 @dataclass
 class Balloon(Note):
     _source_note: Note
