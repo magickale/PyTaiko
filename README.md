@@ -56,12 +56,12 @@ Use the provided shell.nix code and run with python:
 
 ## Roadmap
 
-Ask me
+See "enhancements" on issues page
 
 
 ## Known Issues
 
-- Everything
+See "bugs" on issues page
 
 
 ## Run Locally
@@ -95,7 +95,7 @@ uv run nuitka --mode=app --noinclude-setuptools-mode=nofollow --noinclude-IPytho
 Linux:
 Install portaudio with `sudo apt install portaudio19-dev`
 
-Arch Linux only:
+Some Linux distributions may need this:
 Install [patchelf](https://github.com/NixOS/patchelf)
 Run this command
 ```
