@@ -22,9 +22,9 @@ class State:
     RAINBOW = 2
 
 class ResultScreen:
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
+    def __init__(self):
+        self.width = 1280
+        self.height = 720
         self.screen_init = False
         self.alpha_shader = ray.load_shader('', 'shader/grayscale_alpha.fs')
 

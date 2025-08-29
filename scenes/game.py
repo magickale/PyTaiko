@@ -35,9 +35,8 @@ from libs.video import VideoPlayer
 
 class GameScreen:
     JUDGE_X = 414
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
+    def __init__(self):
+        self.width = 1280
         self.current_ms = 0
         self.screen_init = False
         self.end_ms = 0
@@ -86,7 +85,7 @@ class GameScreen:
             self.movie = None
             self.song_music = None
             tex.load_screen_textures('game')
-            self.background = Background(self.width, self.height, global_data.player_num)
+            self.background = Background(global_data.player_num)
             self.load_sounds()
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
             self.song_info = SongInfo(session_data.song_title, 'TEST')
@@ -1056,7 +1055,6 @@ class KusudamaAnimation:
         self.renda_move_up.start()
         self.renda_move_down.start()
         self.renda_fade_in.start()
-        self.renda_breathe.start()
 
         self.open.reset()
         self.renda_fade_out.reset()
@@ -1085,8 +1083,6 @@ class KusudamaAnimation:
         self.breathing.update(current_ms)
         self.renda_breathe.update(current_ms)
         self.open.update(current_ms)
-        if self.renda_breathe.is_finished:
-            self.renda_breathe.restart()
         self.is_finished = self.fade_out.is_finished
     def draw(self):
         y = self.move_down.attribute - self.move_up.attribute
@@ -1255,12 +1251,9 @@ class SongInfo:
         self.genre = genre
         self.song_title = OutlinedText(song_name, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
         self.fade = tex.get_animation(3)
-        self.fade.start()
 
     def update(self, current_ms: float):
         self.fade.update(current_ms)
-        if self.fade.is_finished:
-            self.fade.restart()
 
     def draw(self):
         tex.draw_texture('song_info', 'song_num', fade=self.fade.attribute, frame=global_data.songs_played % 4)

@@ -24,11 +24,11 @@ class Texture:
             self.height = self.texture.height
         self.is_frames = isinstance(self.texture, list)
 
-        self.x = 0
-        self.y = 0
-        self.x2 = self.width
-        self.y2 = self.height
-        self.controllable = False
+        self.x: list[int] = [0]
+        self.y: list[int] = [0]
+        self.x2: list[int] = [self.width]
+        self.y2: list[int] = [self.height]
+        self.controllable: list[bool] = [False]
 
 class TextureWrapper:
     def __init__(self):
@@ -50,20 +50,35 @@ class TextureWrapper:
         if index not in self.animations:
             raise Exception(f"Unable to find id {index} in loaded animations")
         if is_copy:
-            return copy.deepcopy(self.animations[index])
+            new_anim = copy.deepcopy(self.animations[index])
+            if self.animations[index].loop:
+                new_anim.start()
+            return new_anim
+        if self.animations[index].loop:
+            self.animations[index].start()
         return self.animations[index]
 
-    def update_attr(self, subset: str, texture: str, attr: str, value: float | int):
-        tex_object = self.textures[subset][texture]
-        if hasattr(tex_object, attr):
-            setattr(tex_object, attr, tex_object.init_vals[attr] + value)
-
-    def _read_tex_obj_data(self, tex_mapping: dict, tex_object: Texture):
-        tex_object.x = tex_mapping.get("x", 0)
-        tex_object.y = tex_mapping.get("y", 0)
-        tex_object.x2 = tex_mapping.get("x2", tex_object.width)
-        tex_object.y2 = tex_mapping.get("y2", tex_object.height)
-        tex_object.controllable = tex_mapping.get("controllable", False)
+    def _read_tex_obj_data(self, tex_mapping: dict | list, tex_object: Texture):
+        if isinstance(tex_mapping, list):
+            for i in range(len(tex_mapping)):
+                if i == 0:
+                    tex_object.x[i] = tex_mapping[i].get("x", 0)
+                    tex_object.y[i] = tex_mapping[i].get("y", 0)
+                    tex_object.x2[i] = tex_mapping[i].get("x2", tex_object.width)
+                    tex_object.y2[i] = tex_mapping[i].get("y2", tex_object.height)
+                    tex_object.controllable[i] = tex_mapping[i].get("controllable", False)
+                else:
+                    tex_object.x.append(tex_mapping[i].get("x", 0))
+                    tex_object.y.append(tex_mapping[i].get("y", 0))
+                    tex_object.x2.append(tex_mapping[i].get("x2", tex_object.width))
+                    tex_object.y2.append(tex_mapping[i].get("y2", tex_object.height))
+                    tex_object.controllable.append(tex_mapping[i].get("controllable", False))
+        else:
+            tex_object.x = [tex_mapping.get("x", 0)]
+            tex_object.y = [tex_mapping.get("y", 0)]
+            tex_object.x2 = [tex_mapping.get("x2", tex_object.width)]
+            tex_object.y2 = [tex_mapping.get("y2", tex_object.height)]
+            tex_object.controllable = [tex_mapping.get("controllable", False)]
 
     def load_animations(self, screen_name: str):
         screen_path = self.graphics_path / screen_name
@@ -125,26 +140,27 @@ class TextureWrapper:
                 continue
             self.load_zip(screen_name, zip.name)
 
-    def control(self, tex_object: Texture):
+    def control(self, tex_object: Texture, index: int = 0):
         distance = 1
         if ray.is_key_down(ray.KeyboardKey.KEY_LEFT_SHIFT):
             distance = 10
         if ray.is_key_pressed(ray.KeyboardKey.KEY_LEFT):
-            tex_object.x -= distance
-            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+            tex_object.x[index] -= distance
+            print(f"{tex_object.name}: {tex_object.x[index]}, {tex_object.y[index]}")
         if ray.is_key_pressed(ray.KeyboardKey.KEY_RIGHT):
-            tex_object.x += distance
-            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+            tex_object.x[index] += distance
+            print(f"{tex_object.name}: {tex_object.x[index]}, {tex_object.y[index]}")
         if ray.is_key_pressed(ray.KeyboardKey.KEY_UP):
-            tex_object.y -= distance
-            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+            tex_object.y[index] -= distance
+            print(f"{tex_object.name}: {tex_object.x[index]}, {tex_object.y[index]}")
         if ray.is_key_pressed(ray.KeyboardKey.KEY_DOWN):
-            tex_object.y += distance
-            print(f"{tex_object.name}: {tex_object.x}, {tex_object.y}")
+            tex_object.y[index] += distance
+            print(f"{tex_object.name}: {tex_object.x[index]}, {tex_object.y[index]}")
 
     def draw_texture(self, subset: str, texture: str, color: ray.Color=ray.WHITE, frame: int = 0, scale: float = 1.0, center: bool = False,
                             mirror: str = '', x: float = 0, y: float = 0, x2: float = 0, y2: float = 0,
-                            origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0, fade: float = 1.1) -> None:
+                            origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0, fade: float = 1.1,
+                            index: int = 0) -> None:
         mirror_x = -1 if mirror == 'horizontal' else 1
         mirror_y = -1 if mirror == 'vertical' else 1
         if fade != 1.1:
@@ -154,9 +170,9 @@ class TextureWrapper:
         tex_object = self.textures[subset][texture]
         source_rect = ray.Rectangle(0, 0, tex_object.width * mirror_x, tex_object.height * mirror_y)
         if center:
-            dest_rect = ray.Rectangle(tex_object.x + (tex_object.width//2) - ((tex_object.width * scale)//2) + x, tex_object.y + (tex_object.height//2) - ((tex_object.height * scale)//2) + y, tex_object.x2*scale + x2, tex_object.y2*scale + y2)
+            dest_rect = ray.Rectangle(tex_object.x[index] + (tex_object.width//2) - ((tex_object.width * scale)//2) + x, tex_object.y[index] + (tex_object.height//2) - ((tex_object.height * scale)//2) + y, tex_object.x2[index]*scale + x2, tex_object.y2[index]*scale + y2)
         else:
-            dest_rect = ray.Rectangle(tex_object.x + x, tex_object.y + y, tex_object.x2*scale + x2, tex_object.y2*scale + y2)
+            dest_rect = ray.Rectangle(tex_object.x[index] + x, tex_object.y[index] + y, tex_object.x2[index]*scale + x2, tex_object.y2[index]*scale + y2)
         if tex_object.is_frames:
             if not isinstance(tex_object.texture, list):
                 raise Exception("Texture was marked as multiframe but is only 1 texture")
@@ -167,7 +183,7 @@ class TextureWrapper:
             if isinstance(tex_object.texture, list):
                 raise Exception("Texture is multiframe but was called as 1 texture")
             ray.draw_texture_pro(tex_object.texture, source_rect, dest_rect, origin, rotation, final_color)
-        if tex_object.controllable:
+        if tex_object.controllable[index]:
             self.control(tex_object)
 
 tex = TextureWrapper()

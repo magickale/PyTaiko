@@ -32,11 +32,10 @@ class State:
 
 class SongSelectScreen:
     BOX_CENTER = 444
-    def __init__(self, screen_width: int, screen_height: int):
+    def __init__(self, screen_width: int = 1280):
         self.screen_init = False
         self.root_dir = global_data.config["paths"]["tja_path"]
         self.screen_width = screen_width
-        self.screen_height = screen_height
 
     def load_navigator(self):
         self.navigator = FileNavigator(self.root_dir)
@@ -65,7 +64,6 @@ class SongSelectScreen:
             self.diff_selector_move_1 = tex.get_animation(26)
             self.diff_selector_move_2 = tex.get_animation(27)
             self.diff_select_move_right = False
-            self.background_move.start()
             self.state = State.BROWSING
             self.selected_difficulty = -3
             self.prev_diff = -3
@@ -360,9 +358,6 @@ class SongSelectScreen:
 
         if self.text_fade_out.is_finished:
             self.selected_song = True
-
-        if self.background_move.is_finished:
-            self.background_move.restart()
 
         if self.last_texture_index != self.texture_index:
             if not self.background_fade_change.is_started:
@@ -775,7 +770,7 @@ class YellowBox:
         self.center_width = self.center_out.attribute
         self.top_y = self.top_y_out.attribute
         self.center_height = self.center_h_out.attribute
-        self.bottom_y = tex.textures['yellow_box']['yellow_box_bottom_right'].y
+        self.bottom_y = tex.textures['yellow_box']['yellow_box_bottom_right'].y[0]
         self.edge_height = tex.textures['yellow_box']['yellow_box_bottom_right'].height
 
     def reset(self):
@@ -1004,7 +999,6 @@ class DiffSortSelect:
         self.bounce_down_2 = tex.get_animation(25)
         self.bg_resize.start()
         self.diff_fade_in.start()
-        self.box_flicker.start()
 
     def update(self, current_ms):
         self.bg_resize.update(current_ms)
@@ -1014,8 +1008,6 @@ class DiffSortSelect:
         self.bounce_down_1.update(current_ms)
         self.bounce_up_2.update(current_ms)
         self.bounce_down_2.update(current_ms)
-        if self.box_flicker.is_finished:
-            self.box_flicker.restart()
 
     def get_random_sort(self):
         diff = random.randint(0, 4)
@@ -1113,7 +1105,7 @@ class DiffSortSelect:
 
         if self.confirmation:
             texture = tex.textures['diff_sort']['level_box']
-            ray.draw_rectangle(texture.x, texture.y, texture.x2, texture.y2, ray.fade(ray.BLACK, 0.5))
+            ray.draw_rectangle(texture.x[0], texture.y[0], texture.x2[0], texture.y2[0], ray.fade(ray.BLACK, 0.5))
             y = -self.bounce_up_1.attribute + self.bounce_down_1.attribute - self.bounce_up_2.attribute + self.bounce_down_2.attribute
             for i in range(3):
                 if i == self.confirm_index:
@@ -1146,8 +1138,6 @@ class NeiroSelector:
         self.move.start()
         self.blue_arrow_fade = tex.get_animation(29)
         self.blue_arrow_move = tex.get_animation(30)
-        self.blue_arrow_move.start()
-        self.blue_arrow_fade.start()
         self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
         self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
         self.move_sideways = tex.get_animation(31)
@@ -1205,10 +1195,6 @@ class NeiroSelector:
         if self.move_sideways.is_finished:
             self.text.unload()
             self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
-        if self.blue_arrow_fade.is_finished:
-            self.blue_arrow_fade.restart()
-        if self.blue_arrow_move.is_finished:
-            self.blue_arrow_move.restart()
         self.is_finished = self.move.is_finished and self.is_confirmed
 
     def draw(self):
@@ -1262,8 +1248,6 @@ class ModifierSelector:
         self.is_finished = False
         self.blue_arrow_fade = tex.get_animation(29)
         self.blue_arrow_move = tex.get_animation(30)
-        self.blue_arrow_move.start()
-        self.blue_arrow_fade.start()
         self.move = tex.get_animation(28)
         self.move.start()
         self.move_sideways = tex.get_animation(31)
@@ -1300,11 +1284,6 @@ class ModifierSelector:
             if current_mod.name == 'speed':
                 self.text_speed.unload()
                 self.text_speed = OutlinedText(str(current_value), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-
-        if self.blue_arrow_fade.is_finished:
-            self.blue_arrow_fade.restart()
-        if self.blue_arrow_move.is_finished:
-            self.blue_arrow_move.restart()
 
     def confirm(self):
         if self.is_confirmed:

@@ -13,9 +13,7 @@ from libs.utils import (
 
 
 class SettingsScreen:
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
+    def __init__(self):
         self.screen_init = False
         self.config = global_data.config
         self.headers = list(self.config.keys())

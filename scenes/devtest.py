@@ -1,14 +1,10 @@
 import pyray as ray
 
-from libs.texture import tex
-from libs.utils import get_current_ms
-from scenes.song_select import ScoreHistory
-
 
 class DevScreen:
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
+    def __init__(self):
+        self.width = 1280
+        self.height = 720
         self.screen_init = False
 
     def on_screen_start(self):

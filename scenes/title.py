@@ -18,9 +18,7 @@ class State:
     ATTRACT_VIDEO = 2
 
 class TitleScreen:
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
+    def __init__(self):
         video_dir = Path(global_data.config["paths"]["video_path"]) / "op_videos"
         self.op_video_list = [file for file in video_dir.glob("**/*.mp4")]
         video_dir = Path(global_data.config["paths"]["video_path"]) / "attract_videos"
@@ -180,14 +178,14 @@ class WarningScreen:
                 else:
                     self.shadow_fade.restart()
             self.is_finished = self.chara_1_frame.is_finished
-        def draw(self, fade: float, fade_2: float):
-            tex.draw_texture('warning', 'chara_0_shadow', fade=fade_2)
-            tex.draw_texture('warning', 'chara_0', frame=self.chara_0_frame.attribute, fade=fade)
+        def draw(self, fade: float, fade_2: float, y_pos: float):
+            tex.draw_texture('warning', 'chara_0_shadow', fade=fade_2, y=y_pos)
+            tex.draw_texture('warning', 'chara_0', frame=self.chara_0_frame.attribute, fade=fade, y=y_pos)
 
-            tex.draw_texture('warning', 'chara_1_shadow', fade=fade_2)
+            tex.draw_texture('warning', 'chara_1_shadow', fade=fade_2, y=y_pos)
             if -1 < self.chara_1_frame.attribute-1 < 7:
-                tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute-1, fade=self.shadow_fade.attribute)
-            tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute, fade=fade)
+                tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute-1, fade=self.shadow_fade.attribute, y=y_pos)
+            tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute, fade=fade, y=y_pos)
 
     class Board:
         def __init__(self):
@@ -209,10 +207,9 @@ class WarningScreen:
                 self.y_pos = self.move_up.attribute
             else:
                 self.y_pos = self.move_down.attribute
-            tex.update_attr('warning', 'warning_box', 'y', self.y_pos)
 
         def draw(self):
-            tex.draw_texture('warning', 'warning_box')
+            tex.draw_texture('warning', 'warning_box', y=self.y_pos)
 
 
     def __init__(self, current_ms: float):
@@ -238,10 +235,6 @@ class WarningScreen:
         elapsed_time = current_ms - self.start_ms
         self.warning_x.update(current_ms, title_screen.sound_warning_error)
         self.characters.update(current_ms)
-        tex.update_attr('warning', 'chara_0', 'y', self.board.y_pos)
-        tex.update_attr('warning', 'chara_0_shadow', 'y', self.board.y_pos)
-        tex.update_attr('warning', 'chara_1_shadow', 'y', self.board.y_pos)
-        tex.update_attr('warning', 'chara_1', 'y', self.board.y_pos)
 
         if self.characters.is_finished:
             self.warning_bachi_hit.update(current_ms, title_screen.sound_bachi_hit)
@@ -256,7 +249,7 @@ class WarningScreen:
     def draw(self):
         self.board.draw()
         self.warning_x.draw_bg()
-        self.characters.draw(self.fade_in.attribute, min(self.fade_in.attribute, 0.75))
+        self.characters.draw(self.fade_in.attribute, min(self.fade_in.attribute, 0.75), self.board.y_pos)
         self.warning_x.draw_fg()
         self.warning_bachi_hit.draw()
 

@@ -10,9 +10,9 @@ from scenes.song_select import SongSelectScreen
 
 
 class LoadScreen:
-    def __init__(self, width: int, height: int, song_select_screen: SongSelectScreen):
-        self.width = width
-        self.height = height
+    def __init__(self, song_select_screen: SongSelectScreen):
+        self.width = 1280
+        self.height = 720
         self.screen_init = False
         self.songs_loaded = False
         self.navigator_started = False
@@ -20,10 +20,10 @@ class LoadScreen:
         self.song_select_screen = song_select_screen
 
         # Progress bar settings
-        self.progress_bar_width = width * 0.43
+        self.progress_bar_width = self.width * 0.43
         self.progress_bar_height = 50
-        self.progress_bar_x = (width - self.progress_bar_width) // 2
-        self.progress_bar_y = height * 0.85
+        self.progress_bar_x = (self.width - self.progress_bar_width) // 2
+        self.progress_bar_y = self.height * 0.85
 
         # Thread references
         self.loading_thread = None

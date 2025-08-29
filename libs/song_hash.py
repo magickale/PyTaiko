@@ -31,18 +31,24 @@ def read_tjap3_score(input_file: Path):
               int(score_ini['HiScore.Drums']['HiScore3']),
               int(score_ini['HiScore.Drums']['HiScore4']),
               int(score_ini['HiScore.Drums']['HiScore5'])]
-    clears = [int(score_ini['HiScore.Drums']['Clear0']),
-              int(score_ini['HiScore.Drums']['Clear1']),
-              int(score_ini['HiScore.Drums']['Clear2']),
-              int(score_ini['HiScore.Drums']['Clear3']),
-              int(score_ini['HiScore.Drums']['Clear4'])]
+    clears = [int(score_ini['HiScore.Drums'].get('Clear0', 0)),
+              int(score_ini['HiScore.Drums'].get('Clear1', 0)),
+              int(score_ini['HiScore.Drums'].get('Clear2', 0)),
+              int(score_ini['HiScore.Drums'].get('Clear3', 0)),
+              int(score_ini['HiScore.Drums'].get('Clear4', 0))]
     if score_ini['HiScore.Drums']['PerfectRange'] != 25:
-        return [0],[0]
+        return [0],[0], None
     if score_ini['HiScore.Drums']['GoodRange'] != 75:
-        return [0],[0]
+        return [0],[0], None
     if score_ini['HiScore.Drums']['PoorRange'] != 108:
-        return [0],[0]
-    return scores, clears
+        return [0],[0], None
+    if score_ini['HiScore.Drums']['Perfect'] != 0:
+        good = score_ini['HiScore.Drums'].get('Perfect', 0)
+        ok = score_ini['HiScore.Drums'].get('Great', 0)
+        bad = score_ini['HiScore.Drums'].get('Miss', 0)
+        return scores, clears, [good, ok, bad]
+    else:
+        return scores, clears, None
 
 def build_song_hashes(output_dir=Path("cache")):
     if not output_dir.exists():
@@ -149,7 +155,7 @@ def build_song_hashes(output_dir=Path("cache")):
 
         score_ini_path = tja_path.with_suffix('.tja.score.ini')
         if score_ini_path.exists():
-            imported_scores, imported_clears = read_tjap3_score(score_ini_path)
+            imported_scores, imported_clears, _ = read_tjap3_score(score_ini_path)
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             for i in range(len(imported_scores)):

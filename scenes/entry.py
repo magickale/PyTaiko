@@ -20,9 +20,7 @@ class State:
     SELECT_MODE = 1
 
 class EntryScreen:
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
+    def __init__(self):
         self.screen_init = False
 
     def load_textures(self):
@@ -51,9 +49,7 @@ class EntryScreen:
             self.cloud_resize_loop = tex.get_animation(6)
             self.cloud_texture_change = tex.get_animation(7)
             self.cloud_fade = tex.get_animation(8)
-            self.cloud_resize_loop.start()
             self.side_select_fade.start()
-            self.bg_flicker.start()
             audio.play_sound(self.bgm)
 
     def on_screen_end(self, next_screen: str):
@@ -101,8 +97,6 @@ class EntryScreen:
         self.on_screen_start()
         self.side_select_fade.update(get_current_ms())
         self.bg_flicker.update(get_current_ms())
-        if self.bg_flicker.is_finished:
-            self.bg_flicker.restart()
         self.drum_move_1.update(get_current_ms())
         self.drum_move_2.update(get_current_ms())
         self.drum_move_3.update(get_current_ms())
@@ -110,8 +104,6 @@ class EntryScreen:
         self.cloud_texture_change.update(get_current_ms())
         self.cloud_fade.update(get_current_ms())
         self.cloud_resize_loop.update(get_current_ms())
-        if self.cloud_resize_loop.is_finished:
-            self.cloud_resize_loop.restart()
         self.box_manager.update(get_current_ms())
         if self.box_manager.is_finished():
             return self.on_screen_end(self.box_manager.selected_box())
@@ -152,37 +144,30 @@ class EntryScreen:
         tex.draw_texture('side_select', '2P', fade=fade)
         if self.side == 0:
             tex.draw_texture('side_select', '1P_highlight', fade=fade)
-            tex.textures['side_select']['1P2P_outline'].x = 261
-            tex.draw_texture('side_select', '1P2P_outline', fade=fade, mirror='horizontal')
+            tex.draw_texture('side_select', '1P2P_outline', index=0, fade=fade, mirror='horizontal')
         elif self.side == 1:
             tex.draw_texture('side_select', 'cancel_highlight', fade=fade)
             tex.draw_texture('side_select', 'cancel_outline', fade=fade)
         else:
             tex.draw_texture('side_select', '2P_highlight', fade=fade)
-            tex.textures['side_select']['1P2P_outline'].x = 762
-            tex.draw_texture('side_select', '1P2P_outline', fade=fade)
+            tex.draw_texture('side_select', '1P2P_outline', index=1, fade=fade)
         tex.draw_texture('side_select', 'cancel_text', fade=fade)
 
     def draw_player_drum(self):
         move_x = self.drum_move_3.attribute
         move_y = self.drum_move_1.attribute + self.drum_move_2.attribute
-        tex.update_attr('side_select', 'red_drum', 'x', move_x)
-        tex.update_attr('side_select', 'red_drum', 'y', move_y)
-        tex.update_attr('side_select', 'blue_drum', 'y', move_y)
         if self.side == 0:
-            tex.draw_texture('side_select', 'red_drum')
+            offset = 0
+            tex.draw_texture('side_select', 'red_drum', x=move_x, y=move_y)
         else:
             move_x *= -1
-            tex.textures['side_select']['cloud'].init_vals['x'] = tex.textures['side_select']['blue_drum'].init_vals['x']
-            tex.update_attr('side_select', 'blue_drum', 'x', move_x)
-            tex.draw_texture('side_select', 'blue_drum')
+            offset = 620
+            tex.draw_texture('side_select', 'blue_drum', x=move_x, y=move_y)
 
         scale = self.cloud_resize.attribute
         if self.cloud_resize.is_finished:
             scale = max(1, self.cloud_resize_loop.attribute)
-        tex.update_attr('side_select', 'cloud', 'x', move_x)
-        tex.update_attr('side_select', 'cloud', 'y', move_y)
-        tex.draw_texture('side_select', 'cloud', frame=self.cloud_texture_change.attribute, fade=self.cloud_fade.attribute, scale=scale, center=True)
+        tex.draw_texture('side_select', 'cloud', x=move_x + offset, y=move_y, frame=self.cloud_texture_change.attribute, fade=self.cloud_fade.attribute, scale=scale, center=True)
 
     def draw_mode_select(self):
         self.draw_player_drum()
@@ -201,7 +186,7 @@ class EntryScreen:
         tex.draw_texture('global', 'player_entry')
 
         if self.box_manager.is_finished():
-            ray.draw_rectangle(0, 0, self.width, self.height, ray.BLACK)
+            ray.draw_rectangle(0, 0, 1280, 720, ray.BLACK)
 
     def draw_3d(self):
         pass
@@ -214,8 +199,8 @@ class Box:
         if isinstance(self.box_tex_obj.texture, list):
             raise Exception("Box texture cannot be iterable")
         self.texture = self.box_tex_obj.texture
-        self.x = self.box_tex_obj.x
-        self.y = self.box_tex_obj.y
+        self.x = self.box_tex_obj.x[0]
+        self.y = self.box_tex_obj.y[0]
         self.move = tex.get_animation(10)
         self.open = tex.get_animation(11)
         self.is_selected = False

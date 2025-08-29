@@ -88,14 +88,14 @@ def main():
 
     create_song_db()
 
-    title_screen = TitleScreen(screen_width, screen_height)
-    entry_screen = EntryScreen(screen_width, screen_height)
-    song_select_screen = SongSelectScreen(screen_width, screen_height)
-    load_screen = LoadScreen(screen_width, screen_height, song_select_screen)
-    game_screen = GameScreen(screen_width, screen_height)
-    result_screen = ResultScreen(screen_width, screen_height)
-    settings_screen = SettingsScreen(screen_width, screen_height)
-    dev_screen = DevScreen(screen_width, screen_height)
+    title_screen = TitleScreen()
+    entry_screen = EntryScreen()
+    song_select_screen = SongSelectScreen()
+    load_screen = LoadScreen(song_select_screen)
+    game_screen = GameScreen()
+    result_screen = ResultScreen()
+    settings_screen = SettingsScreen()
+    dev_screen = DevScreen()
 
     screen_mapping = {
         Screens.ENTRY: entry_screen,
