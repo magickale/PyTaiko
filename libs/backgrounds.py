@@ -102,7 +102,7 @@ class DonBG3(DonBGBase):
         super().update(current_time_ms, is_clear)
         self.bounce_up.update(current_time_ms)
         self.bounce_down.update(current_time_ms)
-        if self.bounce_up.is_finished:
+        if self.bounce_down.is_finished:
             self.bounce_up.restart()
             self.bounce_down.restart()
         self.overlay_move.update(current_time_ms)
@@ -150,7 +150,7 @@ class DonBG5(DonBGBase):
         super().update(current_time_ms, is_clear)
         self.bounce_up.update(current_time_ms)
         self.bounce_down.update(current_time_ms)
-        if self.bounce_up.is_finished:
+        if self.bounce_down.is_finished:
             self.bounce_up.restart()
             self.bounce_down.restart()
         self.adjust.update(current_time_ms)
@@ -331,7 +331,7 @@ class BGFever:
 
     @staticmethod
     def create(tex: TextureWrapper, index: int):
-        map = [BGFever1, None, None, BGFever4]
+        map = [BGFever1, BGFever2, None, BGFever4]
         selected_obj = map[index]
         return selected_obj(tex, index)
 
@@ -344,6 +344,7 @@ class BGFeverBase:
 class BGFever1(BGFeverBase):
     def __init__(self, tex: TextureWrapper, index: int):
         super().__init__(tex, index)
+        pass
 
     def start(self):
         pass
@@ -353,6 +354,31 @@ class BGFever1(BGFeverBase):
 
     def draw(self, tex: TextureWrapper):
         pass
+
+class BGFever2(BGFeverBase):
+    def __init__(self, tex: TextureWrapper, index: int):
+        super().__init__(tex, index)
+        self.fadein = tex.get_animation(19)
+        self.bg_texture_change = tex.get_animation(20)
+        self.ship_rotation = Animation.create_fade(1000, initial_opacity=0.0, final_opacity=1.0, reverse_delay=0, loop=True)
+        self.ship_rotation.start()
+
+    def start(self):
+        self.fadein.start()
+
+    def update(self, current_time_ms: float):
+        self.fadein.update(current_time_ms)
+        self.bg_texture_change.update(current_time_ms)
+        self.ship_rotation.update(current_time_ms)
+
+    def draw(self, tex: TextureWrapper):
+        tex.draw_texture(self.name, 'background', frame=self.bg_texture_change.attribute, fade=self.fadein.attribute)
+        tex.draw_texture(self.name, 'footer_3', fade=self.fadein.attribute)
+        tex.draw_texture(self.name, 'footer_1', fade=self.fadein.attribute)
+        tex.draw_texture(self.name, 'footer_2', fade=self.fadein.attribute)
+        tex.draw_texture(self.name, 'bird', index=0, mirror='horizontal')
+        tex.draw_texture(self.name, 'bird', index=1)
+        tex.draw_texture(self.name, 'ship', rotation=self.ship_rotation.attribute*100, center=True)
 
 class BGFever4(BGFeverBase):
     def __init__(self, tex: TextureWrapper, index: int):
