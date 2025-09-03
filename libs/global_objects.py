@@ -1,4 +1,3 @@
-from typing import Optional
 import pyray as ray
 
 from libs.utils import OutlinedText, global_data

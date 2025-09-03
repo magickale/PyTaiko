@@ -9,7 +9,7 @@ import pyray as ray
 
 from libs.animation import Animation
 from libs.audio import audio
-from libs.backgrounds import Background
+from libs.background import Background
 from libs.global_objects import Nameplate
 from libs.texture import tex
 from libs.tja import (
@@ -263,7 +263,7 @@ class Player:
         self.last_subdivision = -1
 
     def get_result_score(self):
-        return self.score, self.good_count, self.ok_count, self.bad_count, self.total_drumroll, self.max_combo
+        return self.score, self.good_count, self.ok_count, self.bad_count, self.max_combo, self.total_drumroll
 
     def get_position_x(self, width: int, current_ms: float, load_ms: float, pixels_per_frame: float) -> int:
         return int(width + pixels_per_frame * (60 / 1000) * (load_ms - current_ms) - 64) - self.visual_offset
@@ -1300,7 +1300,7 @@ class Gauge:
         self.previous_length = 0
         self.total_notes = total_notes
         self.difficulty = min(3, difficulty)
-        self.clear_start = [0, 0, 68, 68]
+        self.clear_start = [68, 68, 68, 68]
         self.level = min(10, level)
         self.table = [
             [

@@ -949,15 +949,26 @@ class GenreBG:
         offset = -150 if self.start_box.is_open else 0
 
         tex.draw_texture('box', 'folder_background_edge', frame=self.end_box.texture_index, x=self.start_position+offset, y=y, mirror="horizontal", fade=self.fade_in.attribute)
-        extra_distance = 155 if self.end_box.is_open or self.start_box.is_open else 0
+
+
+        extra_distance = 155 if self.end_box.is_open or (self.start_box.is_open and 844 <= self.end_position <= 1144) else 0
         if self.start_position >= -56 and self.end_position < self.start_position:
-            x2 = self.start_position + 1336
+            x2 = self.start_position + 1400
+            x = self.start_position+offset
+        elif (self.start_position <= -56) and (self.end_position < self.start_position):
+            x = 0
+            x2 = 1280
         else:
             x2 = abs(self.end_position) - self.start_position + extra_distance + 57
-        tex.draw_texture('box', 'folder_background', x=self.start_position+offset, y=y, x2=x2, frame=self.end_box.texture_index)
+            x = self.start_position+offset
+        tex.draw_texture('box', 'folder_background', x=x, y=y, x2=x2, frame=self.end_box.texture_index)
+
+
         if self.end_position < self.start_position and self.end_position >= -56:
             x2 = min(self.end_position+75, 1280) + extra_distance
             tex.draw_texture('box', 'folder_background', x=-18, y=y, x2=x2, frame=self.end_box.texture_index)
+
+
         offset = 150 if self.end_box.is_open else 0
         tex.draw_texture('box', 'folder_background_edge', x=self.end_position+80+offset, y=y, fade=self.fade_in.attribute, frame=self.end_box.texture_index)
 

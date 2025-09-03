@@ -168,19 +168,19 @@ class ResultScreen:
         self.nameplate.update(get_current_ms())
 
     def draw_score_info(self):
-        if self.good:
+        if self.good != '':
             for i in range(len(str(self.good))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.good)[::-1][i]), x=943-(i*24), y=186)
-        if self.ok:
+        if self.ok != '':
             for i in range(len(str(self.ok))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.ok)[::-1][i]), x=943-(i*24), y=227)
-        if self.bad:
+        if self.bad != '':
             for i in range(len(str(self.bad))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.bad)[::-1][i]), x=943-(i*24), y=267)
-        if self.max_combo:
+        if self.max_combo != '':
             for i in range(len(str(self.max_combo))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.max_combo)[::-1][i]), x=1217-(i*24), y=186)
-        if self.total_drumroll:
+        if self.total_drumroll != '':
             for i in range(len(str(self.total_drumroll))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.total_drumroll)[::-1][i]), x=1217-(i*24), y=227)
 
@@ -188,7 +188,7 @@ class ResultScreen:
         if not self.fade_in.is_finished:
             return
         tex.draw_texture('score', 'score_shinuchi')
-        if self.score:
+        if self.score != '':
             for i in range(len(str(self.score))):
                 tex.draw_texture('score', 'score_num', x=-(i*21), frame=int(str(self.score)[::-1][i]))
 
