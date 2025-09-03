@@ -407,8 +407,11 @@ class BGFever1(BGFeverBase):
         self.overlay_move_up.update(current_time_ms)
         self.overlay_move_down.update(current_time_ms)
         self.wave_spin.update(current_time_ms)
+        if (self.overlay_move_down.is_finished and len(self.bg_tiles) == 20) and not self.is_transitioned:
+            self.bg_move.restart()
         self.is_transitioned = self.overlay_move_down.is_finished and len(self.bg_tiles) == 20
-        self.bg_move.update(current_time_ms)
+        if self.is_transitioned:
+            self.bg_move.update(current_time_ms)
 
 
     def draw(self, tex: TextureWrapper):
