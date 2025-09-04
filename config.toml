@@ -39,4 +39,5 @@ screen_width = 1280
 screen_height = 720
 fullscreen = false
 borderless = false
+target_fps = -1
 vsync = true

@@ -65,6 +65,8 @@ def main():
 
     if global_data.config["video"]["vsync"]:
         ray.set_config_flags(ray.ConfigFlags.FLAG_VSYNC_HINT)
+    if global_data.config["video"]["target_fps"] != -1:
+        ray.set_target_fps(global_data.config["video"]["target_fps"])
     ray.set_config_flags(ray.ConfigFlags.FLAG_MSAA_4X_HINT)
     ray.set_trace_log_level(ray.TraceLogLevel.LOG_WARNING)
 
