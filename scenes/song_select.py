@@ -1699,7 +1699,7 @@ class FileNavigator:
             tja_files = self._get_tja_files_for_directory(dir_path)
 
             # Create SongFile objects
-            for i, tja_path in enumerate(tja_files):
+            for tja_path in sorted(tja_files):
                 song_key = str(tja_path)
                 if song_key not in self.all_song_files:
                     song_obj = SongFile(tja_path, tja_path.name, texture_index)

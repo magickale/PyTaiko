@@ -86,15 +86,17 @@ class GameScreen:
             self.movie = None
             self.song_music = None
             tex.load_screen_textures('game')
-            self.background = Background(global_data.player_num)
             self.load_sounds()
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
             self.song_info = SongInfo(session_data.song_title, 'TEST')
             self.result_transition = ResultTransition(global_data.player_num)
+            self.bpm = 0
             if self.tja is not None:
                 subtitle = self.tja.metadata.subtitle.get(global_data.config['general']['language'].lower(), '')
+                self.bpm = self.tja.metadata.bpm
             else:
                 subtitle = ''
+            self.background = Background(global_data.player_num, self.bpm)
             self.transition = Transition(session_data.song_title, subtitle, is_second=True)
             self.transition.start()
 
@@ -154,7 +156,9 @@ class GameScreen:
         if self.movie is not None:
             self.movie.update()
         else:
-            self.background.update(get_current_ms(), self.player_1.gauge.gauge_length > self.player_1.gauge.clear_start[min(self.player_1.difficulty, 3)])
+            if len(self.player_1.current_bars) > 0:
+                self.bpm = self.player_1.current_bars[0].bpm
+            self.background.update(get_current_ms(), self.bpm, self.player_1.gauge.gauge_length > self.player_1.gauge.clear_start[min(self.player_1.difficulty, 3)], self.player_1.gauge.gauge_length == 87)
 
         self.player_1.update(self)
         self.song_info.update(get_current_ms())
