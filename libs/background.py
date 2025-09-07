@@ -17,7 +17,7 @@ class Background:
         self.bg_fever = BGFever.create(self.tex_wrapper, random.randint(0, 3))
         self.footer = Footer(self.tex_wrapper, random.randint(0, 2))
         self.fever = Fever.create(self.tex_wrapper, random.randint(0, 3), bpm)
-        self.dancer = Dancer.create(self.tex_wrapper, random.randint(0, 2), bpm)
+        self.dancer = Dancer.create(self.tex_wrapper, 8, bpm)
         self.is_clear = False
         self.is_rainbow = False
         self.last_milestone = 0

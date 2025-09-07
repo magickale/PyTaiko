@@ -7,7 +7,7 @@ class Dancer:
 
     @staticmethod
     def create(tex: TextureWrapper, index: int, bpm: float):
-        map = [DancerGroup0, DancerGroup0, DancerGroup0]
+        map = [DancerGroup0, DancerGroup0, DancerGroup0, DancerGroup1, DancerGroup2, DancerGroup3, DancerGroup4, DancerGroup5, DancerGroup6]
         selected_obj = map[index]
         return selected_obj(tex, index, bpm)
 
@@ -121,6 +121,127 @@ class Dancer0_4(BaseDancer):
                 tex.draw_texture(self.name, '4_loop', frame=16, x=x, y=-self.bounce_up.attribute + self.bounce_down.attribute)
             tex.draw_texture(self.name, '4_loop', frame=self.texture_change.attribute, x=x)
 
+class Dancer1_0(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+
+class Dancer1_1(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+
+class Dancer1_2(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+
+class Dancer2_0(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+class Dancer2_1(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+class Dancer2_2(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+class Dancer3_0(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
+class Dancer3_1(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
+class Dancer3_2(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
+class Dancer3_3(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
+class Dancer4_0(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+class Dancer4_1(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+class Dancer4_2(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+class Dancer4_3(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+class Dancer5_0(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4]
+        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        duration = (60000 / self.bpm)
+        poof_keyframes = [((duration / 7)*i, (duration / 7)*(i+1), i) for i in range(7)]
+        self.poof_texture_change = Animation.create_texture_change(duration, textures=poof_keyframes, delay=250)
+        self.poof_texture_change.start()
+
+    def update(self, current_time_ms: float, bpm: float):
+        super().update(current_time_ms, bpm)
+        self.poof_texture_change.update(current_time_ms)
+
+    def draw(self, tex: TextureWrapper, x: int):
+        super().draw(tex, x)
+        if not self.poof_texture_change.is_finished:
+            tex.draw_texture(self.name, 'poof', x=x, frame=self.poof_texture_change.attribute)
+
+class Dancer6_0(BaseDancer):
+    def __init__(self, name: str, index: int, bpm: float):
+        super().__init__(name, index, bpm)
+        self.start_keyframes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4]
+        self.keyframes = [0, 1, 2, 3, 2, 1, 0, 4, 5, 6, 5, 4, 0, 1, 2, 3, 2, 1, 2, 3, 0, 4, 5, 6, 5, 4, 5, 6, 0]
+        duration = (60000 / self.bpm)
+        poof_keyframes = [((duration / 7)*i, (duration / 7)*(i+1), i) for i in range(7)]
+        self.poof_texture_change = Animation.create_texture_change(duration, textures=poof_keyframes, delay=250)
+        self.poof_texture_change.start()
+
+    def update(self, current_time_ms: float, bpm: float):
+        super().update(current_time_ms, bpm)
+        self.poof_texture_change.update(current_time_ms)
+
+    def draw(self, tex: TextureWrapper, x: int):
+        super().draw(tex, x)
+        if not self.poof_texture_change.is_finished:
+            tex.draw_texture(self.name, 'poof', x=x, frame=self.poof_texture_change.attribute)
 
 class BaseDancerGroup():
     def __init__(self, tex: TextureWrapper, index: int, bpm: float):
@@ -156,6 +277,102 @@ class DancerGroup0(BaseDancerGroup):
                        Dancer0_2(self.name, 2, bpm), Dancer0_3(self.name, 3, bpm),
                        Dancer0_4(self.name, 4, bpm)]
         random.shuffle(self.dancers)
+        for dancer in self.dancers:
+            dancer.keyframe()
+        self.add_dancer()
+
+class DancerGroup1(BaseDancerGroup):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+        super().__init__(tex, index, bpm)
+        dancer_classes = [Dancer1_0, Dancer1_1, Dancer1_2]
+        self.dancers = []
+        for i in range(5):
+            DancerClass = random.choice(dancer_classes)
+            dancer = DancerClass(self.name, i % 3, bpm)
+            self.dancers.append(dancer)
+
+        random.shuffle(self.dancers)
+
+        for dancer in self.dancers:
+            dancer.keyframe()
+        self.add_dancer()
+
+class DancerGroup2(BaseDancerGroup):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+        super().__init__(tex, index, bpm)
+        dancer_classes = [Dancer2_0, Dancer2_1, Dancer2_2]
+        self.dancers = []
+        for i in range(5):
+            DancerClass = random.choice(dancer_classes)
+            dancer = DancerClass(self.name, i % 3, bpm)
+            self.dancers.append(dancer)
+
+        random.shuffle(self.dancers)
+
+        for dancer in self.dancers:
+            dancer.keyframe()
+        self.add_dancer()
+
+class DancerGroup3(BaseDancerGroup):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+        super().__init__(tex, index, bpm)
+        dancer_classes = [Dancer3_0, Dancer3_1, Dancer3_2, Dancer3_3]
+        self.dancers = []
+        for i in range(5):
+            DancerClass = random.choice(dancer_classes)
+            dancer = DancerClass(self.name, i % 4, bpm)
+            self.dancers.append(dancer)
+
+        random.shuffle(self.dancers)
+
+        for dancer in self.dancers:
+            dancer.keyframe()
+        self.add_dancer()
+
+class DancerGroup4(BaseDancerGroup):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+        super().__init__(tex, index, bpm)
+        dancer_classes = [Dancer4_0, Dancer4_1, Dancer4_2, Dancer4_3]
+        self.dancers = []
+        for i in range(5):
+            DancerClass = random.choice(dancer_classes)
+            dancer = DancerClass(self.name, i % 4, bpm)
+            self.dancers.append(dancer)
+
+        random.shuffle(self.dancers)
+
+        for dancer in self.dancers:
+            dancer.keyframe()
+        self.add_dancer()
+
+class DancerGroup5(BaseDancerGroup):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+        super().__init__(tex, index, bpm)
+        dancer_classes = [Dancer5_0]
+        self.dancers = []
+        for i in range(5):
+            DancerClass = random.choice(dancer_classes)
+            dancer = DancerClass(self.name, i % 2, bpm)
+            self.dancers.append(dancer)
+
+        random.shuffle(self.dancers)
+
+        for dancer in self.dancers:
+            dancer.keyframe()
+        self.add_dancer()
+
+class DancerGroup6(BaseDancerGroup):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+        super().__init__(tex, index, bpm)
+        dancer_classes = [Dancer6_0]
+        self.dancers = []
+        for i in range(5):
+            DancerClass = random.choice(dancer_classes)
+            dancer = DancerClass(self.name, i % 2, bpm)
+            self.dancers.append(dancer)
+
+        random.shuffle(self.dancers)
+
         for dancer in self.dancers:
             dancer.keyframe()
         self.add_dancer()
