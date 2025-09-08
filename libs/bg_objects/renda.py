@@ -80,7 +80,7 @@ class RendaController:
     def add_renda(self):
         self.rendas.add(Renda.create(self.tex, self.index))
 
-    def update(self, current_time_ms: int):
+    def update(self, current_time_ms: float):
         remove = set()
         for renda in self.rendas:
             renda.update(current_time_ms)

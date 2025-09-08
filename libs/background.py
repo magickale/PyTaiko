@@ -2,6 +2,7 @@ import random
 
 from libs.bg_objects.bg_fever import BGFever
 from libs.bg_objects.bg_normal import BGNormal
+from libs.bg_objects.chibi import ChibiController
 from libs.bg_objects.dancer import Dancer
 from libs.bg_objects.don_bg import DonBG
 from libs.bg_objects.fever import Fever
@@ -20,12 +21,13 @@ class Background:
         self.fever = Fever.create(self.tex_wrapper, random.randint(0, 3), bpm)
         self.dancer = Dancer.create(self.tex_wrapper, random.randint(0, 20), bpm)
         self.renda = RendaController(self.tex_wrapper, random.randint(0, 2))
+        self.chibi = ChibiController(self.tex_wrapper, random.randint(0, 13), bpm)
         self.is_clear = False
         self.is_rainbow = False
         self.last_milestone = 0
 
-    def add_chibi(self):
-        pass
+    def add_chibi(self, bad: bool):
+        self.chibi.add_chibi(bad)
 
     def add_renda(self):
         self.renda.add_renda()
@@ -53,6 +55,7 @@ class Background:
         self.fever.update(current_time_ms, bpm)
         self.dancer.update(current_time_ms, bpm)
         self.renda.update(current_time_ms)
+        self.chibi.update(current_time_ms, bpm)
     def draw(self):
         self.bg_normal.draw(self.tex_wrapper)
         if self.is_clear:
@@ -63,6 +66,7 @@ class Background:
         self.footer.draw(self.tex_wrapper)
         if self.is_rainbow:
             self.fever.draw(self.tex_wrapper)
+        self.chibi.draw()
     def unload(self):
         self.tex_wrapper.unload_textures()
 

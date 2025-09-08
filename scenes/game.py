@@ -308,6 +308,7 @@ class Player:
         if note.hit_ms + Player.TIMING_BAD < game_screen.current_ms:
             if 0 < note.type <= 4:
                 self.combo = 0
+                game_screen.background.add_chibi(True)
                 self.bad_count += 1
                 self.gauge.add_bad()
                 self.play_notes.popleft()
@@ -456,6 +457,7 @@ class Player:
                 self.base_score_list.append(ScoreCounterAnimation(self.player_number, self.base_score))
                 self.note_correct(curr_note)
                 self.gauge.add_good()
+                game_screen.background.add_chibi(False)
 
             elif (curr_note.hit_ms - Player.TIMING_OK) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_OK):
                 self.draw_judge_list.append(Judgement('OK', big, ms_display=game_screen.current_ms - curr_note.hit_ms))
@@ -464,6 +466,7 @@ class Player:
                 self.base_score_list.append(ScoreCounterAnimation(self.player_number, 10 * math.floor(self.base_score / 2 / 10)))
                 self.note_correct(curr_note)
                 self.gauge.add_ok()
+                game_screen.background.add_chibi(False)
 
             elif (curr_note.hit_ms - Player.TIMING_BAD) <= game_screen.current_ms <= (curr_note.hit_ms + Player.TIMING_BAD):
                 self.draw_judge_list.append(Judgement('BAD', big, ms_display=game_screen.current_ms - curr_note.hit_ms))
@@ -471,6 +474,7 @@ class Player:
                 self.combo = 0
                 self.play_notes.popleft()
                 self.gauge.add_bad()
+                game_screen.background.add_chibi(True)
 
     def drumroll_counter_manager(self):
         if self.is_drumroll and self.curr_drumroll_count > 0 and self.drumroll_counter is None:
