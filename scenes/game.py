@@ -377,10 +377,11 @@ class Player:
             index = self.current_notes_draw.index(note)
             self.current_notes_draw.pop(index)
 
-    def check_drumroll(self, drum_type: int):
+    def check_drumroll(self, drum_type: int, game_screen: GameScreen):
         self.draw_arc_list.append(NoteArc(drum_type, get_current_ms(), 1, drum_type == 3 or drum_type == 4))
         self.curr_drumroll_count += 1
         self.total_drumroll += 1
+        game_screen.background.add_renda()
         self.score += 100
         self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100))
         if not isinstance(self.current_notes_draw[0], Drumroll):
@@ -424,7 +425,7 @@ class Player:
 
         curr_note = self.play_notes[0]
         if self.is_drumroll:
-            self.check_drumroll(drum_type)
+            self.check_drumroll(drum_type, game_screen)
         elif self.is_balloon:
             if not isinstance(curr_note, Balloon):
                 raise Exception("Balloon mode entered but current note is not balloon")

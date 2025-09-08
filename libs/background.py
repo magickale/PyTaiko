@@ -5,6 +5,7 @@ from libs.bg_objects.bg_normal import BGNormal
 from libs.bg_objects.dancer import Dancer
 from libs.bg_objects.don_bg import DonBG
 from libs.bg_objects.fever import Fever
+from libs.bg_objects.renda import RendaController
 from libs.texture import TextureWrapper
 
 
@@ -18,9 +19,17 @@ class Background:
         self.footer = Footer(self.tex_wrapper, random.randint(0, 2))
         self.fever = Fever.create(self.tex_wrapper, random.randint(0, 3), bpm)
         self.dancer = Dancer.create(self.tex_wrapper, random.randint(0, 20), bpm)
+        self.renda = RendaController(self.tex_wrapper, random.randint(0, 2))
         self.is_clear = False
         self.is_rainbow = False
         self.last_milestone = 0
+
+    def add_chibi(self):
+        pass
+
+    def add_renda(self):
+        self.renda.add_renda()
+
     def update(self, current_time_ms: float, bpm: float, gauge):
         is_clear = gauge.gauge_length > gauge.clear_start[min(gauge.difficulty, 3)]
         is_rainbow = gauge.gauge_length == gauge.gauge_max
@@ -43,11 +52,13 @@ class Background:
         self.bg_fever.update(current_time_ms)
         self.fever.update(current_time_ms, bpm)
         self.dancer.update(current_time_ms, bpm)
+        self.renda.update(current_time_ms)
     def draw(self):
         self.bg_normal.draw(self.tex_wrapper)
         if self.is_clear:
             self.bg_fever.draw(self.tex_wrapper)
         self.donbg.draw(self.tex_wrapper)
+        self.renda.draw()
         self.dancer.draw(self.tex_wrapper)
         self.footer.draw(self.tex_wrapper)
         if self.is_rainbow:
