@@ -91,7 +91,7 @@ class GameScreen:
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
             self.load_sounds()
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
-            self.song_info = SongInfo(session_data.song_title, 'TEST')
+            self.song_info = SongInfo(session_data.song_title, session_data.genre_index)
             self.result_transition = ResultTransition(global_data.player_num)
             self.bpm = 120
             if self.tja is not None:
@@ -1281,7 +1281,7 @@ class ScoreCounterAnimation:
             tex.draw_texture('lane', 'score_number', frame=int(counter[i]), x=start_x + (i * margin), y=y, color=self.color)
 
 class SongInfo:
-    def __init__(self, song_name: str, genre: str):
+    def __init__(self, song_name: str, genre: int):
         self.song_name = song_name
         self.genre = genre
         self.song_title = OutlinedText(song_name, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
@@ -1297,6 +1297,8 @@ class SongInfo:
         text_y = 50 - self.song_title.texture.height//2
         dest = ray.Rectangle(text_x, text_y, self.song_title.texture.width, self.song_title.texture.height)
         self.song_title.draw(self.song_title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade.attribute))
+
+        tex.draw_texture('song_info', 'genre', fade=1 - self.fade.attribute, frame=self.genre)
 
 class ResultTransition:
     def __init__(self, player_num: int):

@@ -101,6 +101,7 @@ class SongSelectScreen:
         if self.navigator.items != []:
             global_data.selected_song = self.navigator.get_current_item().path
             session_data.selected_difficulty = self.selected_difficulty
+            session_data.genre_index = self.navigator.get_current_item().box.texture_index
             self.reset_demo_music()
             self.navigator.reset_items()
             audio.unload_all_sounds()
@@ -494,10 +495,10 @@ class SongSelectScreen:
         if self.modifier_selector is not None:
             self.modifier_selector.draw()
 
+        self.indicator.draw(410, 575)
+
         if self.game_transition is not None:
             self.game_transition.draw()
-
-        self.indicator.draw(410, 575)
 
     def draw_3d(self):
         pass

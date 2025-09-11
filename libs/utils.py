@@ -209,6 +209,7 @@ class Modifiers:
 class SessionData:
     selected_difficulty: int = 0
     song_title: str = ''
+    genre_index: int = 0
     result_score: int = 0
     result_good: int = 0
     result_ok: int = 0
