@@ -709,7 +709,8 @@ class Player:
         tex.draw_texture('lane', 'lane_score_cover')
         tex.draw_texture('lane', f'{self.player_number}p_icon')
         tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty)
-        self.nameplate.draw(-62, 285)
+        if not global_data.modifiers.auto:
+            self.nameplate.draw(-62, 285)
         self.draw_modifiers()
         if self.drumroll_counter is not None:
             self.drumroll_counter.draw()

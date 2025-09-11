@@ -3,7 +3,7 @@ from pathlib import Path
 import pyray as ray
 
 from libs.audio import audio
-from libs.global_objects import Nameplate
+from libs.global_objects import Nameplate, Indicator
 from libs.texture import tex
 from libs.utils import (
     OutlinedText,
@@ -42,6 +42,7 @@ class EntryScreen:
             self.state = State.SELECT_SIDE
             plate_info = global_data.config['nameplate']
             self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False)
+            self.indicator = Indicator(Indicator.State.SELECT)
             self.screen_init = True
             self.side_select_fade = tex.get_animation(0)
             self.bg_flicker = tex.get_animation(1)
@@ -116,6 +117,7 @@ class EntryScreen:
         self.box_manager.update(get_current_ms())
         self.nameplate_fadein.update(get_current_ms())
         self.nameplate.update(get_current_ms())
+        self.indicator.update(get_current_ms())
         if self.box_manager.is_finished():
             return self.on_screen_end(self.box_manager.selected_box())
         return self.handle_input()
@@ -198,8 +200,10 @@ class EntryScreen:
         if self.state == State.SELECT_MODE:
             if self.side == 0:
                 self.nameplate.draw(30, 640, fade=self.nameplate_fadein.attribute)
+                self.indicator.draw(50, 575, fade=self.nameplate_fadein.attribute)
             else:
                 self.nameplate.draw(950, 640, fade=self.nameplate_fadein.attribute)
+                self.indicator.draw(770, 575, fade=self.nameplate_fadein.attribute)
 
         tex.draw_texture('global', 'player_entry')
 

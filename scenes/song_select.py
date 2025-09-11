@@ -9,7 +9,7 @@ import pyray as ray
 
 from libs.animation import Animation, MoveAnimation
 from libs.audio import audio
-from libs.global_objects import Nameplate
+from libs.global_objects import Nameplate, Indicator
 from libs.texture import tex
 from libs.tja import TJAParser, test_encodings
 from libs.transition import Transition
@@ -37,6 +37,7 @@ class SongSelectScreen:
         self.screen_init = False
         self.root_dir = global_data.config["paths"]["tja_path"]
         self.screen_width = screen_width
+        self.indicator = Indicator(Indicator.State.SELECT)
 
     def load_navigator(self):
         self.navigator = FileNavigator(self.root_dir)
@@ -360,6 +361,7 @@ class SongSelectScreen:
         self.diff_selector_move_1.update(get_current_ms())
         self.diff_selector_move_2.update(get_current_ms())
         self.nameplate.update(get_current_ms())
+        self.indicator.update(get_current_ms())
 
         if self.text_fade_out.is_finished:
             self.selected_song = True
@@ -494,6 +496,8 @@ class SongSelectScreen:
 
         if self.game_transition is not None:
             self.game_transition.draw()
+
+        self.indicator.draw(410, 575)
 
     def draw_3d(self):
         pass

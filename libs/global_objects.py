@@ -1,3 +1,4 @@
+from enum import Enum
 import pyray as ray
 
 from libs.utils import OutlinedText, global_data
@@ -42,3 +43,37 @@ class Nameplate:
         self.name.draw(self.name.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, fade))
         dest = ray.Rectangle(x+136 - (self.title.texture.width//2) + title_offset, y-3, self.title.texture.width, self.title.texture.height)
         self.title.draw(self.title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, fade))
+
+class Indicator:
+    class State(Enum):
+        SKIP = 0
+        SIDE = 1
+        SELECT = 2
+        WAIT = 3
+    def __init__(self, state: State):
+        self.state = state
+        self.don_fade = global_data.tex.get_animation(6)
+        self.blue_arrow_move = global_data.tex.get_animation(7)
+        self.blue_arrow_fade = global_data.tex.get_animation(8)
+
+    def update(self, current_time_ms: float):
+        self.don_fade.update(current_time_ms)
+        self.blue_arrow_move.update(current_time_ms)
+        self.blue_arrow_fade.update(current_time_ms)
+
+    def draw(self, x: int, y: int, fade=1.0):
+        tex = global_data.tex
+        tex.draw_texture('indicator', 'background', x=x, y=y, fade=fade)
+        tex.draw_texture('indicator', 'text', frame=self.state.value, x=x, y=y, fade=fade)
+        tex.draw_texture('indicator', 'drum_face', index=self.state.value, x=x, y=y, fade=fade)
+        if self.state == Indicator.State.SELECT:
+            tex.draw_texture('indicator', 'drum_kat', fade=min(fade, self.don_fade.attribute), x=x, y=y)
+
+            tex.draw_texture('indicator', 'drum_kat', fade=min(fade, self.don_fade.attribute), x=x+23, y=y, mirror='horizontal')
+            tex.draw_texture('indicator', 'drum_face', x=x+175, y=y, fade=fade)
+
+            tex.draw_texture('indicator', 'drum_don', fade=min(fade, self.don_fade.attribute), index=self.state.value, x=x+214, y=y)
+            tex.draw_texture('indicator', 'blue_arrow', x=x-self.blue_arrow_move.attribute, y=y, fade=min(fade, self.blue_arrow_fade.attribute))
+            tex.draw_texture('indicator', 'blue_arrow', index=1, x=x+self.blue_arrow_move.attribute, y=y, mirror='horizontal', fade=min(fade, self.blue_arrow_fade.attribute))
+        else:
+            tex.draw_texture('indicator', 'drum_don', fade=min(fade, self.don_fade.attribute), index=self.state.value, x=x, y=y)
