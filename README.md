@@ -1,7 +1,6 @@
-
 # PyTaiko
 
-This is a TJA player / Taiko simulator written in python and uses the [raylib](https://www.raylib.com/) library.
+This is a TJA player / Taiko simulator written in Python and uses the [raylib](https://www.raylib.com/) library.
 
 
 ## Installation
@@ -18,14 +17,14 @@ Windows:
 ```
 MacOS:
 ```
-Good luck, would suggest running with python directly
+Run with Python directly
 ```
 Linux:
 ```
-    Run PyTaiko.bin for Debian based systems, otherwise run python
+    Attempt to run PyTaiko.bin compiled, otherwise fall back to Python
 ```
 Nix OS:
-Use the provided shell.nix code and run with python:
+Use the provided shell.nix code and run with Python:
 ```
 { pkgs ? import <nixpkgs> {} }:
 
@@ -108,6 +107,7 @@ sudo ln -s /lib/libatomic.so /lib/libatomic.a
 
 Hit F1 in entry screen to access settings menu
 Hit F1 in game to quick restart
+Generic drum keybinds can be found in config.toml or the settings screen ingame
 
 #### Why does it look like Gen 3 instead of Nijiiro?
 
