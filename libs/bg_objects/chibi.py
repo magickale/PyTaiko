@@ -7,25 +7,26 @@ import pyray as ray
 class Chibi:
 
     @staticmethod
-    def create(index: int, bpm: float, bad: bool):
+    def create(index: int, bpm: float, bad: bool, tex: TextureWrapper):
         if bad:
-            return ChibiBad(index, bpm)
-        map = [Chibi0, Chibi1, Chibi2, Chibi3, Chibi4, Chibi5, Chibi6,
-        Chibi7, Chibi8, Chibi9, Chibi10, Chibi11, Chibi12, Chibi13]
+            return ChibiBad(index, bpm, tex)
+        map = [Chibi0, BaseChibi, Chibi2, BaseChibi, Chibi4, Chibi5, BaseChibi,
+        BaseChibi, Chibi8, BaseChibi, BaseChibi, BaseChibi, BaseChibi, Chibi13]
         selected_obj = map[index]
-        return selected_obj(index, bpm)
+        return selected_obj(index, bpm, tex)
 
 class BaseChibi:
-    def __init__(self, index: int, bpm: float):
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
         self.name = 'chibi_' + str(index)
         self.bpm = bpm
         self.hori_move = Animation.create_move(60000 / self.bpm * 5, total_distance=1280)
         self.hori_move.start()
         self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50, reverse_delay=0)
         self.vert_move.start()
-        self.keyframes = [0]
-
-    def keyframe(self):
+        self.index = random.randint(0, len(tex.textures[self.name])-1)
+        tex_list = tex.textures[self.name][str(self.index)].texture
+        keyframe_len = tex_list if isinstance(tex_list, list) else [0]
+        self.keyframes = [i for i in range(len(keyframe_len))]
         duration = (60000 / self.bpm) / 2
         textures = [((duration / len(self.keyframes))*i, (duration / len(self.keyframes))*(i+1), index) for i, index in enumerate(self.keyframes)]
         self.texture_change = Animation.create_texture_change(duration, textures=textures)
@@ -40,9 +41,12 @@ class BaseChibi:
         if self.texture_change.is_finished:
             self.texture_change.restart()
 
+    def draw(self, tex: TextureWrapper):
+        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
+
 class ChibiBad(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
+        super().__init__(index, bpm, tex)
         self.index = random.randint(0, 2)
         self.keyframes = [3, 4]
         duration = (60000 / self.bpm) / 2
@@ -69,32 +73,14 @@ class ChibiBad(BaseChibi):
             tex.draw_texture('chibi_bad', '0', frame=self.texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute)
 
 class Chibi0(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 2)
-        self.keyframes = [0, 1, 2, 3, 2, 1]
-        self.keyframe()
-
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute)
 
-class Chibi1(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [0, 1, 2, 3, 4, 3, 2, 1]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
 class Chibi2(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
+        super().__init__(index, bpm, tex)
         self.rotate = Animation.create_move(60000 / self.bpm / 2, total_distance=360, reverse_delay=0)
         self.rotate.start()
-        self.keyframe()
 
     def update(self, current_time_ms: float):
         super().update(current_time_ms)
@@ -106,116 +92,25 @@ class Chibi2(BaseChibi):
         origin = ray.Vector2(64, 64)
         tex.draw_texture(self.name, str(self.index), x=self.hori_move.attribute+origin.x, y=origin.y, origin=origin, rotation=self.rotate.attribute)
 
-class Chibi3(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(8)]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
 class Chibi4(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(7)]
-        self.keyframe()
-
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute)
 
 class Chibi5(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [0, 1, 2, 3, 4, 5, 6, 7, 6, 7, 6, 7, 8]
-        self.keyframe()
-
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute)
-
-class Chibi6(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(10)]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
-class Chibi7(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(3) if self.index < 2]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
 
 class Chibi8(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(5)]
-        self.keyframe()
-
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute)
 
-class Chibi9(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(7)]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
-class Chibi10(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(7)]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
-class Chibi11(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 1)
-        self.keyframes = [i for i in range(10)]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
-class Chibi12(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 1)
-        self.keyframes = [i for i in range(6)]
-        self.keyframe()
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
-
 class Chibi13(BaseChibi):
-    def __init__(self, index: int, bpm: float):
-        super().__init__(index, bpm)
-        self.index = random.randint(0, 3)
-        self.keyframes = [i for i in range(7)]
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
+        super().__init__(index, bpm, tex)
         duration = (60000 / self.bpm)
         self.scale = Animation.create_fade(duration, initial_opacity=1.0, final_opacity=0.75, delay=duration, reverse_delay=duration)
         self.scale.start()
         self.frame = 0
-        self.keyframe()
 
     def update(self, current_time_ms: float):
         super().update(current_time_ms)
@@ -246,7 +141,7 @@ class ChibiController:
         tex.load_zip('background', f'chibi/chibi_bad')
 
     def add_chibi(self, bad=False):
-        self.chibis.add(Chibi.create(self.index, self.bpm, bad))
+        self.chibis.add(Chibi.create(self.index, self.bpm, bad, self.tex))
 
     def update(self, current_time_ms: float, bpm: float):
         self.bpm = bpm

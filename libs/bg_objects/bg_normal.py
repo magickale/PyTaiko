@@ -116,27 +116,11 @@ class BGNormal5(BGNormalBase):
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, 'background')
 
-        tex.draw_texture(self.name, 'paper_lamp', frame=9, index=0)
-        tex.draw_texture(self.name, 'paper_lamp', frame=8, index=1)
-        tex.draw_texture(self.name, 'paper_lamp', frame=7, index=2)
-        tex.draw_texture(self.name, 'paper_lamp', frame=6, index=3)
-        tex.draw_texture(self.name, 'paper_lamp', frame=5, index=4)
-        tex.draw_texture(self.name, 'paper_lamp', frame=4, index=5)
-        tex.draw_texture(self.name, 'paper_lamp', frame=3, index=6)
-        tex.draw_texture(self.name, 'paper_lamp', frame=2, index=7)
-        tex.draw_texture(self.name, 'paper_lamp', frame=1, index=8)
-        tex.draw_texture(self.name, 'paper_lamp', frame=0, index=9)
+        for i in range(10):
+            tex.draw_texture(self.name, 'paper_lamp', frame=9-i, index=i)
 
-        tex.draw_texture(self.name, 'light_overlay', index=0, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=1, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=2, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=3, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=4, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=5, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=6, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=7, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=8, fade=self.flicker.attribute)
-        tex.draw_texture(self.name, 'light_overlay', index=9, fade=self.flicker.attribute)
+        for i in range(10):
+            tex.draw_texture(self.name, 'light_overlay', index=i, fade=self.flicker.attribute)
 
         tex.draw_texture(self.name, 'overlay', fade=0.75)
 
