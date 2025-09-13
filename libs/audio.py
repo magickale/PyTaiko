@@ -857,7 +857,7 @@ class AudioEngine:
         if sound in self.sounds:
             self.sounds[sound].pan = max(0.0, min(1.0, pan))
 
-    def load_music_stream(self, fileName: Path, preview: float=0, normalize: Optional[float] = None) -> str:
+    def load_music_stream(self, fileName: Path, preview: Optional[float] = None, normalize: Optional[float] = None) -> str:
         music = Music(file_path=fileName, target_sample_rate=self.target_sample_rate, preview=preview, normalize=normalize)
         music_id = f"music_{len(self.music_streams)}"
         self.music_streams[music_id] = music

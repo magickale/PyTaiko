@@ -23,7 +23,7 @@ class BaseChibi:
         self.hori_move.start()
         self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50, reverse_delay=0)
         self.vert_move.start()
-        self.index = random.randint(0, len(tex.textures[self.name])-1)
+        self.index = random.randint(0, len([item for item in tex.textures[self.name] if item[0].isdigit()])-1)
         tex_list = tex.textures[self.name][str(self.index)].texture
         keyframe_len = tex_list if isinstance(tex_list, list) else [0]
         self.keyframes = [i for i in range(len(keyframe_len))]
