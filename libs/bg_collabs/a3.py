@@ -8,10 +8,10 @@ from libs.bg_objects.don_bg import DonBGBase
 from libs.bg_objects.renda import RendaController
 from libs.texture import TextureWrapper
 
-class A3:
-    def __init__(self, tex: TextureWrapper, bpm: float):
+class Background:
+    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float):
         self.tex_wrapper = tex
-        path = 'background/collab/A3'
+        path = 'background/collab/a3'
         self.max_dancers = 4
         self.don_bg = DonBG(self.tex_wrapper, 0, 1, path)
         self.bg_normal = BGNormal(self.tex_wrapper, 0, path)

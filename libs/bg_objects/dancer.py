@@ -167,7 +167,7 @@ class BaseDancerGroup():
         total_width = 1280
         num_dancers = len(self.active_dancers)
 
-        first_dancer = self.active_dancers[3]
+        first_dancer = next((dancer for dancer in self.active_dancers if dancer is not None), None)
         if first_dancer is None:
             return
         dancer_width = tex.textures[self.name][str(first_dancer.index) + '_loop'].width

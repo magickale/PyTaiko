@@ -10,9 +10,9 @@ class Fever:
         return selected_obj(tex, index, bpm)
 
 class BaseFever:
-    def __init__(self, tex: TextureWrapper, index: int, bpm: float):
+    def __init__(self, tex: TextureWrapper, index: int, bpm: float, path: str = 'background'):
         self.name = 'fever_' + str(index)
-        tex.load_zip('background/regular', f'fever/{self.name}')
+        tex.load_zip(path, f'fever/{self.name}')
         self.bounce_up = Animation.create_move((60000 / bpm) / 2, total_distance=50, ease_out='quadratic')
         self.bounce_down = Animation.create_move((60000 / bpm) / 2, total_distance=50, ease_in='quadratic', delay=self.bounce_up.duration)
 

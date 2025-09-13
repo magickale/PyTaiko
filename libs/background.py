@@ -13,7 +13,8 @@ from libs.texture import TextureWrapper
 
 class Background:
     COLLABS = {
-        "A3": libs.bg_collabs.a3.A3
+        "A3": libs.bg_collabs.a3.Background,
+        "ANIMAL": libs.bg_collabs.animal.Background
     }
     def __init__(self, player_num: int, bpm: float, scene_preset: str = ''):
         self.tex_wrapper = TextureWrapper()
@@ -29,7 +30,7 @@ class Background:
             self.renda = RendaController(self.tex_wrapper, random.randint(0, 2))
             self.chibi = ChibiController(self.tex_wrapper, random.randint(0, 13), bpm)
         else:
-            collab_bg = Background.COLLABS[scene_preset](self.tex_wrapper, bpm)
+            collab_bg = Background.COLLABS[scene_preset](self.tex_wrapper, player_num, bpm)
             self.max_dancers = collab_bg.max_dancers
             self.don_bg = collab_bg.don_bg
             self.bg_normal = collab_bg.bg_normal
