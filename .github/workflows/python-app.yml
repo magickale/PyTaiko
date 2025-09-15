@@ -147,7 +147,7 @@ jobs:
       - name: Create Release Directory
         run: |
           mkdir -p release
-          cp -r Graphics Sounds Videos Songs config.toml shader model release/
+          cp -r Graphics Sounds Videos Songs config.toml shader model lib release/
 
           # Copy the compiled audio library to release
           if [ "${{ runner.os }}" == "Windows" ]; then
