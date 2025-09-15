@@ -26,7 +26,6 @@ ifneq (,$(findstring Windows,$(UNAME_S)))
         LDFLAGS += $(LIB_PATH)
     endif
 
-    # Check for environment variables set by GitHub Actions
     ifdef VCPKG_INCLUDE_PATH
         CFLAGS += /I"$(VCPKG_INCLUDE_PATH)"
     endif
@@ -85,6 +84,7 @@ check-deps:
 	@echo "Assuming vcpkg dependencies are installed..."
 	@if exist "$(VCPKG_INSTALLATION_ROOT)\installed\x64-windows\include\portaudio.h" (echo PortAudio found!) else (echo PortAudio not found! && exit 1)
 	@if exist "$(VCPKG_INSTALLATION_ROOT)\installed\x64-windows\include\sndfile.h" (echo libsndfile found!) else (echo libsndfile not found! && exit 1)
+	@if exist "$(VCPKG_INSTALLATION_ROOT)\installed\x64-windows\include\samplerate.h" (echo libsamplerate found!) else (echo libsamplerate not found! && exit 1)
 	@echo "All dependencies found!"
 
 else
