@@ -29,7 +29,8 @@ jobs:
               pkg-config \
               portaudio19-dev \
               libsndfile1-dev \
-              libsamplerate0-dev
+              libsamplerate0-dev \
+              ccache
 
       - name: Install Audio Dependencies (macOS)
         if: runner.os == 'macOS'
