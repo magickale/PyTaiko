@@ -16,8 +16,6 @@ ifeq ($(UNAME_S),MINGW64_NT)
     LDFLAGS = -shared -Wl,--export-all-symbols -L/mingw64/lib
     LIBS = -lportaudio -lsndfile -lsamplerate -lpthread -lm
     OBJ_EXT = .o
-endif
-
 
 else ifeq ($(UNAME_S),Darwin)
     # macOS
