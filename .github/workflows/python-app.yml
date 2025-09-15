@@ -115,10 +115,6 @@ jobs:
             Copy-Item "libaudio.dll" "../../build/lib/"
             echo "Copied libaudio.dll"
           }
-          if (Test-Path "audio.dll") {
-            Copy-Item "audio.dll" "../../build/lib/"
-            echo "Copied audio.dll"
-          }
 
           # Copy vcpkg DLLs that are needed at runtime
           $vcpkgBin = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
@@ -129,10 +125,6 @@ jobs:
               echo "Copied $($_.Name)"
             }
           }
-
-          # Verify what was copied
-          echo "Files in build/lib:"
-          ls ../../build/lib/
 
           # Add to PATH
           echo "${{ github.workspace }}/build/lib" >> $env:GITHUB_PATH
