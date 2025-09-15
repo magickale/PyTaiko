@@ -8,7 +8,7 @@ LIBS = -lportaudio -lsndfile -lsamplerate -lpthread -lm
 # Detect OS and set appropriate flags
 UNAME_S := $(shell uname -s 2>/dev/null || echo Windows)
 
-# Windows detection (including GitHub Actions Windows runners)
+# Windows detection
 ifneq (,$(findstring Windows,$(UNAME_S)))
     # Windows with MSVC
     CC = cl
