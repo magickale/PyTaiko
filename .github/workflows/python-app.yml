@@ -73,6 +73,35 @@ jobs:
           cp libs/audio/libaudio.dll build/lib/
         shell: bash
 
+      - name: Copy DLL dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          # Create build directory
+          mkdir -p /c/Users/runneradmin/work/*/build/lib
+
+          # Copy our built library
+          cp libs/audio/libaudio.dll /c/Users/runneradmin/work/*/build/lib/
+
+          # Copy MinGW runtime dependencies
+          cp /mingw64/bin/libgcc_s_seh-1.dll /c/Users/runneradmin/work/*/build/lib/
+          cp /mingw64/bin/libwinpthread-1.dll /c/Users/runneradmin/work/*/build/lib/
+          cp /mingw64/bin/libstdc++-6.dll /c/Users/runneradmin/work/*/build/lib/ || true
+
+          # Copy audio library dependencies
+          cp /mingw64/bin/libportaudio-2.dll /c/Users/runneradmin/work/*/build/lib/
+          cp /mingw64/bin/libsndfile-1.dll /c/Users/runneradmin/work/*/build/lib/
+          cp /mingw64/bin/libsamplerate-0.dll /c/Users/runneradmin/work/*/build/lib/
+
+          # Copy other potential dependencies
+          cp /mingw64/bin/libFLAC-8.dll /c/Users/runneradmin/work/*/build/lib/ || true
+          cp /mingw64/bin/libvorbis-0.dll /c/Users/runneradmin/work/*/build/lib/ || true
+          cp /mingw64/bin/libvorbisenc-2.dll /c/Users/runneradmin/work/*/build/lib/ || true
+          cp /mingw64/bin/libogg-0.dll /c/Users/runneradmin/work/*/build/lib/ || true
+
+          # List what we copied
+          ls -la /c/Users/runneradmin/work/*/build/lib/
+
       # Compile the audio library (Unix)
       - name: Check Audio Library Dependencies
         run: |
