@@ -1,8 +1,7 @@
-Songs2
 __pycache__
 .venv
 scores.db
 cache
-full.csv
 dev-config.toml
 .env
+libaudio.so
