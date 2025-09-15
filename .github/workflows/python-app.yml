@@ -90,7 +90,7 @@ jobs:
           cp /mingw64/bin/libstdc++-6.dll /c/Users/runneradmin/work/*/build/lib/ || true
 
           # Copy audio library dependencies
-          cp /mingw64/bin/libportaudio-2.dll /c/Users/runneradmin/work/*/build/lib/
+          cp /mingw64/bin/libportaudio.dll /c/Users/runneradmin/work/*/build/lib/
           cp /mingw64/bin/libsndfile-1.dll /c/Users/runneradmin/work/*/build/lib/
           cp /mingw64/bin/libsamplerate-0.dll /c/Users/runneradmin/work/*/build/lib/
 
