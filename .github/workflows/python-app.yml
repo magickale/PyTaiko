@@ -25,6 +25,7 @@ jobs:
           brew update
           brew install portaudio libsndfile libsamplerate pkg-config
 
+      # Use MSYS2 for Windows audio library build with all codec dependencies
       - name: Set up MSYS2 (Windows)
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
@@ -40,6 +41,9 @@ jobs:
             mingw-w64-x86_64-libvorbis
             mingw-w64-x86_64-libogg
             mingw-w64-x86_64-opus
+            mingw-w64-x86_64-mpg123
+            mingw-w64-x86_64-lame
+            mingw-w64-x86_64-speex
 
       - name: Build static audio library (Windows)
         if: runner.os == 'Windows'
@@ -50,7 +54,7 @@ jobs:
           make clean
 
           # Build with static linking
-          make all
+          make static
 
           # Verify the build
           make verify

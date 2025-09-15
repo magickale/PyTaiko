@@ -21,7 +21,7 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
     CFLAGS = -Wall -Wextra -O3 -fPIC -std=c99 -I/mingw64/include -m64
     LDFLAGS = -shared -Wl,--export-all-symbols -static-libgcc -static-libstdc++ -L/mingw64/lib -m64
 
-    # Core libraries (try static first, fall back to dynamic)
+    # Core libraries with full dependency chain
     CORE_LIBS =
     ifneq (,$(wildcard /mingw64/lib/libportaudio.a))
         CORE_LIBS += /mingw64/lib/libportaudio.a
@@ -29,10 +29,35 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
         CORE_LIBS += -lportaudio
     endif
 
+    # libsndfile and ALL its dependencies (order matters!)
     ifneq (,$(wildcard /mingw64/lib/libsndfile.a))
         CORE_LIBS += /mingw64/lib/libsndfile.a
+
+        # libsndfile codec dependencies
+        ifneq (,$(wildcard /mingw64/lib/libFLAC.a))
+            CORE_LIBS += /mingw64/lib/libFLAC.a
+        endif
+        ifneq (,$(wildcard /mingw64/lib/libvorbisenc.a))
+            CORE_LIBS += /mingw64/lib/libvorbisenc.a /mingw64/lib/libvorbisfile.a /mingw64/lib/libvorbis.a
+        endif
+        ifneq (,$(wildcard /mingw64/lib/libogg.a))
+            CORE_LIBS += /mingw64/lib/libogg.a
+        endif
+        ifneq (,$(wildcard /mingw64/lib/libopus.a))
+            CORE_LIBS += /mingw64/lib/libopus.a
+        endif
+        ifneq (,$(wildcard /mingw64/lib/libmpg123.a))
+            CORE_LIBS += /mingw64/lib/libmpg123.a
+        endif
+        ifneq (,$(wildcard /mingw64/lib/libmp3lame.a))
+            CORE_LIBS += /mingw64/lib/libmp3lame.a
+        endif
+        ifneq (,$(wildcard /mingw64/lib/libspeex.a))
+            CORE_LIBS += /mingw64/lib/libspeex.a
+        endif
     else
-        CORE_LIBS += -lsndfile
+        # Dynamic linking with all dependencies
+        CORE_LIBS += -lsndfile -lFLAC -lvorbisenc -lvorbisfile -lvorbis -logg -lopus -lmpg123 -lmp3lame -lspeex
     endif
 
     ifneq (,$(wildcard /mingw64/lib/libsamplerate.a))
@@ -41,22 +66,10 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
         CORE_LIBS += -lsamplerate
     endif
 
-    # Optional codec libraries
-    CODEC_LIBS =
-    ifneq (,$(wildcard /mingw64/lib/libFLAC.a))
-        CODEC_LIBS += /mingw64/lib/libFLAC.a
-    endif
-    ifneq (,$(wildcard /mingw64/lib/libvorbisenc.a))
-        CODEC_LIBS += /mingw64/lib/libvorbisenc.a /mingw64/lib/libvorbisfile.a /mingw64/lib/libvorbis.a
-    endif
-    ifneq (,$(wildcard /mingw64/lib/libogg.a))
-        CODEC_LIBS += /mingw64/lib/libogg.a
-    endif
+    # System libraries (always dynamic)
+    SYSTEM_LIBS = -lwinmm -lole32 -luuid -lksuser -lsetupapi -lws2_32 -ladvapi32
 
-    # System libraries
-    SYSTEM_LIBS = -lwinmm -lole32 -luuid -lksuser -lsetupapi -lws2_32
-
-    LIBS = $(CORE_LIBS) $(CODEC_LIBS) $(SYSTEM_LIBS)
+    LIBS = $(CORE_LIBS) $(SYSTEM_LIBS)
     OBJ_EXT = .o
 
 else ifeq ($(UNAME_S),Darwin)
