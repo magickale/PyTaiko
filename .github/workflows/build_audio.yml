@@ -53,10 +53,18 @@ jobs:
           make help || echo "Help target not available"
           echo "VCPKG_ROOT: %VCPKG_ROOT%"
           echo "VCPKG_INSTALLATION_ROOT: %VCPKG_INSTALLATION_ROOT%"
+          echo "System detection:"
+          echo %OS%
+          echo "Compiler detection:"
+          where cl || echo "cl not found in PATH"
+          where gcc || echo "gcc not found in PATH"
+          echo "Testing Windows detection in Makefile:"
+          make -n all | head -5 || echo "Make dry-run failed"
         shell: cmd
         working-directory: libs/audio
         env:
           VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
+          OS: Windows_NT
 
       - name: Check dependencies
         run: |
@@ -67,13 +75,19 @@ jobs:
         continue-on-error: true
         env:
           VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
+          OS: Windows_NT
 
-      - name: Build audio library
-        run: make all
+      - name: Build audio library (Force Windows detection)
+        run: |
+          echo "Forcing Windows build..."
+          set "UNAME_S=Windows"
+          make all
         shell: cmd
         working-directory: libs/audio
         env:
           VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
+          OS: Windows_NT
+          UNAME_S: Windows
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -143,6 +157,7 @@ jobs:
         working-directory: libs/audio
         env:
           VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
+          OS: Windows_NT
 
       - name: Upload artifacts (${{ matrix.architecture }}, ${{ matrix.configuration }})
         uses: actions/upload-artifact@v4
