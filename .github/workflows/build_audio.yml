@@ -1,213 +1,49 @@
 name: Build Audio Library (Windows)
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-  workflow_dispatch: # Allow manual triggering
+    paths:
+      - "libs/audio/**"
+      - ".github/workflows/windows-audio-build.yml"
 
 jobs:
   build-windows:
     runs-on: windows-latest
 
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKG_INSTALLATION_ROOT: ${{ github.workspace }}\vcpkg
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup vcpkg
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Cache vcpkg packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
-            ${{ env.VCPKG_INSTALLATION_ROOT }}\packages
-          key: vcpkg-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
-          restore-keys: |
-            vcpkg-${{ runner.os }}-
-
-      - name: Install vcpkg dependencies
+      - name: Install vcpkg
         run: |
-          echo "Installing vcpkg dependencies..."
-          vcpkg install portaudio:x64-windows
-          vcpkg install libsndfile:x64-windows
-          vcpkg install libsamplerate:x64-windows
-          vcpkg integrate install
-          echo "Verifying installations..."
-          vcpkg list | findstr portaudio
-          vcpkg list | findstr sndfile
-          vcpkg list | findstr samplerate
+          git clone https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
 
-      - name: Setup MSVC environment
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Setup Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Debug Makefile and environment
+      - name: Install dependencies with vcpkg
         run: |
-          echo "Current directory:"
+          .\vcpkg\vcpkg.exe install portaudio:x64-windows libsndfile:x64-windows libsamplerate:x64-windows
+
+      - name: Add vcpkg include/lib paths to environment
+        run: |
+          echo "VCPKG_INCLUDE_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\include" >> $env:GITHUB_ENV
+          echo "VCPKG_LIB_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\lib" >> $env:GITHUB_ENV
+
+      - name: Build audio library
+        working-directory: libs/audio
+        run: |
+          nmake /f Makefile all
+
+      - name: List build outputs
+        working-directory: libs/audio
+        run: |
           dir
-          echo "Makefile exists:"
-          if exist Makefile (echo Yes) else (echo No)
-          echo "Available make targets:"
-          make help || echo "Help target not available"
-          echo "VCPKG_ROOT: %VCPKG_ROOT%"
-          echo "VCPKG_INSTALLATION_ROOT: %VCPKG_INSTALLATION_ROOT%"
-          echo "System detection:"
-          echo %OS%
-          echo "Compiler detection:"
-          where cl || echo "cl not found in PATH"
-          where gcc || echo "gcc not found in PATH"
-          echo "Testing Windows detection in Makefile:"
-          make -n all | head -5 || echo "Make dry-run failed"
-        shell: cmd
+
+      - name: Clean build artifacts
         working-directory: libs/audio
-        env:
-          VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
-          OS: Windows_NT
-
-      - name: Check dependencies
         run: |
-          echo "Attempting to check dependencies..."
-          make check-deps || echo "check-deps target failed or not available, continuing..."
-        shell: cmd
-        working-directory: libs/audio
-        continue-on-error: true
-        env:
-          VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
-          OS: Windows_NT
-
-      - name: Verify vcpkg installation
-        run: |
-          echo "Checking vcpkg installation..."
-          echo "VCPKG_ROOT: %VCPKG_ROOT%"
-          dir "%VCPKG_ROOT%\installed" /B 2>nul || echo "No installed packages found"
-          if exist "%VCPKG_ROOT%\installed\x64-windows\include\portaudio.h" (
-            echo "PortAudio header found!"
-          ) else (
-            echo "PortAudio header NOT found. Checking alternative locations..."
-            dir "%VCPKG_ROOT%\installed\x64-windows\include" /B 2>nul || echo "Include directory doesn't exist"
-          )
-        shell: cmd
-        working-directory: libs/audio
-        env:
-          VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
-
-      - name: Build audio library (Force Windows detection)
-        run: |
-          echo "Forcing Windows build with explicit variables..."
-          echo "Using VCPKG_ROOT: %VCPKG_ROOT%"
-          make all CC=cl "CFLAGS=/O2 /W3 /MD /TC /I\"%VCPKG_ROOT%\installed\x64-windows\include\"" "LDFLAGS=/DLL /LIBPATH:\"%VCPKG_ROOT%\installed\x64-windows\lib\"" "LIBS=portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME=libaudio.dll OBJ_EXT=.obj
-        shell: cmd
-        working-directory: libs/audio
-        env:
-          VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
-          OS: Windows_NT
-          MSYS_NO_PATHCONV: 1
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: libaudio-windows-x64
-          path: |
-            libs/audio/libaudio.dll
-            libs/audio/*.lib
-          retention-days: 30
-
-      - name: Run tests (if available)
-        run: |
-          if exist tests.exe (
-            echo Running tests...
-            tests.exe
-          ) else (
-            echo No tests found, skipping...
-          )
-        shell: cmd
-        working-directory: libs/audio
-        continue-on-error: true
-
-  build-matrix:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        architecture: [x64, x86]
-        configuration: [Release, Debug]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup vcpkg
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Cache vcpkg packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VCPKG_INSTALLATION_ROOT }}\installed
-            ${{ env.VCPKG_INSTALLATION_ROOT }}\packages
-          key: vcpkg-${{ matrix.architecture }}-${{ matrix.configuration }}-${{ hashFiles('**/vcpkg.json') }}
-          restore-keys: |
-            vcpkg-${{ matrix.architecture }}-${{ matrix.configuration }}-
-
-      - name: Setup MSVC environment and Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.architecture }}
-
-      - name: Install vcpkg dependencies
-        run: |
-          echo "Installing vcpkg dependencies for ${{ matrix.architecture }}..."
-          vcpkg install portaudio:${{ matrix.architecture }}-windows
-          vcpkg install libsndfile:${{ matrix.architecture }}-windows
-          vcpkg install libsamplerate:${{ matrix.architecture }}-windows
-          vcpkg integrate install
-          echo "Verifying installations..."
-          vcpkg list | findstr portaudio
-          vcpkg list | findstr sndfile
-          vcpkg list | findstr samplerate
-
-      - name: Build library (${{ matrix.architecture }}, ${{ matrix.configuration }})
-        run: |
-          $arch = "${{ matrix.architecture }}"
-          $config = "${{ matrix.configuration }}"
-          $vcpkg_path = $env:VCPKG_ROOT
-
-          $cflags = "/O2 /W3 /MD /TC"
-          if ($config -eq "Debug") {
-              $cflags += " /Zi"
-          }
-          $cflags += " /I`"$vcpkg_path\installed\$arch-windows\include`""
-
-          $ldflags = "/DLL /LIBPATH:`"$vcpkg_path\installed\$arch-windows\lib`""
-
-          Write-Host "Building with MSVC for $arch $config..."
-          Write-Host "CFLAGS: $cflags"
-          Write-Host "LDFLAGS: $ldflags"
-
-          $env:MSYS_NO_PATHCONV = "1"
-          if ($config -eq "Debug") {
-              make debug CC=cl "CFLAGS=$cflags" "LDFLAGS=$ldflags" "LIBS=portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME=libaudio.dll OBJ_EXT=.obj
-          } else {
-              make all CC=cl "CFLAGS=$cflags" "LDFLAGS=$ldflags" "LIBS=portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME=libaudio.dll OBJ_EXT=.obj
-          }
-        shell: powershell
-        working-directory: libs/audio
-        env:
-          VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
-          OS: Windows_NT
-
-      - name: Upload artifacts (${{ matrix.architecture }}, ${{ matrix.configuration }})
-        uses: actions/upload-artifact@v4
-        with:
-          name: libaudio-windows-${{ matrix.architecture }}-${{ matrix.configuration }}
-          path: |
-            libs/audio/libaudio.dll
-            libs/audio/*.lib
-            libs/audio/*.pdb
-          retention-days: 30
+          nmake /f Makefile clean
