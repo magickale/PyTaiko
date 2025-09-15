@@ -79,6 +79,7 @@ jobs:
         run: |
           # Create build directory
           mkdir -p /c/Users/runneradmin/work/*/build/lib
+          ls -la /mingw64/bin
 
           # Copy our built library
           cp libs/audio/libaudio.dll /c/Users/runneradmin/work/*/build/lib/
