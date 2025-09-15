@@ -19,6 +19,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup MSVC Build Environment
+        uses: microsoft/setup-msbuild@v2
+
       - name: Install vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git
@@ -33,22 +36,17 @@ jobs:
           echo "VCPKG_INCLUDE_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\include" >> $env:GITHUB_ENV
           echo "VCPKG_LIB_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\lib" >> $env:GITHUB_ENV
 
-      - name: Build audio library (MSVC nmake)
+      - name: Build audio library
         working-directory: libs/audio
-        shell: cmd
         run: |
-          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat"
           nmake /f Makefile all
 
       - name: List build outputs
         working-directory: libs/audio
-        shell: cmd
         run: |
           dir
 
       - name: Clean build artifacts
         working-directory: libs/audio
-        shell: cmd
         run: |
-          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat"
           nmake /f Makefile clean
