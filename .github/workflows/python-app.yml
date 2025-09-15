@@ -19,19 +19,6 @@ jobs:
       - name: Check-out repository
         uses: actions/checkout@v4
 
-      # Install audio library dependencies
-      - name: Install Audio Dependencies (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-              build-essential \
-              pkg-config \
-              portaudio19-dev \
-              libsndfile1-dev \
-              libsamplerate0-dev \
-              ccache
-
       - name: Install Audio Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
