@@ -30,10 +30,15 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
+          echo "Installing vcpkg dependencies..."
           vcpkg install portaudio:x64-windows
           vcpkg install libsndfile:x64-windows
           vcpkg install libsamplerate:x64-windows
           vcpkg integrate install
+          echo "Verifying installations..."
+          vcpkg list | findstr portaudio
+          vcpkg list | findstr sndfile
+          vcpkg list | findstr samplerate
 
       - name: Setup MSVC environment
         uses: microsoft/setup-msbuild@v2
@@ -77,15 +82,33 @@ jobs:
           VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
           OS: Windows_NT
 
+      - name: Verify vcpkg installation
+        run: |
+          echo "Checking vcpkg installation..."
+          echo "VCPKG_ROOT: %VCPKG_ROOT%"
+          dir "%VCPKG_ROOT%\installed" /B 2>nul || echo "No installed packages found"
+          if exist "%VCPKG_ROOT%\installed\x64-windows\include\portaudio.h" (
+            echo "PortAudio header found!"
+          ) else (
+            echo "PortAudio header NOT found. Checking alternative locations..."
+            dir "%VCPKG_ROOT%\installed\x64-windows\include" /B 2>nul || echo "Include directory doesn't exist"
+          )
+        shell: cmd
+        working-directory: libs/audio
+        env:
+          VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
+
       - name: Build audio library (Force Windows detection)
         run: |
           echo "Forcing Windows build with explicit variables..."
-          make all CC=cl CFLAGS="/O2 /W3 /MD /TC /I\"%VCPKG_INSTALLATION_ROOT%\installed\x64-windows\include\"" LDFLAGS="/DLL /LIBPATH:\"%VCPKG_INSTALLATION_ROOT%\installed\x64-windows\lib\"" LIBS="portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME="libaudio.dll" OBJ_EXT=".obj"
+          echo "Using VCPKG_ROOT: %VCPKG_ROOT%"
+          make all CC=cl "CFLAGS=/O2 /W3 /MD /TC /I\"%VCPKG_ROOT%\installed\x64-windows\include\"" "LDFLAGS=/DLL /LIBPATH:\"%VCPKG_ROOT%\installed\x64-windows\lib\"" "LIBS=portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME=libaudio.dll OBJ_EXT=.obj
         shell: cmd
         working-directory: libs/audio
         env:
           VCPKG_INSTALLATION_ROOT: ${{ env.VCPKG_ROOT }}
           OS: Windows_NT
+          MSYS_NO_PATHCONV: 1
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -139,10 +162,15 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
+          echo "Installing vcpkg dependencies for ${{ matrix.architecture }}..."
           vcpkg install portaudio:${{ matrix.architecture }}-windows
           vcpkg install libsndfile:${{ matrix.architecture }}-windows
           vcpkg install libsamplerate:${{ matrix.architecture }}-windows
           vcpkg integrate install
+          echo "Verifying installations..."
+          vcpkg list | findstr portaudio
+          vcpkg list | findstr sndfile
+          vcpkg list | findstr samplerate
 
       - name: Build library (${{ matrix.architecture }}, ${{ matrix.configuration }})
         run: |
@@ -159,10 +187,14 @@ jobs:
           $ldflags = "/DLL /LIBPATH:`"$vcpkg_path\installed\$arch-windows\lib`""
 
           Write-Host "Building with MSVC for $arch $config..."
+          Write-Host "CFLAGS: $cflags"
+          Write-Host "LDFLAGS: $ldflags"
+
+          $env:MSYS_NO_PATHCONV = "1"
           if ($config -eq "Debug") {
-              make debug CC=cl CFLAGS="$cflags" LDFLAGS="$ldflags" LIBS="portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME="libaudio.dll" OBJ_EXT=".obj"
+              make debug CC=cl "CFLAGS=$cflags" "LDFLAGS=$ldflags" "LIBS=portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME=libaudio.dll OBJ_EXT=.obj
           } else {
-              make all CC=cl CFLAGS="$cflags" LDFLAGS="$ldflags" LIBS="portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME="libaudio.dll" OBJ_EXT=".obj"
+              make all CC=cl "CFLAGS=$cflags" "LDFLAGS=$ldflags" "LIBS=portaudio.lib libsndfile.lib libsamplerate.lib" LIBNAME=libaudio.dll OBJ_EXT=.obj
           }
         shell: powershell
         working-directory: libs/audio
