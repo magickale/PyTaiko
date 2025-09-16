@@ -53,11 +53,11 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
         ifneq (,$(wildcard /mingw64/lib/libFLAC.a))
             CORE_LIBS += /mingw64/lib/libFLAC.a
         endif
+        ifneq (,$(wildcard /mingw64/lib/libogg.a))
+            CORE_LIBS += /mingw64/lib/libogg.a
+        endif
         ifneq (,$(wildcard /mingw64/lib/libvorbisenc.a))
             CORE_LIBS += /mingw64/lib/libvorbisenc.a /mingw64/lib/libvorbisfile.a /mingw64/lib/libvorbis.a
-        endif
-        ifneq (,$(wildstring /mingw64/lib/libogg.a))
-            CORE_LIBS += /mingw64/lib/libogg.a
         endif
         ifneq (,$(wildcard /mingw64/lib/libspeex.a))
             CORE_LIBS += /mingw64/lib/libspeex.a
