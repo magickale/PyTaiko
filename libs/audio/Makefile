@@ -65,6 +65,12 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
         CORE_LIBS += -lsamplerate
     endif
 
+    ifneq (,$(wildcard /mingw64/lib/libwinpthread.a))
+        SYSTEM_LIBS += /mingw64/lib/libwinpthread.a
+    else
+        SYSTEM_LIBS += -lwinpthread
+    endif
+
     # Windows system libraries (these provide the missing symbols)
     SYSTEM_LIBS = -lwinmm -lole32 -luuid -lksuser -lsetupapi -lws2_32 -ladvapi32 -luser32 -lgdi32 -lkernel32
 
