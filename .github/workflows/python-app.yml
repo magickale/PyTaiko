@@ -57,7 +57,7 @@ jobs:
           cd portaudio
 
           # Configure with ASIO and other Windows audio APIs
-          mkdir build && cd build
+          cd build
           cmake .. \
             -G "MSYS Makefiles" \
             -DCMAKE_BUILD_TYPE=Release \
