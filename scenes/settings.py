@@ -34,6 +34,7 @@ class SettingsScreen:
         global_data.config = self.config
         audio.close_audio_device()
         audio.device_type = global_data.config["audio"]["device_type"]
+        audio.target_sample_rate = global_data.config["audio"]["sample_rate"]
         audio.init_audio_device()
         return "ENTRY"
 
@@ -56,7 +57,6 @@ class SettingsScreen:
         step_sizes = {
             'judge_offset': 1,
             'visual_offset': 1,
-            'buffer_size': 1,
             'sample_rate': 1000,
         }
 

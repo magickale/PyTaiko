@@ -32,7 +32,6 @@
 #define FREE(ptr) do { if (ptr) { free(ptr); (ptr) = NULL; } } while(0)
 
 #define AUDIO_DEVICE_CHANNELS              2    // Device output channels: stereo
-#define AUDIO_DEVICE_SAMPLE_RATE           44100    // Device output sample rate
 
 // Forward declarations of structures
 struct audio_buffer;
@@ -101,6 +100,7 @@ typedef struct AudioData {
         PaStreamParameters outputParameters;  // Output stream parameters
         pthread_mutex_t lock;       // Mutex lock for thread synchronization
         bool isReady;               // Check if audio device is ready
+        double sampleRate;
         size_t pcmBufferSize;       // Pre-allocated buffer size
         void *pcmBuffer;            // Pre-allocated buffer to read audio data from file/memory
         float masterVolume;         // Master volume control
@@ -114,7 +114,7 @@ typedef struct AudioData {
 // Function declarations
 // Device management
 void list_host_apis(void);
-void init_audio_device(PaHostApiIndex host_api);
+void init_audio_device(PaHostApiIndex host_api, double sample_rate);
 void close_audio_device(void);
 bool is_audio_device_ready(void);
 void set_master_volume(float volume);
@@ -322,7 +322,7 @@ PaDeviceIndex get_best_output_device_for_host_api(PaHostApiIndex hostApi)
 }
 
 // Device management implementations
-void init_audio_device(PaHostApiIndex host_api)
+void init_audio_device(PaHostApiIndex host_api, double sample_rate)
 {
     // Initialize PortAudio
     PaError err = Pa_Initialize();
@@ -351,12 +351,13 @@ void init_audio_device(PaHostApiIndex host_api)
     AUDIO.System.outputParameters.sampleFormat = paFloat32; // Using float format like miniaudio version
     AUDIO.System.outputParameters.suggestedLatency = Pa_GetDeviceInfo(AUDIO.System.outputParameters.device)->defaultLowOutputLatency;
     AUDIO.System.outputParameters.hostApiSpecificStreamInfo = NULL;
+    AUDIO.System.sampleRate = sample_rate;
 
     // Open the audio stream
     err = Pa_OpenStream(&AUDIO.System.stream,
                         NULL,                               // No input
                         &AUDIO.System.outputParameters,     // Output parameters
-                        AUDIO_DEVICE_SAMPLE_RATE,          // Sample rate
+                        sample_rate,          // Sample rate
                         paFramesPerBufferUnspecified,      // Frames per buffer (let PortAudio decide)
                         paClipOff,                         // No clipping
                         port_audio_callback,                 // Callback function
@@ -390,7 +391,7 @@ void init_audio_device(PaHostApiIndex host_api)
     TRACELOG(LOG_INFO, "    > Device:        %s", deviceInfo->name);
     TRACELOG(LOG_INFO, "    > Format:        %s", "Float32");
     TRACELOG(LOG_INFO, "    > Channels:      %d", AUDIO_DEVICE_CHANNELS);
-    TRACELOG(LOG_INFO, "    > Sample rate:   %d", AUDIO_DEVICE_SAMPLE_RATE);
+    TRACELOG(LOG_INFO, "    > Sample rate:   %f", AUDIO.System.sampleRate);
     TRACELOG(LOG_INFO, "    > Latency:       %f ms", AUDIO.System.outputParameters.suggestedLatency * 1000.0);
 }
 
@@ -657,13 +658,13 @@ sound load_sound_from_wave(wave wave) {
     struct wave resampled_wave = { 0 };
     bool is_resampled = false;
 
-    if (wave.sampleRate != AUDIO_DEVICE_SAMPLE_RATE) {
-        TRACELOG(LOG_INFO, "AUDIO: Resampling wave from %d Hz to %d Hz", wave.sampleRate, AUDIO_DEVICE_SAMPLE_RATE);
+    if (wave.sampleRate != AUDIO.System.sampleRate) {
+        TRACELOG(LOG_INFO, "AUDIO: Resampling wave from %d Hz to %f Hz", wave.sampleRate, AUDIO.System.sampleRate);
 
         SRC_DATA src_data;
         src_data.data_in = wave.data;
         src_data.input_frames = wave.frameCount;
-        src_data.src_ratio = (double)AUDIO_DEVICE_SAMPLE_RATE / wave.sampleRate;
+        src_data.src_ratio = AUDIO.System.sampleRate / wave.sampleRate;
         src_data.output_frames = (sf_count_t)(wave.frameCount * src_data.src_ratio);
 
         resampled_wave.data = calloc(src_data.output_frames * wave.channels, sizeof(float));
@@ -681,7 +682,7 @@ sound load_sound_from_wave(wave wave) {
         }
 
         resampled_wave.frameCount = src_data.output_frames_gen;
-        resampled_wave.sampleRate = AUDIO_DEVICE_SAMPLE_RATE;
+        resampled_wave.sampleRate = AUDIO.System.sampleRate;
         resampled_wave.channels = wave.channels;
         resampled_wave.sampleSize = wave.sampleSize;
         is_resampled = true;
@@ -790,7 +791,7 @@ audio_stream load_audio_stream(unsigned int sample_rate, unsigned int sample_siz
     stream.channels = channels;
 
     // Pass 1 to indicate this is a streaming buffer
-    stream.buffer = load_audio_buffer(AUDIO_DEVICE_CHANNELS, AUDIO_DEVICE_SAMPLE_RATE, 1);
+    stream.buffer = load_audio_buffer(AUDIO_DEVICE_CHANNELS, AUDIO.System.sampleRate, 1);
     return stream;
 }
 
@@ -884,8 +885,8 @@ music load_music_stream(const char* filename) {
         }
         ctx->snd_file = snd_file;
 
-        if (sf_info.samplerate != AUDIO_DEVICE_SAMPLE_RATE) {
-            TRACELOG(LOG_INFO, "AUDIO: Resampling music from %d Hz to %d Hz", sf_info.samplerate, AUDIO_DEVICE_SAMPLE_RATE);
+        if (sf_info.samplerate != AUDIO.System.sampleRate) {
+            TRACELOG(LOG_INFO, "AUDIO: Resampling music from %d Hz to %f Hz", sf_info.samplerate, AUDIO.System.sampleRate);
             int error;
             ctx->resampler = src_new(SRC_SINC_FASTEST, sf_info.channels, &error);
             if (ctx->resampler == NULL) {
@@ -894,7 +895,7 @@ music load_music_stream(const char* filename) {
                 sf_close(snd_file);
                 return music;
             }
-            ctx->src_ratio = (double)AUDIO_DEVICE_SAMPLE_RATE / sf_info.samplerate;
+            ctx->src_ratio = AUDIO.System.sampleRate / sf_info.samplerate;
         } else {
             ctx->resampler = NULL;
             ctx->src_ratio = 1.0;
@@ -902,7 +903,7 @@ music load_music_stream(const char* filename) {
 
         music.ctxData = ctx;
         int sample_size = 32; // We will work with floats internally
-        music.stream = load_audio_stream(AUDIO_DEVICE_SAMPLE_RATE, sample_size, sf_info.channels);
+        music.stream = load_audio_stream(AUDIO.System.sampleRate, sample_size, sf_info.channels);
         music.frameCount = (unsigned int)(sf_info.frames * ctx->src_ratio);
         music_loaded = true;
     }

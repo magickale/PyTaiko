@@ -30,7 +30,6 @@ right_kat = [12]
 
 [audio]
 device_type = 0
-buffer_size = 16
 sample_rate = -1
 exclusive = false
 

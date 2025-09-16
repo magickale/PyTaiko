@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <portaudio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,7 +79,7 @@ void list_host_apis(void);
  * Initialize the audio device and system
  * Must be called before using any other audio functions
  */
-void init_audio_device(void);
+void init_audio_device(PaHostApiIndex host_api, double sample_rate);
 
 /**
  * Close the audio device and cleanup resources

@@ -44,7 +44,7 @@ ffi.cdef("""
 
     // Device management
     void list_host_apis(void);
-    void init_audio_device(PaHostApiIndex host_api);
+    void init_audio_device(PaHostApiIndex host_api, double sample_rate);
     void close_audio_device(void);
     bool is_audio_device_ready(void);
     void set_master_volume(float volume);
@@ -128,9 +128,11 @@ except OSError as e:
     raise
 
 class AudioEngine:
-    def __init__(self, device_type: int):
+    def __init__(self, device_type: int, sample_rate: float):
         self.device_type = device_type
-        self.target_sample_rate = 44100
+        if sample_rate == -1:
+            sample_rate = 44100
+        self.target_sample_rate = sample_rate
         self.sounds = {}  # sound_id -> sound struct
         self.music_streams = {}  # music_id -> music struct
         self.sound_counter = 0
@@ -143,7 +145,7 @@ class AudioEngine:
     def init_audio_device(self) -> bool:
         """Initialize the audio device"""
         try:
-            lib.init_audio_device(self.device_type)
+            lib.init_audio_device(self.device_type, self.target_sample_rate)
             self.audio_device_ready = lib.is_audio_device_ready()
             if self.audio_device_ready:
                 print("Audio device initialized successfully")
@@ -358,4 +360,4 @@ class AudioEngine:
         return 0.0
 
 # Create the global audio instance
-audio = AudioEngine(get_config()["audio"]["device_type"])
+audio = AudioEngine(get_config()["audio"]["device_type"], get_config()["audio"]["sample_rate"])
