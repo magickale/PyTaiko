@@ -140,13 +140,13 @@ class AudioEngine:
         self.audio_device_ready = False
 
     def list_host_apis(self):
-        lib.list_host_apis()
+        lib.list_host_apis() # type: ignore
 
     def init_audio_device(self) -> bool:
         """Initialize the audio device"""
         try:
-            lib.init_audio_device(self.device_type, self.target_sample_rate)
-            self.audio_device_ready = lib.is_audio_device_ready()
+            lib.init_audio_device(self.device_type, self.target_sample_rate) # type: ignore
+            self.audio_device_ready = lib.is_audio_device_ready() # type: ignore
             if self.audio_device_ready:
                 print("Audio device initialized successfully")
             return self.audio_device_ready
@@ -163,7 +163,7 @@ class AudioEngine:
             for music_id in list(self.music_streams.keys()):
                 self.unload_music_stream(music_id)
 
-            lib.close_audio_device()
+            lib.close_audio_device() # type: ignore
             self.audio_device_ready = False
             print("Audio device closed")
         except Exception as e:
@@ -171,24 +171,24 @@ class AudioEngine:
 
     def is_audio_device_ready(self) -> bool:
         """Check if audio device is ready"""
-        return lib.is_audio_device_ready()
+        return lib.is_audio_device_ready() # type: ignore
 
     def set_master_volume(self, volume: float) -> None:
         """Set master volume (0.0 to 1.0)"""
-        lib.set_master_volume(max(0.0, min(1.0, volume)))
+        lib.set_master_volume(max(0.0, min(1.0, volume))) # type: ignore
 
     def get_master_volume(self) -> float:
         """Get master volume"""
-        return lib.get_master_volume()
+        return lib.get_master_volume() # type: ignore
 
     # Sound management
     def load_sound(self, file_path: Path) -> str:
         """Load a sound file and return sound ID"""
         try:
             file_path_str = str(file_path).encode('utf-8')
-            sound = lib.load_sound(file_path_str)
+            sound = lib.load_sound(file_path_str) # type: ignore
 
-            if lib.is_sound_valid(sound):
+            if lib.is_sound_valid(sound): # type: ignore
                 sound_id = f"sound_{self.sound_counter}"
                 self.sounds[sound_id] = sound
                 self.sound_counter += 1
@@ -204,7 +204,7 @@ class AudioEngine:
     def unload_sound(self, sound_id: str) -> None:
         """Unload a sound"""
         if sound_id in self.sounds:
-            lib.unload_sound(self.sounds[sound_id])
+            lib.unload_sound(self.sounds[sound_id]) # type: ignore
             del self.sounds[sound_id]
 
     def unload_all_sounds(self) -> None:
@@ -215,44 +215,44 @@ class AudioEngine:
     def play_sound(self, sound_id: str) -> None:
         """Play a sound"""
         if sound_id in self.sounds:
-            lib.play_sound(self.sounds[sound_id])
+            lib.play_sound(self.sounds[sound_id]) # type: ignore
 
     def stop_sound(self, sound_id: str) -> None:
         """Stop a sound"""
         if sound_id in self.sounds:
-            lib.stop_sound(self.sounds[sound_id])
+            lib.stop_sound(self.sounds[sound_id]) # type: ignore
 
     def pause_sound(self, sound_id: str) -> None:
         """Pause a sound"""
         if sound_id in self.sounds:
-            lib.pause_sound(self.sounds[sound_id])
+            lib.pause_sound(self.sounds[sound_id]) # type: ignore
 
     def resume_sound(self, sound_id: str) -> None:
         """Resume a sound"""
         if sound_id in self.sounds:
-            lib.resume_sound(self.sounds[sound_id])
+            lib.resume_sound(self.sounds[sound_id]) # type: ignore
 
     def is_sound_valid(self, sound_id: str) -> bool:
         """Check if sound is valid"""
         if sound_id in self.sounds:
-            return lib.is_sound_valid(self.sounds[sound_id])
+            return lib.is_sound_valid(self.sounds[sound_id]) # type: ignore
         return False
 
     def is_sound_playing(self, sound_id: str) -> bool:
         """Check if sound is playing"""
         if sound_id in self.sounds:
-            return lib.is_sound_playing(self.sounds[sound_id])
+            return lib.is_sound_playing(self.sounds[sound_id]) # type: ignore
         return False
 
     def set_sound_volume(self, sound_id: str, volume: float) -> None:
         """Set sound volume"""
         if sound_id in self.sounds:
-            lib.set_sound_volume(self.sounds[sound_id], max(0.0, volume))
+            lib.set_sound_volume(self.sounds[sound_id], max(0.0, volume)) # type: ignore
 
     def set_sound_pan(self, sound_id: str, pan: float) -> None:
         """Set sound pan (0.0 = left, 0.5 = center, 1.0 = right)"""
         if sound_id in self.sounds:
-            lib.set_sound_pan(self.sounds[sound_id], max(0.0, min(1.0, pan)))
+            lib.set_sound_pan(self.sounds[sound_id], max(0.0, min(1.0, pan))) # type: ignore
 
     def normalize_sound(self, sound_id: str, rms: float) -> None:
         """Normalize sound - Note: This would need to be implemented in C"""
@@ -265,9 +265,9 @@ class AudioEngine:
         """Load a music stream and return music ID"""
         try:
             file_path_str = str(file_path).encode('utf-8')
-            music = lib.load_music_stream(file_path_str)
+            music = lib.load_music_stream(file_path_str) # type: ignore
 
-            if lib.is_music_valid(music):
+            if lib.is_music_valid(music): # type: ignore
                 music_id = f"music_{self.music_counter}"
                 self.music_streams[music_id] = music
                 self.music_counter += 1
@@ -288,60 +288,61 @@ class AudioEngine:
     def unload_music_stream(self, music_id: str) -> None:
         """Unload a music stream"""
         if music_id in self.music_streams:
-            lib.unload_music_stream(self.music_streams[music_id])
+            lib.unload_music_stream(self.music_streams[music_id]) # type: ignore
             del self.music_streams[music_id]
 
     def is_music_valid(self, music_id: str) -> bool:
         """Check if music is valid"""
         if music_id in self.music_streams:
-            return lib.is_music_valid(self.music_streams[music_id])
+            return lib.is_music_valid(self.music_streams[music_id]) # type: ignore
         return False
 
     def play_music_stream(self, music_id: str) -> None:
         """Play a music stream"""
         if music_id in self.music_streams:
-            lib.play_music_stream(self.music_streams[music_id])
+            lib.seek_music_stream(self.music_streams[music_id], 0) # type: ignore
+            lib.play_music_stream(self.music_streams[music_id]) # type: ignore
 
     def stop_music_stream(self, music_id: str) -> None:
         """Stop a music stream"""
         if music_id in self.music_streams:
-            lib.stop_music_stream(self.music_streams[music_id])
+            lib.stop_music_stream(self.music_streams[music_id]) # type: ignore
 
     def pause_music_stream(self, music_id: str) -> None:
         """Pause a music stream"""
         if music_id in self.music_streams:
-            lib.pause_music_stream(self.music_streams[music_id])
+            lib.pause_music_stream(self.music_streams[music_id]) # type: ignore
 
     def resume_music_stream(self, music_id: str) -> None:
         """Resume a music stream"""
         if music_id in self.music_streams:
-            lib.resume_music_stream(self.music_streams[music_id])
+            lib.resume_music_stream(self.music_streams[music_id]) # type: ignore
 
     def is_music_stream_playing(self, music_id: str) -> bool:
         """Check if music stream is playing"""
         if music_id in self.music_streams:
-            return lib.is_music_stream_playing(self.music_streams[music_id])
+            return lib.is_music_stream_playing(self.music_streams[music_id]) # type: ignore
         return False
 
     def seek_music_stream(self, music_id: str, position: float) -> None:
         """Seek music stream to position in seconds"""
         if music_id in self.music_streams:
-            lib.seek_music_stream(self.music_streams[music_id], position)
+            lib.seek_music_stream(self.music_streams[music_id], position) # type: ignore
 
     def update_music_stream(self, music_id: str) -> None:
         """Update music stream (fill buffers)"""
         if music_id in self.music_streams:
-            lib.update_music_stream(self.music_streams[music_id])
+            lib.update_music_stream(self.music_streams[music_id]) # type: ignore
 
     def set_music_volume(self, music_id: str, volume: float) -> None:
         """Set music volume"""
         if music_id in self.music_streams:
-            lib.set_music_volume(self.music_streams[music_id], max(0.0, min(1.0, volume)))
+            lib.set_music_volume(self.music_streams[music_id], max(0.0, min(1.0, volume))) # type: ignore
 
     def set_music_pan(self, music_id: str, pan: float) -> None:
         """Set music pan"""
         if music_id in self.music_streams:
-            lib.set_music_pan(self.music_streams[music_id], max(0.0, min(1.0, pan)))
+            lib.set_music_pan(self.music_streams[music_id], max(0.0, min(1.0, pan))) # type: ignore
 
     def normalize_music_stream(self, music_id: str, rms: float) -> None:
         """Normalize music stream - would need C implementation"""
@@ -350,14 +351,15 @@ class AudioEngine:
     def get_music_time_length(self, music_id: str) -> float:
         """Get total music length in seconds"""
         if music_id in self.music_streams:
-            return lib.get_music_time_length(self.music_streams[music_id])
+            return lib.get_music_time_length(self.music_streams[music_id]) # type: ignore
         return 0.0
 
     def get_music_time_played(self, music_id: str) -> float:
         """Get current music position in seconds"""
         if music_id in self.music_streams:
-            return lib.get_music_time_played(self.music_streams[music_id])
+            return lib.get_music_time_played(self.music_streams[music_id]) # type: ignore
         return 0.0
 
 # Create the global audio instance
 audio = AudioEngine(get_config()["audio"]["device_type"], get_config()["audio"]["sample_rate"])
+audio.set_master_volume(0.75)
