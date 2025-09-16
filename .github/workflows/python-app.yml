@@ -67,7 +67,8 @@ jobs:
             -DPA_USE_WASAPI=ON \
             -DPA_BUILD_SHARED=ON \
             -DPA_BUILD_STATIC=ON \
-            -DCMAKE_INSTALL_PREFIX=/mingw64
+            -DCMAKE_INSTALL_PREFIX=/mingw64 \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
           # Build and install (this will fail if ASIO SDK is missing, but continue anyway)
           make -j$(nproc) || echo "Build failed, likely due to missing ASIO SDK - continuing with system PortAudio"
