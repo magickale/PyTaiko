@@ -25,7 +25,6 @@ jobs:
           brew update
           brew install portaudio libsndfile libsamplerate pkg-config
 
-      # Use MSYS2 for Windows audio library build with ASIO support
       - name: Set up MSYS2 (Windows)
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
@@ -34,7 +33,6 @@ jobs:
           install: >-
             base-devel
             mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-portaudio
             mingw-w64-x86_64-libsndfile
             mingw-w64-x86_64-libsamplerate
             mingw-w64-x86_64-flac
@@ -46,83 +44,41 @@ jobs:
             mingw-w64-x86_64-speex
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-pkg-config
+          # Note: Removed mingw-w64-x86_64-portaudio since we're using our own
 
-      # Download individual PortAudio files (Windows only)
-      - name: Download PortAudio individual files (Windows)
+      - name: Verify local PortAudio library (Windows)
         if: runner.os == 'Windows'
         shell: msys2 {0}
+        working-directory: libs/audio
         run: |
-          # Create directory structure for PortAudio
-          mkdir -p /mingw64/portaudio-custom/{include,lib,bin}
-          cd /mingw64/portaudio-custom
+          echo "=== Checking local PortAudio library ==="
 
-          # Download header files
-          echo "Downloading PortAudio headers..."
-          curl -L -o include/portaudio.h https://raw.githubusercontent.com/PortAudio/portaudio/master/include/portaudio.h
+          # Check if the static library exists
+          if [ -f "libportaudio.a" ]; then
+            echo "✓ Found libportaudio.a"
+            ls -la libportaudio.a
 
-          # Download Windows-specific DLL and import library
-          # Note: You'll need to find actual URLs for these files
-          echo "Downloading PortAudio binaries..."
+            # Check what symbols are in the library
+            echo "=== Library symbols (sample) ==="
+            nm libportaudio.a | grep -E "(Pa_|ASIO)" | head -10 || echo "No PortAudio symbols found"
 
-          # Option 1: From a release that provides individual files
-          curl -L -o lib/libportaudio.dll.a https://example.com/path/to/libportaudio.dll.a
-          curl -L -o lib/portaudio.lib https://example.com/path/to/portaudio.lib  # MSVC-style
-          curl -L -o bin/portaudio_x64.dll https://example.com/path/to/portaudio_x64.dll
+            # Check for ASIO support specifically
+            nm libportaudio.a | grep -i asio && echo "✓ ASIO symbols found!" || echo "⚠ No ASIO symbols found"
 
-          # Option 2: Alternative sources (adjust URLs as needed)
-          # curl -L -o lib/libportaudio.a https://github.com/some-repo/portaudio-static/releases/download/v19.7.0/libportaudio.a
-          # curl -L -o bin/portaudio.dll https://github.com/some-repo/portaudio-binaries/releases/download/v19.7.0/portaudio.dll
-
-          # Verify downloads
-          echo "=== Downloaded files ==="
-          find . -type f -ls
-
-      - name: Set up PortAudio build environment (Windows)
-        if: runner.os == 'Windows'
-        shell: msys2 {0}
-        run: |
-          # Create pkg-config file for custom PortAudio
-          mkdir -p /mingw64/lib/pkgconfig
-          cat > /mingw64/lib/pkgconfig/portaudio-custom.pc << EOF
-          prefix=/mingw64/portaudio-custom
-          exec_prefix=\${prefix}
-          libdir=\${prefix}/lib
-          includedir=\${prefix}/include
-
-          Name: PortAudio
-          Description: Portable cross-platform Audio API
-          Version: 19.7.0
-          Libs: -L\${libdir} -lportaudio -lole32 -luuid -lwinmm -ldsound -lwsock32 -lsetupapi
-          Cflags: -I\${includedir}
-          EOF
-
-          # Or set environment variables directly
-          export PORTAUDIO_INCLUDE_DIR="/mingw64/portaudio-custom/include"
-          export PORTAUDIO_LIB_DIR="/mingw64/portaudio-custom/lib"
-          export PORTAUDIO_BIN_DIR="/mingw64/portaudio-custom/bin"
-
-      - name: Verify PortAudio setup (Windows)
-        if: runner.os == 'Windows'
-        shell: msys2 {0}
-        run: |
-          echo "=== Verifying PortAudio setup ==="
-
-          # Check header file
-          if [ -f "/mingw64/portaudio-custom/include/portaudio.h" ]; then
-            echo "✓ Header file found"
-            grep -i "asio\|version" /mingw64/portaudio-custom/include/portaudio.h | head -5
           else
-            echo "✗ Header file missing"
+            echo "✗ libportaudio.a not found!"
+            echo "Contents of libs/audio directory:"
+            ls -la
+            exit 1
           fi
 
-          # Check library files
-          ls -la /mingw64/portaudio-custom/lib/ || echo "Library directory not found"
-
-          # Check DLL
-          ls -la /mingw64/portaudio-custom/bin/ || echo "Binary directory not found"
-
-          # Test if we can find ASIO symbols (if available)
-          find /mingw64/portaudio-custom -name "*.dll" -o -name "*.a" -exec nm {} \; 2>/dev/null | grep -i asio && echo "ASIO symbols found!" || echo "No ASIO symbols found"
+          # Check if we have portaudio.h header
+          if [ -f "portaudio.h" ]; then
+            echo "✓ Found portaudio.h"
+            grep -i "version\|asio" portaudio.h | head -3
+          else
+            echo "⚠ portaudio.h not found - may need to specify include path"
+          fi
 
       - name: Build static audio library (Windows)
         if: runner.os == 'Windows'
@@ -132,55 +88,61 @@ jobs:
           # Clean previous builds
           make clean 2>/dev/null || echo "No previous build to clean"
 
-          # Build with custom PortAudio
+          # Build with local PortAudio static library
+          echo "Building with local libportaudio.a"
+
+          # Set compiler flags
           export CFLAGS="$CFLAGS -DPA_USE_ASIO=1"
 
-          # Method 1: Use pkg-config with custom .pc file
-          if pkg-config --exists portaudio-custom; then
-            echo "Building with custom pkg-config PortAudio"
-            make all PORTAUDIO_CFLAGS="$(pkg-config --cflags portaudio-custom)" PORTAUDIO_LIBS="$(pkg-config --libs portaudio-custom)"
+          # Build using the local static library
+          # Point to current directory for both the library and headers
+          make all \
+            PORTAUDIO_CFLAGS="-I." \
+            PORTAUDIO_LIBS="./libportaudio.a -lole32 -luuid -lwinmm -ldsound -lwsock32 -lsetupapi"
 
-          # Method 2: Use environment variables
-          elif [ -d "/mingw64/portaudio-custom" ]; then
-            echo "Building with custom PortAudio paths"
-            make all \
-              PORTAUDIO_CFLAGS="-I/mingw64/portaudio-custom/include" \
-              PORTAUDIO_LIBS="-L/mingw64/portaudio-custom/lib -lportaudio -lole32 -luuid -lwinmm -ldsound -lwsock32 -lsetupapi"
+          # Alternative if your Makefile expects different variable names:
+          # make all \
+          #   CFLAGS="-I. $CFLAGS" \
+          #   LDFLAGS="./libportaudio.a -lole32 -luuid -lwinmm -ldsound -lwsock32 -lsetupapi"
 
-          # Method 3: Fallback to system PortAudio
-          else
-            echo "Falling back to system PortAudio"
-            if pkg-config --exists portaudio; then
-              make all PORTAUDIO_CFLAGS="$(pkg-config --cflags portaudio)" PORTAUDIO_LIBS="$(pkg-config --libs portaudio)"
+          echo "=== Build completed ==="
+          ls -la *.dll *.a 2>/dev/null || echo "No output files found"
+
+      - name: Verify build output (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        working-directory: libs/audio
+        run: |
+          echo "=== Verifying build output ==="
+
+          # Check what was built
+          ls -la libaudio.dll 2>/dev/null && echo "✓ libaudio.dll created" || echo "✗ libaudio.dll not found"
+
+          # Check dependencies of the built DLL
+          if [ -f "libaudio.dll" ]; then
+            echo "=== DLL dependencies ==="
+            ldd libaudio.dll || objdump -p libaudio.dll | grep "DLL Name"
+
+            # Since we're statically linking PortAudio, it should NOT show portaudio.dll as dependency
+            if ldd libaudio.dll | grep -i portaudio; then
+              echo "⚠ WARNING: Still depends on external PortAudio DLL"
             else
-              make all PORTAUDIO_LIBS="-lportaudio -lole32 -luuid -lwinmm -ldsound -lwsock32 -lsetupapi"
+              echo "✓ PortAudio is statically linked (no external dependency)"
             fi
           fi
 
-          # Verify the build
-          make verify 2>/dev/null || echo "Verification step not available"
-
-      - name: Copy libraries and DLLs (Windows)
+      - name: Copy static DLL (Windows)
         if: runner.os == 'Windows'
         run: |
           mkdir -p build/lib
-
-          # Copy your built library
           cp libs/audio/libaudio.dll build/lib/
 
-          # Copy the custom PortAudio DLL if it exists
-          if [ -f "/mingw64/portaudio-custom/bin/portaudio.dll" ]; then
-            cp /mingw64/portaudio-custom/bin/portaudio.dll build/lib/
-            echo "✓ Custom PortAudio DLL copied"
-          elif [ -f "/mingw64/portaudio-custom/bin/portaudio_x64.dll" ]; then
-            cp /mingw64/portaudio-custom/bin/portaudio_x64.dll build/lib/
-            echo "✓ Custom PortAudio x64 DLL copied"
-          else
-            echo "⚠ No custom PortAudio DLL found - runtime may need system PortAudio"
-          fi
-
-          echo "Build output:"
+          echo "=== Final build output ==="
           ls -la build/lib/
+
+          # Verify final DLL
+          echo "=== Final DLL dependencies ==="
+          ldd build/lib/libaudio.dll || echo "Could not check dependencies"
         shell: bash
 
       # For Unix systems, also try static builds
