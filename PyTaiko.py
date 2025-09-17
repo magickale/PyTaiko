@@ -79,6 +79,8 @@ def main():
 
     ray.init_window(screen_width, screen_height, "PyTaiko")
     global_data.tex.load_screen_textures('global')
+    global_data.tex.load_zip('chara', 'chara_0')
+    global_data.tex.load_zip('chara', 'chara_1')
     if global_data.config["video"]["borderless"]:
         ray.toggle_borderless_windowed()
     if global_data.config["video"]["fullscreen"]:

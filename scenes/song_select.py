@@ -9,6 +9,7 @@ import pyray as ray
 
 from libs.animation import Animation, MoveAnimation
 from libs.audio import audio
+from libs.chara_2d import Chara2D
 from libs.global_objects import Nameplate, Indicator
 from libs.texture import tex
 from libs.tja import TJAParser, test_encodings
@@ -75,6 +76,7 @@ class SongSelectScreen:
             self.diff_sort_selector = None
             self.neiro_selector = None
             self.modifier_selector = None
+            self.chara = Chara2D(global_data.player_num - 1, 100)
             self.texture_index = SongBox.DEFAULT_INDEX
             self.last_texture_index = SongBox.DEFAULT_INDEX
             self.last_moved = get_current_ms()
@@ -352,17 +354,19 @@ class SongSelectScreen:
         ret_val = self.on_screen_start()
         if ret_val is not None:
             return ret_val
-        self.background_move.update(get_current_ms())
-        self.move_away.update(get_current_ms())
-        self.diff_fade_out.update(get_current_ms())
-        self.background_fade_change.update(get_current_ms())
-        self.text_fade_out.update(get_current_ms())
-        self.text_fade_in.update(get_current_ms())
-        self.ura_switch_animation.update(get_current_ms())
-        self.diff_selector_move_1.update(get_current_ms())
-        self.diff_selector_move_2.update(get_current_ms())
-        self.nameplate.update(get_current_ms())
-        self.indicator.update(get_current_ms())
+        current_time = get_current_ms()
+        self.background_move.update(current_time)
+        self.move_away.update(current_time)
+        self.diff_fade_out.update(current_time)
+        self.background_fade_change.update(current_time)
+        self.text_fade_out.update(current_time)
+        self.text_fade_in.update(current_time)
+        self.ura_switch_animation.update(current_time)
+        self.diff_selector_move_1.update(current_time)
+        self.diff_selector_move_2.update(current_time)
+        self.nameplate.update(current_time)
+        self.indicator.update(current_time)
+        self.chara.update(current_time, 100, False, False)
 
         if self.text_fade_out.is_finished:
             self.selected_song = True
@@ -470,11 +474,6 @@ class SongSelectScreen:
 
         tex.draw_texture('global', 'footer')
 
-        if self.nameplate.player_num == 1:
-            self.nameplate.draw(30, 640)
-        else:
-            self.nameplate.draw(950, 640)
-
         self.ura_switch_animation.draw()
 
         if self.state == State.BROWSING and self.navigator.items != []:
@@ -490,13 +489,34 @@ class SongSelectScreen:
         else:
             tex.draw_texture('global', 'song_select', fade=self.text_fade_out.attribute)
 
+        offset = 0
+        direction = 1
+        if self.neiro_selector is not None:
+            offset = self.neiro_selector.move.attribute
+            if self.neiro_selector.is_confirmed:
+                offset += -370
+            else:
+                offset *= -1
+        if self.modifier_selector is not None:
+            offset = self.modifier_selector.move.attribute
+            if self.modifier_selector.is_confirmed:
+                offset += -370
+            else:
+                offset *= -1
+        if self.nameplate.player_num == 1:
+            self.nameplate.draw(30, 640)
+            self.chara.draw(x=-50, y=410 + (offset*0.6))
+        else:
+            self.nameplate.draw(950, 640)
+            self.chara.draw(mirror=True, x=950, y=410 + (offset*0.6))
+
+        self.indicator.draw(410, 575)
+
         if self.neiro_selector is not None:
             self.neiro_selector.draw()
 
         if self.modifier_selector is not None:
             self.modifier_selector.draw()
-
-        self.indicator.draw(410, 575)
 
         if self.game_transition is not None:
             self.game_transition.draw()
@@ -1235,28 +1255,29 @@ class NeiroSelector:
             y = -370 + self.move.attribute
         else:
             y = -self.move.attribute
-        tex.draw_texture('neiro', 'background', y=y)
-        tex.draw_texture('neiro', f'{global_data.player_num}p', y=y)
-        tex.draw_texture('neiro', 'divisor', y=y)
-        tex.draw_texture('neiro', 'music_note', y=y, x=(self.move_sideways.attribute*self.direction), fade=self.fade_sideways.attribute)
-        tex.draw_texture('neiro', 'music_note', y=y, x=(self.direction*-100) + (self.move_sideways.attribute*self.direction), fade=1 - self.fade_sideways.attribute)
-        tex.draw_texture('neiro', 'blue_arrow', y=y, x=-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
-        tex.draw_texture('neiro', 'blue_arrow', y=y, x=200 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
+        x = (global_data.player_num - 1) * 800
+        tex.draw_texture('neiro', 'background', x=x, y=y)
+        tex.draw_texture('neiro', f'{global_data.player_num}p', x=x, y=y)
+        tex.draw_texture('neiro', 'divisor', x=x, y=y)
+        tex.draw_texture('neiro', 'music_note', y=y, x=x+(self.move_sideways.attribute*self.direction), fade=self.fade_sideways.attribute)
+        tex.draw_texture('neiro', 'music_note', y=y, x=x+(self.direction*-100) + (self.move_sideways.attribute*self.direction), fade=1 - self.fade_sideways.attribute)
+        tex.draw_texture('neiro', 'blue_arrow', y=y, x=x-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
+        tex.draw_texture('neiro', 'blue_arrow', y=y, x=x+200 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
 
         counter = str(self.selected_sound+1)
         total_width = len(counter) * 20
         for i in range(len(counter)):
-            tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * 20), y=y)
+            tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=x-(total_width // 2) + (i * 20), y=y)
 
         counter = str(len(self.sounds))
         total_width = len(counter) * 20
         for i in range(len(counter)):
-            tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=-(total_width // 2) + (i * 20) + 60, y=y)
+            tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=x-(total_width // 2) + (i * 20) + 60, y=y)
 
-        dest = ray.Rectangle(235 - (self.text.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text.texture.width, self.text.texture.height)
+        dest = ray.Rectangle(x+235 - (self.text.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text.texture.width, self.text.texture.height)
         self.text.draw(self.text.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.fade_sideways.attribute))
 
-        dest = ray.Rectangle((self.direction*-100) + 235 - (self.text_2.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text_2.texture.width, self.text_2.texture.height)
+        dest = ray.Rectangle(x+(self.direction*-100) + 235 - (self.text_2.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text_2.texture.width, self.text_2.texture.height)
         self.text_2.draw(self.text_2.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
 
 class ModifierSelector:
@@ -1392,18 +1413,19 @@ class ModifierSelector:
             move = self.move.attribute - 370
         else:
             move = -self.move.attribute
-        tex.draw_texture('modifier', 'top', y=move)
-        tex.draw_texture('modifier', f'{global_data.player_num}p', y=move)
-        tex.draw_texture('modifier', 'bottom', y=move + (len(self.mods)*50))
+        x = (global_data.player_num - 1) * 800
+        tex.draw_texture('modifier', 'top', y=move, x=x)
+        tex.draw_texture('modifier', f'{global_data.player_num}p', y=move, x=x)
+        tex.draw_texture('modifier', 'bottom', y=move + (len(self.mods)*50), x=x)
 
         for i in range(len(self.mods)):
-            tex.draw_texture('modifier', 'background', y=move + (i*50))
+            tex.draw_texture('modifier', 'background', y=move + (i*50), x=x)
             if i == self.current_mod_index:
-                tex.draw_texture('modifier', 'mod_bg_highlight', y=move + (i*50))
+                tex.draw_texture('modifier', 'mod_bg_highlight', y=move + (i*50), x=x)
             else:
-                tex.draw_texture('modifier', 'mod_bg', y=move + (i*50))
-            tex.draw_texture('modifier', 'mod_box', y=move + (i*50))
-            dest = ray.Rectangle(92, 819 + move + (i*50), self.text_name[i].texture.width, self.text_name[i].texture.height)
+                tex.draw_texture('modifier', 'mod_bg', y=move + (i*50), x=x)
+            tex.draw_texture('modifier', 'mod_box', y=move + (i*50), x=x)
+            dest = ray.Rectangle(92 + x, 819 + move + (i*50), self.text_name[i].texture.width, self.text_name[i].texture.height)
             self.text_name[i].draw(self.text_name[i].default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
 
             current_mod = self.mods[i]
@@ -1412,44 +1434,44 @@ class ModifierSelector:
 
             if current_mod.type is bool:
                 if current_value:
-                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
-                    x = 330 - (self.text_true.texture.width//2)
-                    y = 819 + move + (i*50)
-                    self._draw_animated_text(self.text_true, self.text_true_2, x, y, is_current_mod)
+                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50), x=x)
+                    text_x = 330 - (self.text_true.texture.width//2)
+                    text_y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_true, self.text_true_2, text_x + x, text_y, is_current_mod)
                 else:
-                    x = 330 - (self.text_false.texture.width//2)
-                    y = 819 + move + (i*50)
-                    self._draw_animated_text(self.text_false, self.text_false_2, x, y, is_current_mod)
+                    text_x = 330 - (self.text_false.texture.width//2)
+                    text_y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_false, self.text_false_2, text_x + x, text_y, is_current_mod)
             elif current_mod.name == 'speed':
-                x = 330 - (self.text_speed.texture.width//2)
-                y = 819 + move + (i*50)
-                self._draw_animated_text(self.text_speed, self.text_speed_2, x, y, is_current_mod)
+                text_x = 330 - (self.text_speed.texture.width//2)
+                text_y = 819 + move + (i*50)
+                self._draw_animated_text(self.text_speed, self.text_speed_2, text_x + x, text_y, is_current_mod)
 
                 if current_value >= 4.0:
-                    tex.draw_texture('modifier', 'mod_yonbai', y=move + (i*50))
+                    tex.draw_texture('modifier', 'mod_yonbai', x=x, y=move + (i*50))
                 elif current_value >= 3.0:
-                    tex.draw_texture('modifier', 'mod_sanbai', y=move + (i*50))
+                    tex.draw_texture('modifier', 'mod_sanbai', x=x, y=move + (i*50))
                 elif current_value > 1.0:
-                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
+                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], x=x, y=move + (i*50))
             elif current_mod.name == 'random':
                 if current_value == 1:
-                    x = 330 - (self.text_kimagure.texture.width//2)
-                    y = 819 + move + (i*50)
-                    self._draw_animated_text(self.text_kimagure, self.text_kimagure_2, x, y, is_current_mod)
-                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], y=move + (i*50))
+                    text_x = 330 - (self.text_kimagure.texture.width//2)
+                    text_y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_kimagure, self.text_kimagure_2, text_x + x, text_y, is_current_mod)
+                    tex.draw_texture('modifier', ModifierSelector.TEX_MAP[self.mods[i].name], x=x, y=move + (i*50))
                 elif current_value == 2:
-                    x = 330 - (self.text_detarame.texture.width//2)
-                    y = 819 + move + (i*50)
-                    self._draw_animated_text(self.text_detarame, self.text_detarame_2, x, y, is_current_mod)
-                    tex.draw_texture('modifier', 'mod_detarame', y=move + (i*50))
+                    text_x = 330 - (self.text_detarame.texture.width//2)
+                    text_y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_detarame, self.text_detarame_2, text_x + x, text_y, is_current_mod)
+                    tex.draw_texture('modifier', 'mod_detarame', x=x, y=move + (i*50))
                 else:
-                    x = 330 - (self.text_false.texture.width//2)
-                    y = 819 + move + (i*50)
-                    self._draw_animated_text(self.text_false, self.text_false_2, x, y, is_current_mod)
+                    text_x = 330 - (self.text_false.texture.width//2)
+                    text_y = 819 + move + (i*50)
+                    self._draw_animated_text(self.text_false, self.text_false_2, text_x + x, text_y, is_current_mod)
 
             if i == self.current_mod_index:
-                tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
-                tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=110 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
+                tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=x-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
+                tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=x+110 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
 
 class ScoreHistory:
     def __init__(self, scores: dict[int, tuple[int, int, int, int]], current_ms):

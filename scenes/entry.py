@@ -3,6 +3,7 @@ from pathlib import Path
 import pyray as ray
 
 from libs.audio import audio
+from libs.chara_2d import Chara2D
 from libs.global_objects import Nameplate, Indicator
 from libs.texture import tex
 from libs.utils import (
@@ -55,6 +56,7 @@ class EntryScreen:
             self.cloud_fade = tex.get_animation(8)
             self.nameplate_fadein = tex.get_animation(12)
             self.side_select_fade.start()
+            self.chara = Chara2D(0, 100)
             audio.play_sound(self.bgm)
 
     def on_screen_end(self, next_screen: str):
@@ -85,6 +87,10 @@ class EntryScreen:
                 self.nameplate = Nameplate(plate_info['name'], plate_info['title'], round((self.side/3) + 1), plate_info['dan'], plate_info['gold'])
                 self.nameplate_fadein.start()
                 self.state = State.SELECT_MODE
+                if self.side == 2:
+                    self.chara = Chara2D(1, 100)
+                else:
+                    self.chara = Chara2D(0, 100)
                 audio.play_sound(self.sound_don)
             if is_l_kat_pressed():
                 audio.play_sound(self.sound_kat)
@@ -105,19 +111,21 @@ class EntryScreen:
 
     def update(self):
         self.on_screen_start()
-        self.side_select_fade.update(get_current_ms())
-        self.bg_flicker.update(get_current_ms())
-        self.drum_move_1.update(get_current_ms())
-        self.drum_move_2.update(get_current_ms())
-        self.drum_move_3.update(get_current_ms())
-        self.cloud_resize.update(get_current_ms())
-        self.cloud_texture_change.update(get_current_ms())
-        self.cloud_fade.update(get_current_ms())
-        self.cloud_resize_loop.update(get_current_ms())
-        self.box_manager.update(get_current_ms())
-        self.nameplate_fadein.update(get_current_ms())
-        self.nameplate.update(get_current_ms())
-        self.indicator.update(get_current_ms())
+        current_time = get_current_ms()
+        self.side_select_fade.update(current_time)
+        self.bg_flicker.update(current_time)
+        self.drum_move_1.update(current_time)
+        self.drum_move_2.update(current_time)
+        self.drum_move_3.update(current_time)
+        self.cloud_resize.update(current_time)
+        self.cloud_texture_change.update(current_time)
+        self.cloud_fade.update(current_time)
+        self.cloud_resize_loop.update(current_time)
+        self.box_manager.update(current_time)
+        self.nameplate_fadein.update(current_time)
+        self.nameplate.update(current_time)
+        self.indicator.update(current_time)
+        self.chara.update(current_time, 100, False, False)
         if self.box_manager.is_finished():
             return self.on_screen_end(self.box_manager.selected_box())
         return self.handle_input()
@@ -152,6 +160,8 @@ class EntryScreen:
 
         tex.draw_texture('side_select', 'question', fade=fade)
 
+        self.chara.draw(480, 240)
+
         tex.draw_texture('side_select', '1P', fade=fade)
         tex.draw_texture('side_select', 'cancel', fade=fade)
         tex.draw_texture('side_select', '2P', fade=fade)
@@ -181,6 +191,10 @@ class EntryScreen:
         scale = self.cloud_resize.attribute
         if self.cloud_resize.is_finished:
             scale = max(1, self.cloud_resize_loop.attribute)
+        if self.side == 2:
+            self.chara.draw(move_x + offset + 130, 570 + move_y, mirror=True)
+        else:
+            self.chara.draw(move_x + offset + 170, 570 + move_y)
         tex.draw_texture('side_select', 'cloud', x=move_x + offset, y=move_y, frame=self.cloud_texture_change.attribute, fade=self.cloud_fade.attribute, scale=scale, center=True)
 
     def draw_mode_select(self):

@@ -51,8 +51,6 @@ class Background:
         self.renda.add_renda()
 
     def update(self, current_time_ms: float, bpm: float, gauge):
-        is_clear = gauge.gauge_length > gauge.clear_start[min(gauge.difficulty, 3)]
-        is_rainbow = gauge.gauge_length == gauge.gauge_max
         clear_threshold = gauge.clear_start[min(gauge.difficulty, 3)]
         if gauge.gauge_length < clear_threshold:
             current_milestone = min(self.max_dancers - 1, int(gauge.gauge_length / (clear_threshold / self.max_dancers)))
@@ -61,12 +59,12 @@ class Background:
         if current_milestone > self.last_milestone and current_milestone < self.max_dancers:
             self.dancer.add_dancer()
             self.last_milestone = current_milestone
-        if not self.is_clear and is_clear:
+        if not self.is_clear and gauge.is_clear:
             self.bg_fever.start()
-        if not self.is_rainbow and is_rainbow and self.fever is not None:
+        if not self.is_rainbow and gauge.is_rainbow and self.fever is not None:
             self.fever.start()
-        self.is_clear = is_clear
-        self.is_rainbow = is_rainbow
+        self.is_clear = gauge.is_clear
+        self.is_rainbow = gauge.is_rainbow
         self.don_bg.update(current_time_ms, self.is_clear)
         self.bg_normal.update(current_time_ms)
         self.bg_fever.update(current_time_ms)

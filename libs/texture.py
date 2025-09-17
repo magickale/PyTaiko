@@ -98,6 +98,9 @@ class TextureWrapper:
 
     def load_zip(self, screen_name: str, subset: str):
         zip = (self.graphics_path / screen_name / subset).with_suffix('.zip')
+        if screen_name in self.textures and subset in self.textures[screen_name]:
+            print(screen_name, subset)
+            return
         with zipfile.ZipFile(zip, 'r') as zip_ref:
             if 'texture.json' not in zip_ref.namelist():
                 raise Exception(f"texture.json file missing from {zip}")

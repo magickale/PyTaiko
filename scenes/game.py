@@ -10,6 +10,7 @@ import pyray as ray
 from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
+from libs.chara_2d import Chara2D
 from libs.global_objects import Nameplate
 from libs.texture import tex
 from libs.tja import (
@@ -164,7 +165,7 @@ class GameScreen:
             self.movie.update()
         else:
             if len(self.player_1.current_bars) > 0:
-                self.bpm = self.player_1.current_bars[0].bpm
+                self.bpm = self.player_1.bpm
             if self.background is not None:
                 self.background.update(current_time, self.bpm, self.player_1.gauge)
 
@@ -240,6 +241,7 @@ class Player:
         self.is_balloon = False
         self.curr_balloon_count = 0
         self.balloon_index = 0
+        self.bpm = self.play_notes[0].bpm if self.play_notes else 120
 
         #Score management
         self.good_count = 0
@@ -264,6 +266,7 @@ class Player:
         self.score_counter = ScoreCounter(self.score)
         plate_info = global_data.config['nameplate']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
+        self.chara = Chara2D(player_number - 1, self.bpm)
 
         self.input_log: dict[float, tuple] = dict()
 
@@ -397,6 +400,8 @@ class Player:
 
         if note.type < 7:
             self.combo += 1
+            if self.combo % 10 == 0:
+                self.chara.set_animation('10_combo')
             if self.combo > self.max_combo:
                 self.max_combo = self.combo
 
@@ -521,9 +526,11 @@ class Player:
 
     def balloon_manager(self, current_time: float):
         if self.balloon_anim is not None:
+            self.chara.set_animation('balloon_popping')
             self.balloon_anim.update(current_time, self.curr_balloon_count, not self.is_balloon)
             if self.balloon_anim.is_finished:
                 self.balloon_anim = None
+                self.chara.set_animation('balloon_pop')
         if self.kusudama_anim is not None:
             self.kusudama_anim.update(current_time, not self.is_balloon)
             self.kusudama_anim.update_count(self.curr_balloon_count)
@@ -617,6 +624,9 @@ class Player:
         self.handle_input(game_screen, current_time)
         self.nameplate.update(current_time)
         self.gauge.update(current_time)
+        if self.play_notes:
+            self.bpm = self.play_notes[0].bpm
+        self.chara.update(current_time, self.bpm, self.gauge.is_clear, self.gauge.is_rainbow)
 
     def draw_drumroll(self, current_ms: float, head: Drumroll, current_eighth: int):
         start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
@@ -668,13 +678,7 @@ class Player:
         if not self.current_notes_draw:
             return
 
-        # Cache eighth calculations
-        if self.current_bars:
-            bpm = self.current_bars[0].bpm
-        else:
-            bpm = self.current_notes_draw[0].bpm
-
-        eighth_in_ms = 0 if bpm == 0 else (60000 * 4 / bpm) / 8
+        eighth_in_ms = 0 if self.bpm == 0 else (60000 * 4 / self.bpm) / 8
         current_eighth = 0
         if self.combo >= 50 and eighth_in_ms != 0:
             current_eighth = int((current_ms - start_ms) // eighth_in_ms)
@@ -721,7 +725,6 @@ class Player:
         tex.draw_texture('lane', 'lane_hit_circle')
         for anim in self.draw_judge_list:
             anim.draw()
-
         current_ms = game_screen.current_ms
         self.draw_bars(current_ms)
         self.draw_notes(current_ms, game_screen.start_ms)
@@ -738,6 +741,7 @@ class Player:
         if not global_data.modifiers.auto:
             self.nameplate.draw(-62, 285)
         self.draw_modifiers()
+        self.chara.draw()
         if self.drumroll_counter is not None:
             self.drumroll_counter.draw()
         for anim in self.draw_arc_list:
@@ -1047,7 +1051,7 @@ class BalloonAnimation:
             tex.draw_texture('balloon', 'pop', frame=7, color=self.color)
         elif self.balloon_count >= 1:
             balloon_index = min(6, (self.balloon_count - 1) * 6 // self.balloon_total)
-            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color)
+            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color, index=global_data.player_num-1)
         if self.balloon_count > 0:
             tex.draw_texture('balloon', 'bubble')
             counter = str(max(0, self.balloon_total - self.balloon_count + 1))
@@ -1335,6 +1339,8 @@ class Gauge:
         self.clear_start = [68, 68, 68, 68]
         self.gauge_max = 87
         self.level = min(10, level)
+        self.is_clear = False
+        self.is_rainbow = False
         self.table = [
             [
                 None,
@@ -1404,6 +1410,8 @@ class Gauge:
             self.gauge_length = 0
 
     def update(self, current_ms: float):
+        self.is_clear = self.gauge_length > self.clear_start[min(self.difficulty, 3)]
+        self.is_rainbow = self.gauge_length == self.gauge_max
         if self.gauge_length == 87 and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
             self.rainbow_fade_in.start()

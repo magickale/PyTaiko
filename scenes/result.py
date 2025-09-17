@@ -5,6 +5,7 @@ from raylib import SHADER_UNIFORM_FLOAT
 
 from libs import utils
 from libs.audio import audio
+from libs.chara_2d import Chara2D
 from libs.global_objects import Nameplate
 from libs.texture import tex
 from libs.utils import (
@@ -57,6 +58,7 @@ class ResultScreen:
             self.high_score_indicator = None
             plate_info = global_data.config['nameplate']
             self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
+            self.chara = Chara2D(global_data.player_num - 1, 100)
             self.score_animator = ScoreAnimator(session_data.result_score)
             self.score = ''
             self.good = ''
@@ -124,8 +126,8 @@ class ResultScreen:
 
     def update(self):
         self.on_screen_start()
-
-        self.fade_in.update(get_current_ms())
+        current_time = get_current_ms()
+        self.fade_in.update(current_time)
         if self.fade_in.is_finished and self.gauge is None:
             self.gauge = Gauge(str(global_data.player_num), session_data.result_gauge_length)
             self.bottom_characters.start()
@@ -137,37 +139,38 @@ class ResultScreen:
                 self.crown = Crown()
 
         if self.gauge is not None:
-            self.gauge.update(get_current_ms())
+            self.gauge.update(current_time)
             if self.gauge.is_finished and self.score_delay is None:
-                self.score_delay = get_current_ms() + 1883
+                self.score_delay = current_time + 1883
 
         if self.score_delay is not None:
-            if get_current_ms() > self.score_delay and not self.fade_in_bottom.is_started:
+            if current_time > self.score_delay and not self.fade_in_bottom.is_started:
                 self.fade_in_bottom.start()
                 if self.gauge is not None:
                     self.state = self.gauge.state
 
         if self.high_score_indicator is not None:
-            self.high_score_indicator.update(get_current_ms())
+            self.high_score_indicator.update(current_time)
 
-        self.fade_in_bottom.update(get_current_ms())
+        self.fade_in_bottom.update(current_time)
         alpha_loc = ray.get_shader_location(self.alpha_shader, "ext_alpha")
         alpha_value = ray.ffi.new('float*', self.fade_in_bottom.attribute)
         ray.set_shader_value(self.alpha_shader, alpha_loc, alpha_value, SHADER_UNIFORM_FLOAT)
 
-        if get_current_ms() >= self.start_ms + 5000 and not self.fade_out.is_started:
+        if current_time >= self.start_ms + 5000 and not self.fade_out.is_started:
             self.handle_input()
 
         self.update_score_animation()
 
-        self.fade_out.update(get_current_ms())
+        self.fade_out.update(current_time)
         if self.fade_out.is_finished:
             return self.on_screen_end()
 
         if self.crown is not None:
-            self.crown.update(get_current_ms())
+            self.crown.update(current_time)
 
-        self.nameplate.update(get_current_ms())
+        self.nameplate.update(current_time)
+        self.chara.update(current_time, 100, False, False)
 
     def draw_score_info(self):
         if self.good != '':
@@ -259,6 +262,8 @@ class ResultScreen:
 
         if self.high_score_indicator is not None:
             self.high_score_indicator.draw()
+
+        self.chara.draw(y=100)
 
         self.fade_in.draw()
         ray.draw_rectangle(0, 0, self.width, self.height, ray.fade(ray.BLACK, self.fade_out.attribute))
