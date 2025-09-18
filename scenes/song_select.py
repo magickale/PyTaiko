@@ -2203,6 +2203,8 @@ class FileNavigator:
             return False
         favorites_path = self.favorite_folder.path / 'song_list.txt'
         lines = []
+        if not Path(favorites_path).exists():
+            Path(favorites_path).touch()
         with open(favorites_path, 'r', encoding='utf-8-sig') as song_list:
             for line in song_list:
                 line = line.strip()

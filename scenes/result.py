@@ -164,6 +164,7 @@ class ResultScreen:
 
         self.fade_out.update(current_time)
         if self.fade_out.is_finished:
+            self.fade_out.update(current_time)
             return self.on_screen_end()
 
         if self.crown is not None:

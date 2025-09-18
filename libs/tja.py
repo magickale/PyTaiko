@@ -427,10 +427,15 @@ class TJAParser:
             bar_length = sum(len(part) for part in bar if '#' not in part)
             barline_added = False
             for part in bar:
-                if '#LYRIC' in part:
-                    continue
                 if part.startswith('#BRANCHSTART'):
                     skip_branch = True
+                    continue
+                if part == '#M':
+                    skip_branch = False
+                    continue
+                if skip_branch:
+                    continue
+                if '#LYRIC' in part:
                     continue
                 if '#JPOSSCROLL' in part:
                     continue
@@ -525,13 +530,8 @@ class TJAParser:
                 elif '#GOGOEND' in part:
                     gogo_time = False
                     continue
-                elif part.startswith('#M'):
-                    skip_branch = False
-                    continue
                 #Unrecognized commands will be skipped for now
                 elif len(part) > 0 and not part[0].isdigit():
-                    continue
-                if skip_branch:
                     continue
 
                 ms_per_measure = get_ms_per_measure(bpm, time_signature)
@@ -569,6 +569,9 @@ class TJAParser:
                     if item == '.':
                         continue
                     if item == '0' or (not item.isdigit()):
+                        self.current_ms += increment
+                        continue
+                    if item == '9' and play_note_list and play_note_list[-1].type == 9:
                         self.current_ms += increment
                         continue
                     note = Note()
