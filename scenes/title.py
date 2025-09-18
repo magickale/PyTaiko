@@ -88,6 +88,7 @@ class TitleScreen:
 
         self.fade_out.update(get_current_ms())
         if self.fade_out.is_finished:
+            self.fade_out.update(get_current_ms())
             return self.on_screen_end()
 
         self.scene_manager()

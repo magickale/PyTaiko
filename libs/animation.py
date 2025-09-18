@@ -1,6 +1,8 @@
 import time
 from typing import Any, Optional
 
+from libs.global_data import global_data
+
 
 def rounded(num: float) -> int:
     sign = 1 if (num >= 0) else -1
@@ -15,7 +17,7 @@ def get_current_ms() -> int:
 
 
 class BaseAnimation():
-    def __init__(self, duration: float, delay: float = 0.0, loop: bool = False) -> None:
+    def __init__(self, duration: float, delay: float = 0.0, loop: bool = False, lock_input: bool = False) -> None:
         """
         Initialize a base animation.
 
@@ -32,6 +34,7 @@ class BaseAnimation():
         self.attribute = 0
         self.is_started = False
         self.loop = loop
+        self.lock_input = lock_input
 
     def __repr__(self):
         return str(self.__dict__)
@@ -43,11 +46,15 @@ class BaseAnimation():
         """Update the animation based on the current time."""
         if self.loop and self.is_finished:
             self.restart()
+        if self.lock_input and self.is_finished:
+            global_data.input_locked = False
 
     def restart(self) -> None:
         self.start_ms = get_current_ms()
         self.is_finished = False
         self.delay = self.delay_saved
+        if self.lock_input:
+            global_data.input_locked = True
 
     def start(self) -> None:
         self.is_started = True
@@ -55,9 +62,13 @@ class BaseAnimation():
 
     def pause(self):
         self.is_started = False
+        if self.lock_input:
+            global_data.input_locked = False
 
     def unpause(self):
         self.is_started = True
+        if self.lock_input:
+            global_data.input_locked = True
 
     def reset(self):
         self.restart()
@@ -91,10 +102,10 @@ class BaseAnimation():
 
 class FadeAnimation(BaseAnimation):
     def __init__(self, duration: float, initial_opacity: float = 1.0, loop: bool = False,
-                     final_opacity: float = 0.0, delay: float = 0.0,
+                     lock_input: bool = False, final_opacity: float = 0.0, delay: float = 0.0,
                      ease_in: Optional[str] = None, ease_out: Optional[str] = None,
                      reverse_delay: Optional[float] = None) -> None:
-        super().__init__(duration, delay=delay, loop=loop)
+        super().__init__(duration, delay=delay, loop=loop, lock_input=lock_input)
         self.initial_opacity = initial_opacity
         self.attribute = initial_opacity
         self.final_opacity = final_opacity
@@ -139,10 +150,10 @@ class FadeAnimation(BaseAnimation):
 
 class MoveAnimation(BaseAnimation):
     def __init__(self, duration: float, total_distance: int = 0, loop: bool = False,
-                      start_position: int = 0, delay: float = 0.0,
+                      lock_input: bool = False, start_position: int = 0, delay: float = 0.0,
                       reverse_delay: Optional[float] = None,
                       ease_in: Optional[str] = None, ease_out: Optional[str] = None) -> None:
-        super().__init__(duration, delay=delay, loop=loop)
+        super().__init__(duration, delay=delay, loop=loop, lock_input=lock_input)
         self.reverse_delay = reverse_delay
         self.reverse_delay_saved = reverse_delay
         self.total_distance = total_distance
@@ -184,8 +195,8 @@ class MoveAnimation(BaseAnimation):
 
 class TextureChangeAnimation(BaseAnimation):
     def __init__(self, duration: float, textures: list[tuple[float, float, int]],
-                       loop: bool = False, delay: float = 0.0) -> None:
-        super().__init__(duration, loop=loop)
+                       loop: bool = False, lock_input: bool = False, delay: float = 0.0) -> None:
+        super().__init__(duration, loop=loop, lock_input=lock_input)
         self.textures = textures
         self.delay = delay
         self.delay_saved = delay
@@ -212,8 +223,8 @@ class TextureChangeAnimation(BaseAnimation):
             self.is_finished = True
 
 class TextStretchAnimation(BaseAnimation):
-    def __init__(self, duration: float, loop: bool = False,) -> None:
-        super().__init__(duration, loop=loop)
+    def __init__(self, duration: float, loop: bool = False, lock_input: bool = False) -> None:
+        super().__init__(duration, loop=loop, lock_input=lock_input)
     def update(self, current_time_ms: float) -> None:
         if not self.is_started:
             return
@@ -230,11 +241,11 @@ class TextStretchAnimation(BaseAnimation):
 
 class TextureResizeAnimation(BaseAnimation):
     def __init__(self, duration: float, initial_size: float = 1.0,
-                     loop: bool = False,
+                     loop: bool = False, lock_input: bool = False,
                      final_size: float = 0.0, delay: float = 0.0,
                      reverse_delay: Optional[float] = None,
                      ease_in: Optional[str] = None, ease_out: Optional[str] = None) -> None:
-        super().__init__(duration, delay=delay, loop=loop)
+        super().__init__(duration, delay=delay, loop=loop, lock_input=lock_input)
         self.initial_size = initial_size
         self.final_size = final_size
         self.reverse_delay = reverse_delay

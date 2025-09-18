@@ -10,12 +10,12 @@ import pyray as ray
 from libs.animation import Animation, MoveAnimation
 from libs.audio import audio
 from libs.chara_2d import Chara2D
+from libs.global_data import Modifiers
 from libs.global_objects import Nameplate, Indicator
 from libs.texture import tex
 from libs.tja import TJAParser, test_encodings
 from libs.transition import Transition
 from libs.utils import (
-    Modifiers,
     OutlinedText,
     get_current_ms,
     global_data,
@@ -288,7 +288,7 @@ class SongSelectScreen:
             if len(diffs) == 1:
                 self.selected_difficulty = -1
             else:
-                self.selected_difficulty = diffs[-2]
+                self.selected_difficulty = diffs[-3]
         elif self.selected_difficulty == -1 or self.selected_difficulty == -2:
             self.diff_selector_move_2.start()
             self.prev_diff = self.selected_difficulty
@@ -1208,6 +1208,8 @@ class NeiroSelector:
             self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.ogg")
 
     def move_left(self):
+        if self.move.is_started and not self.move.is_finished:
+            return
         self.selected_sound = (self.selected_sound - 1) % len(self.sounds)
         audio.unload_sound(self.curr_sound)
         self.load_sound()
@@ -1221,6 +1223,8 @@ class NeiroSelector:
         audio.play_sound(self.curr_sound)
 
     def move_right(self):
+        if self.move.is_started and not self.move.is_finished:
+            return
         self.selected_sound = (self.selected_sound + 1) % len(self.sounds)
         audio.unload_sound(self.curr_sound)
         self.load_sound()
@@ -1234,6 +1238,8 @@ class NeiroSelector:
         audio.play_sound(self.curr_sound)
 
     def confirm(self):
+        if self.move.is_started and not self.move.is_finished:
+            return
         if self.selected_sound == len(self.sounds):
             global_data.hit_sound = -1
         else:

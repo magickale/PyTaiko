@@ -14,6 +14,7 @@ from libs.utils import (
     force_dedicated_gpu,
     get_config,
     global_data,
+    global_tex
 )
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
@@ -68,7 +69,7 @@ def main():
     if global_data.config["video"]["target_fps"] != -1:
         ray.set_target_fps(global_data.config["video"]["target_fps"])
     ray.set_config_flags(ray.ConfigFlags.FLAG_MSAA_4X_HINT)
-    ray.set_trace_log_level(ray.TraceLogLevel.LOG_INFO)
+    ray.set_trace_log_level(ray.TraceLogLevel.LOG_WARNING)
 
     camera = ray.Camera3D()
     camera.position = ray.Vector3(0.0, 0.0, 10.0)  # Camera position
@@ -78,9 +79,9 @@ def main():
     camera.projection = CAMERA_ORTHOGRAPHIC
 
     ray.init_window(screen_width, screen_height, "PyTaiko")
-    global_data.tex.load_screen_textures('global')
-    global_data.tex.load_zip('chara', 'chara_0')
-    global_data.tex.load_zip('chara', 'chara_1')
+    global_tex.load_screen_textures('global')
+    global_tex.load_zip('chara', 'chara_0')
+    global_tex.load_zip('chara', 'chara_1')
     if global_data.config["video"]["borderless"]:
         ray.toggle_borderless_windowed()
     if global_data.config["video"]["fullscreen"]:

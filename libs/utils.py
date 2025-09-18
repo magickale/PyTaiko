@@ -1,12 +1,10 @@
 import ctypes
 import hashlib
 import math
-import os
 import sys
-import tempfile
 import time
-import zipfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from libs.global_data import global_data
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
@@ -89,6 +87,8 @@ def save_config(config: dict[str, Any]) -> None:
         tomlkit.dump(config, f)
 
 def is_l_don_pressed() -> bool:
+    if global_data.input_locked:
+        return False
     keys = global_data.config["keys"]["left_don"]
     gamepad_buttons = global_data.config["gamepad"]["left_don"]
     for key in keys:
@@ -111,6 +111,8 @@ def is_l_don_pressed() -> bool:
     return False
 
 def is_r_don_pressed() -> bool:
+    if global_data.input_locked:
+        return False
     keys = global_data.config["keys"]["right_don"]
     gamepad_buttons = global_data.config["gamepad"]["right_don"]
     for key in keys:
@@ -135,6 +137,8 @@ def is_r_don_pressed() -> bool:
     return False
 
 def is_l_kat_pressed() -> bool:
+    if global_data.input_locked:
+        return False
     keys = global_data.config["keys"]["left_kat"]
     gamepad_buttons = global_data.config["gamepad"]["left_kat"]
     for key in keys:
@@ -159,6 +163,8 @@ def is_l_kat_pressed() -> bool:
     return False
 
 def is_r_kat_pressed() -> bool:
+    if global_data.input_locked:
+        return False
     keys = global_data.config["keys"]["right_kat"]
     gamepad_buttons = global_data.config["gamepad"]["right_kat"]
     for key in keys:
@@ -183,14 +189,6 @@ def is_r_kat_pressed() -> bool:
     return False
 
 @dataclass
-class Modifiers:
-    auto: bool = False
-    speed: float = 1.0
-    display: bool = False
-    inverse: bool = False
-    random: int = 0
-
-@dataclass
 class SessionData:
     selected_difficulty: int = 0
     song_title: str = ''
@@ -205,25 +203,10 @@ class SessionData:
     prev_score: int = 0
 
 session_data = SessionData()
+global_tex = TextureWrapper()
 
 def reset_session():
     return SessionData()
-
-@dataclass
-class GlobalData:
-    selected_song: Path = Path()
-    tex: TextureWrapper = field(default_factory=lambda: TextureWrapper())
-    songs_played: int = 0
-    config: dict = field(default_factory=lambda: dict())
-    song_hashes: dict[str, list[dict]] = field(default_factory=lambda: dict()) #Hash to path
-    song_paths: dict[Path, str] = field(default_factory=lambda: dict()) #path to hash
-    song_progress: float = 0.0
-    total_songs: int = 0
-    hit_sound: int = 0
-    player_num: int = 1
-    modifiers: Modifiers = field(default_factory=lambda: Modifiers())
-
-global_data = GlobalData()
 
 text_cache = set()
 if not Path('cache/image').exists():

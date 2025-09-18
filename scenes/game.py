@@ -26,6 +26,7 @@ from libs.utils import (
     OutlinedText,
     get_current_ms,
     global_data,
+    global_tex,
     is_l_don_pressed,
     is_l_kat_pressed,
     is_r_don_pressed,
@@ -1412,7 +1413,7 @@ class SongInfo:
 class ResultTransition:
     def __init__(self, player_num: int):
         self.player_num = player_num
-        self.move = global_data.tex.get_animation(5)
+        self.move = global_tex.get_animation(5)
         self.move.reset()
         self.is_finished = False
         self.is_started = False
@@ -1429,10 +1430,10 @@ class ResultTransition:
         x = 0
         screen_width = 1280
         while x < screen_width:
-            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
-            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
-            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
-            global_data.tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
+            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
+            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
+            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
+            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
             x += 256
 
 class Gauge:

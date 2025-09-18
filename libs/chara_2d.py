@@ -1,10 +1,10 @@
 from libs.animation import Animation
-from libs.utils import global_data
+from libs.utils import global_tex
 
 class Chara2D:
     def __init__(self, index: int, bpm: float, path: str = 'chara'):
         self.name = "chara_" + str(index)
-        self.tex = global_data.tex
+        self.tex = global_tex
         self.anims = dict()
         self.bpm = bpm
         self.current_anim = 'normal'

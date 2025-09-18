@@ -1,7 +1,7 @@
 from enum import Enum
 import pyray as ray
 
-from libs.utils import OutlinedText, global_data
+from libs.utils import OutlinedText, global_tex
 
 
 class Nameplate:
@@ -18,7 +18,7 @@ class Nameplate:
         self.name.unload()
         self.title.unload()
     def draw(self, x: int, y: int, fade: float = 1.0):
-        tex = global_data.tex
+        tex = global_tex
         tex.draw_texture('nameplate', 'shadow', x=x, y=y, fade=min(0.5, fade))
         if self.player_num == -1:
             frame = 2
@@ -52,9 +52,9 @@ class Indicator:
         WAIT = 3
     def __init__(self, state: State):
         self.state = state
-        self.don_fade = global_data.tex.get_animation(6)
-        self.blue_arrow_move = global_data.tex.get_animation(7)
-        self.blue_arrow_fade = global_data.tex.get_animation(8)
+        self.don_fade = global_tex.get_animation(6)
+        self.blue_arrow_move = global_tex.get_animation(7)
+        self.blue_arrow_fade = global_tex.get_animation(8)
 
     def update(self, current_time_ms: float):
         self.don_fade.update(current_time_ms)
@@ -62,7 +62,7 @@ class Indicator:
         self.blue_arrow_fade.update(current_time_ms)
 
     def draw(self, x: int, y: int, fade=1.0):
-        tex = global_data.tex
+        tex = global_tex
         tex.draw_texture('indicator', 'background', x=x, y=y, fade=fade)
         tex.draw_texture('indicator', 'text', frame=self.state.value, x=x, y=y, fade=fade)
         tex.draw_texture('indicator', 'drum_face', index=self.state.value, x=x, y=y, fade=fade)

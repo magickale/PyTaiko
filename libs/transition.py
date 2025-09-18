@@ -1,16 +1,16 @@
 import pyray as ray
 
-from libs.utils import OutlinedText, global_data
+from libs.utils import OutlinedText, global_tex
 
 
 class Transition:
     def __init__(self, title: str, subtitle: str, is_second: bool = False) -> None:
         self.is_finished = False
-        self.rainbow_up = global_data.tex.get_animation(0)
-        self.mini_up = global_data.tex.get_animation(1)
-        self.chara_down = global_data.tex.get_animation(2)
-        self.song_info_fade = global_data.tex.get_animation(3)
-        self.song_info_fade_out = global_data.tex.get_animation(4)
+        self.rainbow_up = global_tex.get_animation(0)
+        self.mini_up = global_tex.get_animation(1)
+        self.chara_down = global_tex.get_animation(2)
+        self.song_info_fade = global_tex.get_animation(3)
+        self.song_info_fade_out = global_tex.get_animation(4)
         self.title = OutlinedText(title, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
         self.subtitle = OutlinedText(subtitle, 30, ray.WHITE, ray.BLACK, outline_thickness=5)
         self.is_second = is_second
@@ -38,7 +38,7 @@ class Transition:
             color_1 = ray.fade(ray.WHITE, self.song_info_fade_out.attribute)
             color_2 = ray.fade(ray.WHITE, min(0.70, self.song_info_fade_out.attribute))
             offset = 816 - self.rainbow_up.attribute
-        global_data.tex.draw_texture('rainbow_transition', 'text_bg', y=-self.rainbow_up.attribute - offset, color=color_2)
+        global_tex.draw_texture('rainbow_transition', 'text_bg', y=-self.rainbow_up.attribute - offset, color=color_2)
 
         texture = self.title.texture
         y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset
@@ -53,16 +53,16 @@ class Transition:
         total_offset = 0
         if self.is_second:
             total_offset = 816
-        global_data.tex.draw_texture('rainbow_transition', 'rainbow_bg_bottom', y=-self.rainbow_up.attribute - total_offset)
-        global_data.tex.draw_texture('rainbow_transition', 'rainbow_bg_top', y=-self.rainbow_up.attribute - total_offset)
-        global_data.tex.draw_texture('rainbow_transition', 'rainbow_bg', y=-self.rainbow_up.attribute - total_offset)
+        global_tex.draw_texture('rainbow_transition', 'rainbow_bg_bottom', y=-self.rainbow_up.attribute - total_offset)
+        global_tex.draw_texture('rainbow_transition', 'rainbow_bg_top', y=-self.rainbow_up.attribute - total_offset)
+        global_tex.draw_texture('rainbow_transition', 'rainbow_bg', y=-self.rainbow_up.attribute - total_offset)
         offset = self.chara_down.attribute
         chara_offset = 0
         if self.is_second:
             offset = self.chara_down.attribute - self.mini_up.attribute//3
             chara_offset = 408
-        global_data.tex.draw_texture('rainbow_transition', 'chara_left', x=-self.mini_up.attribute//2 - chara_offset, y=-self.mini_up.attribute + offset - total_offset)
-        global_data.tex.draw_texture('rainbow_transition', 'chara_right', x=self.mini_up.attribute//2 + chara_offset, y=-self.mini_up.attribute + offset - total_offset)
-        global_data.tex.draw_texture('rainbow_transition', 'chara_center', y=-self.rainbow_up.attribute + offset - total_offset)
+        global_tex.draw_texture('rainbow_transition', 'chara_left', x=-self.mini_up.attribute//2 - chara_offset, y=-self.mini_up.attribute + offset - total_offset)
+        global_tex.draw_texture('rainbow_transition', 'chara_right', x=self.mini_up.attribute//2 + chara_offset, y=-self.mini_up.attribute + offset - total_offset)
+        global_tex.draw_texture('rainbow_transition', 'chara_center', y=-self.rainbow_up.attribute + offset - total_offset)
 
         self.draw_song_info()
