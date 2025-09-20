@@ -786,7 +786,7 @@ class Player:
         for anim in self.draw_drum_hit_list:
             anim.draw()
         for anim in self.draw_arc_list:
-            anim.draw(game_screen)
+            anim.draw(game_screen.mask_shader)
         for anim in self.gauge_hit_effect:
             anim.draw()
 
@@ -1026,21 +1026,27 @@ class NoteArc:
         self.current_progress = 0
         self.create_ms = current_ms
         self.player_number = player_number
+
+        self.explosion_point_index = 0
+        self.points_per_explosion = 5
+
         curve_height = 425
         self.start_x, self.start_y = 350, 192
         self.end_x, self.end_y = 1158, 101
+        self.explosion_x = self.start_x
+        self.explosion_y = self.start_y
+
         if self.player_number == 1:
             # Control point influences the curve shape
             self.control_x = (self.start_x + self.end_x) // 2
             self.control_y = min(self.start_y, self.end_y) - curve_height  # Arc upward
         else:
-            # For player 2 (assumed to be a downward arc)
             self.control_x = (self.start_x + self.end_x) // 2
             self.control_y = max(self.start_y, self.end_y) + curve_height  # Arc downward
+
         self.x_i = self.start_x
         self.y_i = self.start_y
         self.is_finished = False
-        # Pre-calculate all arc points for better performance
         self.arc_points_cache = []
         for i in range(self.arc_points + 1):
             t = i / self.arc_points
@@ -1049,35 +1055,63 @@ class NoteArc:
             y = int(t_inv * t_inv * self.start_y + 2 * t_inv * t * self.control_y + t * t * self.end_y)
             self.arc_points_cache.append((x, y))
 
+        self.explosion_x, self.explosion_y = self.arc_points_cache[0]
+        self.explosion_anim = tex.get_animation(22)
+        self.explosion_anim.start()
+
     def update(self, current_ms: float):
         ms_since_call = (current_ms - self.create_ms) / 16.67
         ms_since_call = max(0, min(ms_since_call, self.arc_duration))
+
         self.current_progress = ms_since_call / self.arc_duration
         if self.current_progress >= 1.0:
             self.is_finished = True
             self.x_i, self.y_i = self.arc_points_cache[-1]
             return
+
         point_index = int(self.current_progress * self.arc_points)
         if point_index < len(self.arc_points_cache):
             self.x_i, self.y_i = self.arc_points_cache[point_index]
         else:
             self.x_i, self.y_i = self.arc_points_cache[-1]
 
-    def draw(self, game_screen: GameScreen):
+        self.explosion_anim.update(current_ms)
+        if self.explosion_anim.is_finished:
+            self.explosion_point_index = min(
+                self.explosion_point_index + self.points_per_explosion,
+                len(self.arc_points_cache) - 1
+            )
+
+            self.explosion_x, self.explosion_y = self.arc_points_cache[self.explosion_point_index*4]
+            self.explosion_anim.restart()
+
+    def draw(self, mask_shader: ray.Shader):
         if self.is_balloon:
             rainbow = tex.textures['balloon']['rainbow']
             trail_length_ratio = 0.5
             trail_start_progress = max(0, self.current_progress - trail_length_ratio)
             trail_end_progress = self.current_progress
+
             if trail_end_progress > trail_start_progress:
                 crop_start_x = int(trail_start_progress * rainbow.width)
                 crop_end_x = int(trail_end_progress * rainbow.width)
                 crop_width = crop_end_x - crop_start_x
+
                 if crop_width > 0:
                     src = ray.Rectangle(crop_start_x, 0, crop_width, rainbow.height)
-                    ray.begin_shader_mode(game_screen.mask_shader)
+                    ray.begin_shader_mode(mask_shader)
                     tex.draw_texture('balloon', 'rainbow_mask', src=src, x=crop_start_x, x2=-rainbow.width + crop_width)
                     ray.end_shader_mode()
+
+                    ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
+                    tex.draw_texture('balloon', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
+                    ray.end_blend_mode()
+        '''
+        elif self.is_big:
+            ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
+            tex.draw_texture('hit_effect', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
+            ray.end_blend_mode()
+        '''
         tex.draw_texture('notes', str(self.note_type), x=self.x_i, y=self.y_i)
 
 class DrumrollCounter:

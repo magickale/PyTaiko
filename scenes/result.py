@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pyray as ray
-from raylib import SHADER_UNIFORM_FLOAT
 
 from libs import utils
 from libs.audio import audio
@@ -28,7 +27,6 @@ class ResultScreen:
         self.width = 1280
         self.height = 720
         self.screen_init = False
-        self.alpha_shader = ray.load_shader('', 'shader/grayscale_alpha.fs')
 
     def load_textures(self):
         tex.load_screen_textures('result')
@@ -153,9 +151,6 @@ class ResultScreen:
             self.high_score_indicator.update(current_time)
 
         self.fade_in_bottom.update(current_time)
-        alpha_loc = ray.get_shader_location(self.alpha_shader, "ext_alpha")
-        alpha_value = ray.ffi.new('float*', self.fade_in_bottom.attribute)
-        ray.set_shader_value(self.alpha_shader, alpha_loc, alpha_value, SHADER_UNIFORM_FLOAT)
 
         if current_time >= self.start_ms + 5000 and not self.fade_out.is_started:
             self.handle_input()
@@ -202,9 +197,9 @@ class ResultScreen:
         if self.state == State.FAIL:
             tex.draw_texture('background', 'gradient_fail', fade=min(0.4, self.fade_in_bottom.attribute))
         else:
-            ray.begin_shader_mode(self.alpha_shader)
-            tex.draw_texture('background', 'gradient_clear', fade=self.fade_in_bottom.attribute)
-            ray.end_shader_mode()
+            ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
+            tex.draw_texture('background', 'gradient_clear', fade=min(0.4, self.fade_in_bottom.attribute))
+            ray.end_blend_mode()
         self.bottom_characters.draw()
 
     def draw_modifiers(self):
