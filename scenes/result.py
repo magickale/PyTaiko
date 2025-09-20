@@ -197,9 +197,7 @@ class ResultScreen:
         if self.state == State.FAIL:
             tex.draw_texture('background', 'gradient_fail', fade=min(0.4, self.fade_in_bottom.attribute))
         else:
-            ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
             tex.draw_texture('background', 'gradient_clear', fade=min(0.4, self.fade_in_bottom.attribute))
-            ray.end_blend_mode()
         self.bottom_characters.draw()
 
     def draw_modifiers(self):

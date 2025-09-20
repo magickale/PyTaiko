@@ -1117,14 +1117,10 @@ class NoteArc:
                     tex.draw_texture('balloon', 'rainbow_mask', src=src, x=crop_start_x, x2=-rainbow.width + crop_width)
                     ray.end_shader_mode()
 
-                    ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
                     tex.draw_texture('balloon', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
-                    ray.end_blend_mode()
         '''
         elif self.is_big:
-            ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
             tex.draw_texture('hit_effect', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
-            ray.end_blend_mode()
         '''
         tex.draw_texture('notes', str(self.note_type), x=self.x_i, y=self.y_i)
 
@@ -1501,10 +1497,8 @@ class GogoTime:
     def draw(self):
         tex.draw_texture('gogo_time', 'fire', scale=self.fire_resize.attribute, frame=self.fire_change.attribute, fade=0.5, center=True)
         if not self.explosion_anim.is_finished:
-            ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
             for i in range(5):
                 tex.draw_texture('gogo_time', 'explosion', frame=self.explosion_anim.attribute, index=i)
-            ray.end_blend_mode()
 
 class Gauge:
     def __init__(self, player_num: str, difficulty: int, level: int, total_notes: int):
