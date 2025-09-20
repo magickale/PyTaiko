@@ -269,6 +269,8 @@ class Player:
         self.base_score_list: list[ScoreCounterAnimation] = []
         self.combo_display = Combo(self.combo, 0)
         self.score_counter = ScoreCounter(self.score)
+        self.gogo_time: Optional[GogoTime] = None
+        self.is_gogo_time = self.play_notes[0].gogo_time if self.play_notes else False
         plate_info = global_data.config['nameplate']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
         self.chara = Chara2D(player_number - 1, self.bpm)
@@ -608,6 +610,8 @@ class Player:
         self.drumroll_counter_manager(current_time)
         self.animation_manager(self.draw_judge_list, current_time)
         self.balloon_manager(current_time)
+        if self.gogo_time is not None:
+            self.gogo_time.update(current_time)
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.update(current_time)
         self.animation_manager(self.draw_drum_hit_list, current_time)
@@ -631,6 +635,14 @@ class Player:
         self.gauge.update(current_time)
         if self.play_notes:
             self.bpm = self.play_notes[0].bpm
+            if self.play_notes[0].gogo_time and not self.is_gogo_time:
+                self.is_gogo_time = True
+                self.gogo_time = GogoTime()
+                self.chara.set_animation('gogo_start')
+            if not self.play_notes[0].gogo_time and self.is_gogo_time:
+                self.is_gogo_time = False
+                self.gogo_time = None
+                self.chara.set_animation('gogo_stop')
         self.chara.update(current_time, self.bpm, self.gauge.is_clear, self.gauge.is_rainbow)
 
     def draw_drumroll(self, current_ms: float, head: Drumroll, current_eighth: int):
@@ -771,6 +783,8 @@ class Player:
         # Group 2: Judgement and hit effects
         for anim in self.draw_judge_list:
             anim.draw()
+        if self.gogo_time is not None:
+            self.gogo_time.draw()
 
         # Group 3: Notes and bars (game content)
         self.draw_bars(current_ms)
@@ -1469,6 +1483,28 @@ class ResultTransition:
             global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
             global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
             x += 256
+
+class GogoTime:
+    def __init__(self):
+        self.explosion_anim = tex.get_animation(23)
+        self.fire_resize = tex.get_animation(24)
+        self.fire_change = tex.get_animation(25)
+
+        self.explosion_anim.start()
+        self.fire_resize.start()
+        self.fire_change.start()
+    def update(self, current_time_ms: float):
+        self.explosion_anim.update(current_time_ms)
+        self.fire_resize.update(current_time_ms)
+        self.fire_change.update(current_time_ms)
+
+    def draw(self):
+        tex.draw_texture('gogo_time', 'fire', scale=self.fire_resize.attribute, frame=self.fire_change.attribute, fade=0.5, center=True)
+        if not self.explosion_anim.is_finished:
+            ray.begin_blend_mode(ray.BlendMode.BLEND_ADDITIVE)
+            for i in range(5):
+                tex.draw_texture('gogo_time', 'explosion', frame=self.explosion_anim.attribute, index=i)
+            ray.end_blend_mode()
 
 class Gauge:
     def __init__(self, player_num: str, difficulty: int, level: int, total_notes: int):

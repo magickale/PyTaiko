@@ -11,7 +11,8 @@ class Chara2D:
         self.past_anim = 'normal'
         self.is_rainbow = False
         self.is_clear = False
-        self.temp_anims = {'10_combo','10_combo_max', 'soul_in', 'clear_in', 'balloon_pop', 'balloon_miss'}
+        self.is_gogo = False
+        self.temp_anims = {'10_combo','10_combo_max', 'soul_in', 'clear_in', 'balloon_pop', 'balloon_miss', 'gogo_start'}
         for name in self.tex.textures[self.name]:
             tex_list = self.tex.textures[self.name][name].texture
             keyframe_len = len(tex_list) if isinstance(tex_list, list) else 1
@@ -30,11 +31,21 @@ class Chara2D:
             return
         if self.current_anim in self.temp_anims:
             return
+        if self.is_gogo and name == '10_combo':
+            return
         self.past_anim = self.current_anim
-        if name == 'balloon_pop' or name == 'balloon_miss':
+        if name == 'balloon_pop' or name == 'balloon_miss' or name == 'gogo_stop':
             self.past_anim = 'normal'
             if self.is_clear:
                 self.past_anim = 'clear'
+            if self.is_gogo:
+                self.past_anim = 'gogo'
+            if name == 'gogo_stop':
+                name = self.past_anim
+                self.is_gogo = False
+        elif name == 'gogo_start':
+            self.is_gogo = True
+            self.past_anim = 'gogo'
         self.current_anim = name
         self.anims[name].start()
     def update(self, current_time_ms: float, bpm: float, is_clear: bool, is_rainbow: bool):

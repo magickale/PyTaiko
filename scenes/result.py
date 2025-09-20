@@ -502,5 +502,5 @@ class Gauge:
             tex.draw_texture('gauge', 'clear', scale=scale, fade=self.gauge_fade_in.attribute, index=self.difficulty)
             tex.draw_texture('gauge', 'tamashii', scale=scale, fade=self.gauge_fade_in.attribute)
         else:
-            tex.draw_texture('gauge', 'clear_dark', scale=scale, fade=self.gauge_fade_in.attribute)
+            tex.draw_texture('gauge', 'clear_dark', scale=scale, fade=self.gauge_fade_in.attribute, index=self.difficulty)
             tex.draw_texture('gauge', 'tamashii_dark', scale=scale, fade=self.gauge_fade_in.attribute)
