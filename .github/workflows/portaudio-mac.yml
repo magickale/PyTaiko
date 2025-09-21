@@ -1,0 +1,49 @@
+name: Build PortAudio
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-portaudio:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Xcode command line tools
+        run: xcode-select --install || true
+
+      - name: Install Homebrew dependencies
+        run: |
+          brew update
+          brew install cmake
+
+      - name: Download PortAudio
+        run: |
+          wget http://files.portaudio.com/archives/pa_stable_v190700_20210406.tgz
+          tar -xzf pa_stable_v190700_20210406.tgz
+
+      - name: Build and install PortAudio
+        run: |
+          cd portaudio
+          ./configure --enable-shared --enable-static CFLAGS='-fPIC'
+          make clean && make
+          sudo make install
+
+      - name: Verify installation
+        run: |
+          ls -la /usr/local/lib/libportaudio*
+          ls -la portaudio/lib/.libs/libportaudio.a
+          pkg-config --modversion portaudio-2.0 || echo "pkg-config not found, but libraries should be installed"
+
+      - name: Upload PortAudio static library
+        uses: actions/upload-artifact@v4
+        with:
+          name: libportaudio-static
+          path: portaudio/lib/.libs/libportaudio.a
+          retention-days: 30
