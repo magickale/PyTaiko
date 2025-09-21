@@ -54,7 +54,7 @@ jobs:
           echo "=== Checking local PortAudio library ==="
 
           # Check if the static library exists
-          if [ -f "libportaudio.a" ]; then
+          if [ -f "libportaudio-win.a" ]; then
             echo "✓ Found libportaudio.a"
             ls -la libportaudio-win.a
 
