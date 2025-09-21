@@ -56,14 +56,14 @@ jobs:
           # Check if the static library exists
           if [ -f "libportaudio.a" ]; then
             echo "✓ Found libportaudio.a"
-            ls -la libportaudio.a
+            ls -la libportaudio-win.a
 
             # Check what symbols are in the library
             echo "=== Library symbols (sample) ==="
-            nm libportaudio.a | grep -E "(Pa_|ASIO)" | head -10 || echo "No PortAudio symbols found"
+            nm libportaudio-win.a | grep -E "(Pa_|ASIO)" | head -10 || echo "No PortAudio symbols found"
 
             # Check for ASIO support specifically
-            nm libportaudio.a | grep -i asio && echo "✓ ASIO symbols found!" || echo "⚠ No ASIO symbols found"
+            nm libportaudio-win.a | grep -i asio && echo "✓ ASIO symbols found!" || echo "⚠ No ASIO symbols found"
 
           else
             echo "✗ libportaudio.a not found!"
