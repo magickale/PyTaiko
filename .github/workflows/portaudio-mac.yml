@@ -31,7 +31,7 @@ jobs:
       - name: Build and install PortAudio
         run: |
           cd portaudio
-          ./configure --enable-shared --enable-static CFLAGS='-fPIC -Wno-unused-but-set-variable'
+          ./configure --enable-shared --enable-static CFLAGS='-fPIC -Wno-error'
           make clean && make
           sudo make install
 
