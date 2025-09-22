@@ -33,7 +33,7 @@ jobs:
           cd portaudio
           export CFLAGS='-fPIC -Wno-error -Wno-unused-but-set-variable'
           export CXXFLAGS='-fPIC -Wno-error -Wno-unused-but-set-variable'
-          make clean && make CFLAGS='-fPIC -Wno-error -Wno-unused-but-set-variable' CXXFLAGS='-fPIC -Wno-error -Wno-unused-but-set-variable'
+          make CFLAGS='-fPIC -Wno-error -Wno-unused-but-set-variable' CXXFLAGS='-fPIC -Wno-error -Wno-unused-but-set-variable'
 
       - name: Upload PortAudio static library
         uses: actions/upload-artifact@v4
