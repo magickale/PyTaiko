@@ -33,13 +33,6 @@ jobs:
           cd portaudio
           ./configure --enable-shared --enable-static CFLAGS='-fPIC -Wno-error'
           make clean && make
-          sudo make install
-
-      - name: Verify installation
-        run: |
-          ls -la /usr/local/lib/libportaudio*
-          ls -la portaudio/lib/.libs/libportaudio.a
-          pkg-config --modversion portaudio-2.0 || echo "pkg-config not found, but libraries should be installed"
 
       - name: Upload PortAudio static library
         uses: actions/upload-artifact@v4
