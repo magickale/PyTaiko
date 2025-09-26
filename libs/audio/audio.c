@@ -1,7 +1,9 @@
 
-//WARNING: This is ported code from raylib's rAudio. It's also been mangled
-// with claude. I need a professional review. Thank you raysan for most of the code
+// Thank you raysan for data structures
 // https://github.com/raysan5/raylib/blob/master/src/raudio.c
+// This could be cleaned up significantly. I do not think
+// the audio stream structure is necessary after converting the music
+// stream to portaudio
 
 #include "portaudio.h"
 #include <pthread.h>
@@ -14,7 +16,6 @@
 #include <string.h>
 #include <unistd.h>
 
-// Logging macros
 #define LOG_INFO 0
 #define LOG_WARNING 1
 #define LOG_ERROR 2
@@ -28,15 +29,12 @@
     fflush(stdout); \
 } while(0)
 
-// Memory management macros
 #define FREE(ptr) do { if (ptr) { free(ptr); (ptr) = NULL; } } while(0)
 
 #define AUDIO_DEVICE_CHANNELS              2    // Device output channels: stereo
 
-// Forward declarations of structures
 struct audio_buffer;
 
-// Type definitions
 typedef struct wave {
     unsigned int frameCount;    // Total number of frames (considering channels)
     unsigned int sampleRate;    // Frequency (samples per second)
@@ -45,7 +43,6 @@ typedef struct wave {
     void *data;                 // Buffer data pointer
 } wave;
 
-// AudioStream, custom audio stream
 typedef struct audio_stream {
     struct audio_buffer *buffer;       // Pointer to internal data used by the audio system
 
@@ -54,13 +51,12 @@ typedef struct audio_stream {
     unsigned int channels;      // Number of channels (1-mono, 2-stereo, ...)
 } audio_stream;
 
-// Sound
 typedef struct sound {
     audio_stream stream;         // Audio stream
     unsigned int frameCount;    // Total number of frames (considering channels)
 } sound;
 
-// Music, audio stream, anything longer than ~10 seconds should be streamed
+//anything longer than ~10 seconds should be streamed
 typedef struct music {
     audio_stream stream;         // Audio stream
     unsigned int frameCount;    // Total number of frames (considering channels)
@@ -74,7 +70,6 @@ typedef struct music_ctx {
     double src_ratio;
 } music_ctx;
 
-// Audio buffer structure
 struct audio_buffer {
     float volume;                   // Audio buffer volume
     float pitch;                    // Audio buffer pitch
@@ -91,9 +86,6 @@ struct audio_buffer {
     struct audio_buffer *prev;             // Previous audio buffer on the list
 };
 
-
-
-// Audio data context
 typedef struct AudioData {
     struct {
         PaStream *stream;           // PortAudio stream
@@ -111,8 +103,6 @@ typedef struct AudioData {
     } Buffer;
 } AudioData;
 
-// Function declarations
-// Device management
 void list_host_apis(void);
 void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned long buffer_size);
 void close_audio_device(void);
@@ -120,7 +110,6 @@ bool is_audio_device_ready(void);
 void set_master_volume(float volume);
 float get_master_volume(void);
 
-// Audio buffer management
 struct audio_buffer *load_audio_buffer(uint32_t channels, uint32_t size_in_frames, int usage);
 void unload_audio_buffer(struct audio_buffer *buffer);
 bool is_audio_buffer_playing(struct audio_buffer *buffer);
@@ -134,12 +123,10 @@ void set_audio_buffer_pan(struct audio_buffer *buffer, float pan);
 void track_audio_buffer(struct audio_buffer *buffer);
 void untrack_audio_buffer(struct audio_buffer *buffer);
 
-// Wave management
 wave load_wave(const char* filename);
 bool is_wave_valid(wave wave);
 void unload_wave(wave wave);
 
-// Sound management
 sound load_sound_from_wave(wave wave);
 sound load_sound(const char* filename);
 bool is_sound_valid(sound sound);
@@ -153,7 +140,6 @@ void set_sound_volume(sound sound, float volume);
 void set_sound_pitch(sound sound, float pitch);
 void set_sound_pan(sound sound, float pan);
 
-// Audio stream management
 audio_stream load_audio_stream(unsigned int sample_rate, unsigned int sample_size, unsigned int channels);
 void unload_audio_stream(audio_stream stream);
 void play_audio_stream(audio_stream stream);
@@ -166,7 +152,6 @@ void set_audio_stream_pitch(audio_stream stream, float pitch);
 void set_audio_stream_pan(audio_stream stream, float pan);
 void update_audio_stream(audio_stream stream, const void *data, int frame_count);
 
-// Music management
 music load_music_stream(const char* filename);
 bool is_music_valid(music music);
 void unload_music_stream(music music);
@@ -183,7 +168,6 @@ void set_music_pan(music music, float pan);
 float get_music_time_length(music music);
 float get_music_time_played(music music);
 
-// Internal callback
 static int port_audio_callback(const void *inputBuffer, void *outputBuffer,
                             unsigned long framesPerBuffer,
                             const PaStreamCallbackTimeInfo* timeInfo,
@@ -195,7 +179,6 @@ static AudioData AUDIO = {
     .System.masterVolume = 1.0f
 };
 
-// PortAudio callback implementation
 static int port_audio_callback(const void *inputBuffer, void *outputBuffer,
                             unsigned long framesPerBuffer,
                             const PaStreamCallbackTimeInfo* timeInfo,
@@ -234,7 +217,6 @@ static int port_audio_callback(const void *inputBuffer, void *outputBuffer,
                 if (audio_buffer->isSubBufferProcessed[currentSubBufferIndex]) {
                     // This part of the buffer is not ready, output silence
                 } else {
-                    // Mix the audio data
                     for (unsigned long i = 0; i < framesThisPass; i++) {
                         unsigned long buffer_pos = ((audio_buffer->frameCursorPos + i) % audio_buffer->sizeInFrames) * AUDIO_DEVICE_CHANNELS;
                         unsigned long output_pos = (framesPerBuffer - framesToMix + i) * AUDIO_DEVICE_CHANNELS;
@@ -255,20 +237,15 @@ static int port_audio_callback(const void *inputBuffer, void *outputBuffer,
                     audio_buffer->isSubBufferProcessed[currentSubBufferIndex] = true;
                 }
 
-                // FIXED: Only stop non-streaming buffers when they reach the end
                 if (!audio_buffer->isStreaming && audio_buffer->frameCursorPos >= audio_buffer->sizeInFrames) {
                     audio_buffer->playing = false;
                     break;
                 }
-
-                // For streaming buffers, frameCursorPos can exceed sizeInFrames and that's OK
-                // The modulo operation handles the circular buffer access
             }
         }
         audio_buffer = audio_buffer->next;
     }
 
-    // Apply master volume
     for (unsigned long i = 0; i < framesPerBuffer * AUDIO_DEVICE_CHANNELS; i++) {
         out[i] *= AUDIO.System.masterVolume;
     }
@@ -302,12 +279,10 @@ PaDeviceIndex get_best_output_device_for_host_api(PaHostApiIndex hostApi)
         return paNoDevice;
     }
 
-    // First try the default output device for this host API
     if (hostApiInfo->defaultOutputDevice != paNoDevice) {
         return hostApiInfo->defaultOutputDevice;
     }
 
-    // If no default, find the first available output device for this host API
     for (int i = 0; i < hostApiInfo->deviceCount; i++) {
         PaDeviceIndex deviceIndex = Pa_HostApiDeviceIndexToDeviceIndex(hostApi, i);
         if (deviceIndex >= 0) {
@@ -321,24 +296,20 @@ PaDeviceIndex get_best_output_device_for_host_api(PaHostApiIndex hostApi)
     return paNoDevice;
 }
 
-// Device management implementations
 void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned long buffer_size)
 {
-    // Initialize PortAudio
     PaError err = Pa_Initialize();
     if (err != paNoError) {
         TRACELOG(LOG_WARNING, "AUDIO: Failed to initialize PortAudio: %s", Pa_GetErrorText(err));
         return;
     }
 
-    // Initialize mutex for thread synchronization
     if (pthread_mutex_init(&AUDIO.System.lock, NULL) != 0) {
         TRACELOG(LOG_WARNING, "AUDIO: Failed to create mutex for mixing");
         Pa_Terminate();
         return;
     }
 
-    // Set up output parameters
     AUDIO.System.outputParameters.device = get_best_output_device_for_host_api(host_api);
     if (AUDIO.System.outputParameters.device == paNoDevice) {
         TRACELOG(LOG_WARNING, "AUDIO: No usable output device found");
@@ -353,12 +324,11 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
     AUDIO.System.outputParameters.hostApiSpecificStreamInfo = NULL;
     AUDIO.System.sampleRate = sample_rate;
 
-    // Open the audio stream
     err = Pa_OpenStream(&AUDIO.System.stream,
                         NULL,                               // No input
                         &AUDIO.System.outputParameters,     // Output parameters
                         sample_rate,          // Sample rate
-                        buffer_size,      // Frames per buffer (let PortAudio decide)
+                        buffer_size,      // Frames per buffer
                         paClipOff,                         // No clipping
                         port_audio_callback,                 // Callback function
                         NULL);                             // User data
@@ -370,7 +340,6 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
         return;
     }
 
-    // Start the audio stream
     err = Pa_StartStream(AUDIO.System.stream);
     if (err != paNoError) {
         TRACELOG(LOG_WARNING, "AUDIO: Failed to start audio stream: %s", Pa_GetErrorText(err));
@@ -382,7 +351,6 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
 
     AUDIO.System.isReady = true;
 
-    // Log device information
     const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(AUDIO.System.outputParameters.device);
     const PaHostApiInfo *hostApiInfo = Pa_GetHostApiInfo(deviceInfo->hostApi);
 
@@ -398,19 +366,16 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
 void close_audio_device(void)
 {
     if (AUDIO.System.isReady) {
-        // Stop the stream
         PaError err = Pa_StopStream(AUDIO.System.stream);
         if (err != paNoError) {
             TRACELOG(LOG_WARNING, "AUDIO: Error stopping stream: %s", Pa_GetErrorText(err));
         }
 
-        // Close the stream
         err = Pa_CloseStream(AUDIO.System.stream);
         if (err != paNoError) {
             TRACELOG(LOG_WARNING, "AUDIO: Error closing stream: %s", Pa_GetErrorText(err));
         }
 
-        // Cleanup
         pthread_mutex_destroy(&AUDIO.System.lock);
         Pa_Terminate();
 
@@ -446,7 +411,6 @@ float get_master_volume(void)
     return volume;
 }
 
-// Audio buffer management implementations
 struct audio_buffer *load_audio_buffer(uint32_t channels, uint32_t size_in_frames, int usage)
 {
     struct audio_buffer *buffer = (struct audio_buffer*)calloc(1, sizeof(struct audio_buffer));
@@ -479,9 +443,7 @@ struct audio_buffer *load_audio_buffer(uint32_t channels, uint32_t size_in_frame
         buffer->isSubBufferProcessed[1] = true;
     }
 
-    // Set streaming flag based on usage parameter
-    // You can define constants like: #define AUDIO_BUFFER_USAGE_STATIC 0, #define AUDIO_BUFFER_USAGE_STREAM 1
-    buffer->isStreaming = (usage == 1); // Assuming 1 means streaming
+    buffer->isStreaming = (usage == 1); //1 means streaming
 
     track_audio_buffer(buffer);
 
@@ -606,7 +568,6 @@ void untrack_audio_buffer(struct audio_buffer* buffer) {
     pthread_mutex_unlock(&AUDIO.System.lock);
 }
 
-// Wave management implementations
 wave load_wave(const char* filename) {
     wave wave = { 0 };
     SNDFILE *snd_file;
@@ -650,7 +611,6 @@ void unload_wave(wave wave) {
     FREE(wave.data);
 }
 
-// Sound management implementations
 sound load_sound_from_wave(wave wave) {
     sound sound = { 0 };
     if (wave.data == NULL) return sound;
@@ -781,7 +741,6 @@ void set_sound_pan(sound sound, float pan) {
     set_audio_buffer_pan(sound.stream.buffer, pan);
 }
 
-// Audio stream management implementations
 audio_stream load_audio_stream(unsigned int sample_rate, unsigned int sample_size, unsigned int channels)
 {
     audio_stream stream = { 0 };
@@ -790,7 +749,6 @@ audio_stream load_audio_stream(unsigned int sample_rate, unsigned int sample_siz
     stream.sampleSize = sample_size;
     stream.channels = channels;
 
-    // Pass 1 to indicate this is a streaming buffer
     stream.buffer = load_audio_buffer(AUDIO_DEVICE_CHANNELS, AUDIO.System.sampleRate, 1);
     return stream;
 }
@@ -846,7 +804,6 @@ void update_audio_stream(audio_stream stream, const void *data, int frame_count)
 
     pthread_mutex_lock(&AUDIO.System.lock);
 
-    // For streaming, we directly update the buffer data
     if (stream.buffer->data != NULL) {
         float *buffer_data = (float *)stream.buffer->data;
         const float *input_data = (const float *)data;
@@ -858,18 +815,14 @@ void update_audio_stream(audio_stream stream, const void *data, int frame_count)
             samples_to_copy = max_samples;
         }
 
-        // Copy the data to the buffer
         memcpy(buffer_data, input_data, samples_to_copy * sizeof(float));
 
-        // Update the buffer size to match actual data
         stream.buffer->sizeInFrames = frame_count;
-        // Don't reset cursor - let the callback manage it
     }
 
     pthread_mutex_unlock(&AUDIO.System.lock);
 }
 
-// Music management implementations
 music load_music_stream(const char* filename) {
     music music = { 0 };
     bool music_loaded = false;
@@ -902,7 +855,7 @@ music load_music_stream(const char* filename) {
         }
 
         music.ctxData = ctx;
-        int sample_size = 32; // We will work with floats internally
+        int sample_size = 32;
         music.stream = load_audio_stream(AUDIO.System.sampleRate, sample_size, sf_info.channels);
         music.frameCount = (unsigned int)(sf_info.frames * ctx->src_ratio);
         music_loaded = true;
@@ -964,10 +917,8 @@ void seek_music_stream(music music, float position) {
 
     music_ctx *ctx = (music_ctx *)music.ctxData;
     SNDFILE *sndFile = ctx->snd_file;
-    // Position is in output samples, so we need to convert back to input samples for seeking
     unsigned int position_in_frames = (unsigned int)(position * music.stream.sampleRate / ctx->src_ratio);
 
-    // Seek the file to the new position
     sf_count_t seek_result = sf_seek(sndFile, position_in_frames, SEEK_SET);
     if (seek_result < 0) return; // Seek failed
 
