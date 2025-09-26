@@ -7,7 +7,7 @@ This is a TJA player / Taiko simulator written in Python and uses the [raylib](h
 
 ## Video demo
 
-<iframe width="315" height="560" src="https://www.youtube.com/embed/b-2pODPl0II" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![DEMO VIDEO](https://img.youtube.com/vi/b-2pODPl0II/0.jpg)](https://www.youtube.com/watch?v=b-2pODPl0II)
 
 ## Installation
 
