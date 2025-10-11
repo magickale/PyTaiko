@@ -4,10 +4,9 @@ import json
 import sqlite3
 import sys
 import time
-from collections import deque
 from pathlib import Path
 
-from libs.tja import TJAParser
+from libs.tja import NoteList, TJAParser
 from libs.utils import get_config, global_data
 
 
@@ -113,20 +112,19 @@ def build_song_hashes(output_dir=Path("cache")):
         tja_path_str = str(tja_path)
         current_modified = tja_path.stat().st_mtime
         tja = TJAParser(tja_path)
-        all_notes = deque()
-        all_bars = deque()
+        all_notes = NoteList()
         diff_hashes = dict()
 
         for diff in tja.metadata.course_data:
-            diff_notes, _, diff_bars = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
-            diff_hashes[diff] = tja.hash_note_data(diff_notes, diff_bars)
-            all_notes.extend(diff_notes)
-            all_bars.extend(diff_bars)
+            diff_notes, _, _, _ = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
+            diff_hashes[diff] = tja.hash_note_data(diff_notes)
+            all_notes.play_notes.extend(diff_notes.play_notes)
+            all_notes.bars.extend(diff_notes.bars)
 
         if all_notes == []:
             continue
 
-        hash_val = tja.hash_note_data(all_notes, all_bars)
+        hash_val = tja.hash_note_data(all_notes)
         if hash_val not in song_hashes:
             song_hashes[hash_val] = []
 
@@ -222,14 +220,14 @@ def build_song_hashes(output_dir=Path("cache")):
 def process_tja_file(tja_file):
     """Process a single TJA file and return hash or None if error"""
     tja = TJAParser(tja_file)
-    all_notes = []
+    all_notes = NoteList()
     for diff in tja.metadata.course_data:
-        all_notes.extend(
-            TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
-        )
+        notes, _, _, _ = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
+        all_notes.play_notes.extend(notes.play_notes)
+        all_notes.bars.extend(notes.bars)
     if all_notes == []:
         return ''
-    hash = tja.hash_note_data(all_notes[0], all_notes[2])
+    hash = tja.hash_note_data(all_notes)
     return hash
 
 def get_japanese_songs_for_version(csv_file_path, version_column):

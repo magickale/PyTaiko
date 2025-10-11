@@ -838,16 +838,17 @@ class YellowBox:
         self.fade_in.start()
 
     def update(self, is_diff_select: bool):
-        self.left_out.update(get_current_ms())
-        self.right_out.update(get_current_ms())
-        self.center_out.update(get_current_ms())
-        self.fade.update(get_current_ms())
-        self.fade_in.update(get_current_ms())
-        self.left_out_2.update(get_current_ms())
-        self.right_out_2.update(get_current_ms())
-        self.center_out_2.update(get_current_ms())
-        self.top_y_out.update(get_current_ms())
-        self.center_h_out.update(get_current_ms())
+        current_time = get_current_ms()
+        self.left_out.update(current_time)
+        self.right_out.update(current_time)
+        self.center_out.update(current_time)
+        self.fade.update(current_time)
+        self.fade_in.update(current_time)
+        self.left_out_2.update(current_time)
+        self.right_out_2.update(current_time)
+        self.center_out_2.update(current_time)
+        self.top_y_out.update(current_time)
+        self.center_h_out.update(current_time)
         if is_diff_select and not self.is_diff_select:
             self.create_anim_2()
         if self.is_diff_select:
@@ -897,6 +898,8 @@ class YellowBox:
                 continue
             for j in range(self.tja.metadata.course_data[diff].level):
                 tex.draw_texture('yellow_box', 'star', x=(diff*60), y=(j*-17), color=color)
+            if self.tja.metadata.course_data[diff].is_branching and (get_current_ms() // 1000) % 2 == 0:
+                tex.draw_texture('yellow_box', 'branch_indicator', x=(diff*60), color=color)
 
     def _draw_tja_data_diff(self, is_ura: bool):
         if self.tja is None:
@@ -919,6 +922,12 @@ class YellowBox:
                 continue
             for j in range(self.tja.metadata.course_data[course].level):
                 tex.draw_texture('yellow_box', 'star_ura', x=min(course, 3)*115, y=(j*-20), fade=self.fade_in.attribute)
+            if self.tja.metadata.course_data[course].is_branching and (get_current_ms() // 1000) % 2 == 0:
+                if course == 4:
+                    name = 'branch_indicator_ura'
+                else:
+                    name = 'branch_indicator_diff'
+                tex.draw_texture('yellow_box', name, x=min(course, 3)*115, fade=self.fade_in.attribute)
 
     def _draw_text(self, song_box):
         if not isinstance(self.right_out, MoveAnimation):
@@ -2223,6 +2232,6 @@ class FileNavigator:
             print("Removed favorite:", song.hash, song.tja.metadata.title['en'], song.tja.metadata.subtitle['en'])
         else:
             with open(favorites_path, 'a', encoding='utf-8-sig') as song_list:
-                song_list.write(f'{song.hash}|{song.tja.metadata.title['en']}|{song.tja.metadata.subtitle['en']}\n')
+                song_list.write(f'{song.hash}|{song.tja.metadata.title["en"]}|{song.tja.metadata.subtitle["en"]}\n')
             print("Added favorite: ", song.hash, song.tja.metadata.title['en'], song.tja.metadata.subtitle['en'])
         return True

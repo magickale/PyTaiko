@@ -2,7 +2,7 @@ import pyray as ray
 
 from libs.utils import get_current_ms
 from libs.texture import tex
-from scenes.game import ComboAnnounce
+from scenes.game import BranchIndicator
 
 
 class DevScreen:
@@ -16,7 +16,7 @@ class DevScreen:
         if not self.screen_init:
             self.screen_init = True
             tex.load_screen_textures('game')
-            self.obj = ComboAnnounce(0, get_current_ms())
+            self.obj = BranchIndicator()
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
@@ -27,8 +27,14 @@ class DevScreen:
         self.obj.update(get_current_ms())
         if ray.is_key_pressed(ray.KeyboardKey.KEY_ENTER):
             return self.on_screen_end('GAME')
-        elif ray.is_key_pressed(ray.KeyboardKey.KEY_SPACE):
-            self.obj = ComboAnnounce(100, get_current_ms())
+        elif ray.is_key_pressed(ray.KeyboardKey.KEY_UP):
+            self.obj.level_up('master')
+        elif ray.is_key_pressed(ray.KeyboardKey.KEY_DOWN):
+            self.obj.level_down('expert')
+        elif ray.is_key_pressed(ray.KeyboardKey.KEY_LEFT):
+            self.obj.level_up('expert')
+        elif ray.is_key_pressed(ray.KeyboardKey.KEY_RIGHT):
+            self.obj.level_down('normal')
 
     def draw(self):
         ray.draw_rectangle(0, 0, 1280, 720, ray.GREEN)
