@@ -1948,6 +1948,7 @@ class Gauge:
         self.clear_start = [52, 60, 69, 69]
         self.gauge_max = 87
         self.level = min(10, level)
+        self.tamashii_fire_change = tex.get_animation(25)
         if self.difficulty == 2:
             self.string_diff = "_hard"
         elif self.difficulty == 1:
@@ -2031,6 +2032,7 @@ class Gauge:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
             self.rainbow_fade_in.start()
         self.gauge_update_anim.update(current_ms)
+        self.tamashii_fire_change.update(current_ms)
 
         if self.rainbow_fade_in is not None:
             self.rainbow_fade_in.update(current_ms)
@@ -2087,7 +2089,11 @@ class Gauge:
         # Draw clear status indicators
         if gauge_length >= clear_point:
             tex.draw_texture('gauge', 'clear', index=min(2, self.difficulty))
+            if self.is_rainbow:
+                tex.draw_texture('gauge', 'tamashii_fire', scale=0.75, center=True, frame=self.tamashii_fire_change.attribute)
             tex.draw_texture('gauge', 'tamashii')
+            if self.is_rainbow and self.tamashii_fire_change.attribute in (0, 1, 4, 5):
+                tex.draw_texture('gauge', 'tamashii_overlay', fade=0.5)
         else:
             tex.draw_texture('gauge', 'clear_dark', index=min(2, self.difficulty))
             tex.draw_texture('gauge', 'tamashii_dark')

@@ -453,6 +453,7 @@ class Gauge:
             self.string_diff = "_easy"
         self.rainbow_animation = tex.get_animation(16)
         self.gauge_fade_in = tex.get_animation(17)
+        self.tamashii_fire_change = tex.get_animation(20)
         self.rainbow_animation.start()
         self.gauge_fade_in.start()
         self.is_finished = self.gauge_fade_in.is_finished
@@ -465,6 +466,7 @@ class Gauge:
 
     def update(self, current_ms: float):
         self.rainbow_animation.update(current_ms)
+        self.tamashii_fire_change.update(current_ms)
         if self.rainbow_animation.is_finished:
             self.rainbow_animation.restart()
         self.gauge_fade_in.update(current_ms)
@@ -498,7 +500,11 @@ class Gauge:
 
         if gauge_length >= self.clear_start[self.difficulty]:
             tex.draw_texture('gauge', 'clear', scale=scale, fade=self.gauge_fade_in.attribute, index=self.difficulty)
-            tex.draw_texture('gauge', 'tamashii', scale=scale, fade=self.gauge_fade_in.attribute)
+            if self.state == State.RAINBOW:
+                tex.draw_texture('gauge', 'tamashii_fire', scale=0.75 * scale, center=True, frame=self.tamashii_fire_change.attribute, fade=self.gauge_fade_in.attribute)
+                tex.draw_texture('gauge', 'tamashii', scale=scale, fade=self.gauge_fade_in.attribute)
+            if self.state == State.RAINBOW and self.tamashii_fire_change.attribute in (0, 1, 4, 5):
+                tex.draw_texture('gauge', 'tamashii_overlay', scale=scale, fade=min(0.5, self.gauge_fade_in.attribute))
         else:
             tex.draw_texture('gauge', 'clear_dark', scale=scale, fade=self.gauge_fade_in.attribute, index=self.difficulty)
             tex.draw_texture('gauge', 'tamashii_dark', scale=scale, fade=self.gauge_fade_in.attribute)
