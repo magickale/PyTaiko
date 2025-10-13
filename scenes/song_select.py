@@ -66,6 +66,11 @@ class SongSelectScreen:
             self.background_fade_change = tex.get_animation(5)
             self.diff_selector_move_1 = tex.get_animation(26)
             self.diff_selector_move_2 = tex.get_animation(27)
+            self.selected_diff_bounce = tex.get_animation(33)
+            self.selected_diff_fadein = tex.get_animation(34)
+            self.selected_diff_highlight_fade = tex.get_animation(35)
+            self.selected_diff_text_resize = tex.get_animation(36)
+            self.selected_diff_text_fadein = tex.get_animation(37)
             self.diff_select_move_right = False
             self.state = State.BROWSING
             self.selected_difficulty = -3
@@ -169,6 +174,8 @@ class SongSelectScreen:
                     self.diff_fade_out.start()
                     self.text_fade_out.start()
                     self.text_fade_in.start()
+                    self.selected_diff_bounce.start()
+                    self.selected_diff_fadein.start()
 
         if ray.is_key_pressed(ray.KeyboardKey.KEY_SPACE):
             success = self.navigator.add_favorite()
@@ -219,11 +226,16 @@ class SongSelectScreen:
             audio.play_sound(self.sound_kat)
             selected_song = get_current_song()
             diffs = sorted(selected_song.tja.metadata.course_data)
+            prev_diff = self.selected_difficulty
 
             if is_l_kat_pressed():
                 self._navigate_difficulty_left(diffs)
             else:  # is_r_kat_pressed()
                 self._navigate_difficulty_right(diffs)
+
+            if 0 <= self.selected_difficulty <= 4 and self.selected_difficulty != prev_diff:
+                self.selected_diff_bounce.start()
+                self.selected_diff_fadein.start()
 
         if (ray.is_key_pressed(ray.KeyboardKey.KEY_TAB) and
             self.selected_difficulty in [3, 4]):
@@ -268,16 +280,9 @@ class SongSelectScreen:
     def _confirm_selection(self):
         """Confirm song selection and create game transition"""
         audio.play_sound(self.sound_don)
-        selected_song = self.navigator.get_current_item()
-        if not isinstance(selected_song, SongFile):
-            raise Exception("picked directory")
-
-        title = selected_song.tja.metadata.title.get(
-            global_data.config['general']['language'], '')
-        subtitle = selected_song.tja.metadata.subtitle.get(
-            global_data.config['general']['language'], '')
-        self.game_transition = Transition(title, subtitle)
-        self.game_transition.start()
+        self.selected_diff_highlight_fade.start()
+        self.selected_diff_text_resize.start()
+        self.selected_diff_text_fadein.start()
 
     def _navigate_difficulty_left(self, diffs):
         """Navigate difficulty selection leftward"""
@@ -366,6 +371,11 @@ class SongSelectScreen:
         self.diff_selector_move_2.update(current_time)
         self.nameplate.update(current_time)
         self.indicator.update(current_time)
+        self.selected_diff_bounce.update(current_time)
+        self.selected_diff_fadein.update(current_time)
+        self.selected_diff_highlight_fade.update(current_time)
+        self.selected_diff_text_resize.update(current_time)
+        self.selected_diff_text_fadein.update(current_time)
         self.chara.update(current_time, 100, False, False)
 
         if self.text_fade_out.is_finished:
@@ -403,6 +413,18 @@ class SongSelectScreen:
             self.modifier_selector.update(get_current_ms())
             if self.modifier_selector.is_finished:
                 self.modifier_selector = None
+
+        if self.selected_diff_highlight_fade.is_finished and self.game_transition is None:
+            selected_song = self.navigator.get_current_item()
+            if not isinstance(selected_song, SongFile):
+                raise Exception("picked directory")
+
+            title = selected_song.tja.metadata.title.get(
+                global_data.config['general']['language'], '')
+            subtitle = selected_song.tja.metadata.subtitle.get(
+                global_data.config['general']['language'], '')
+            self.game_transition = Transition(title, subtitle)
+            self.game_transition.start()
 
         for song in self.navigator.items:
             song.box.update(self.state == State.SONG_SELECTED)
@@ -463,6 +485,18 @@ class SongSelectScreen:
 
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
             self.navigator.genre_bg.draw(95)
+
+        if (self.selected_song and self.state == State.SONG_SELECTED and self.selected_difficulty >= 0):
+            if global_data.player_num == 2:
+                tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
+                tex.draw_texture('global', 'background_diff_highlight', frame=max(3, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute, x=1025)
+                tex.draw_texture('global', 'bg_diff_text_bg', x=1025, fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
+                tex.draw_texture('global', 'bg_diff_text', frame=self.selected_difficulty, x=1025, fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
+            else:
+                tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
+                tex.draw_texture('global', 'background_diff_highlight', frame=max(3, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute)
+                tex.draw_texture('global', 'bg_diff_text_bg', fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
+                tex.draw_texture('global', 'bg_diff_text', frame=self.selected_difficulty, fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
 
         for item in self.navigator.items:
             box = item.box
