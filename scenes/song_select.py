@@ -944,12 +944,23 @@ class YellowBox:
             if self.tja.metadata.course_data[diff].is_branching and (get_current_ms() // 1000) % 2 == 0:
                 tex.draw_texture('yellow_box', 'branch_indicator', x=(diff*60), color=color)
 
-    def _draw_tja_data_diff(self, is_ura: bool):
+    def _draw_tja_data_diff(self, is_ura: bool, song_box):
         if self.tja is None:
             return
         tex.draw_texture('diff_select', 'back', fade=self.fade_in.attribute)
         tex.draw_texture('diff_select', 'option', fade=self.fade_in.attribute)
         tex.draw_texture('diff_select', 'neiro', fade=self.fade_in.attribute)
+
+        for diff in self.tja.metadata.course_data:
+            if diff >= 4:
+                continue
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0:
+                tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][3] == 0:
+                tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == 1:
+                tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
+            tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*115)+8, y=-120, fade=min(self.fade_in.attribute, 0.25))
 
         for i in range(4):
             if i == 3 and is_ura:
@@ -1006,7 +1017,7 @@ class YellowBox:
     def draw(self, song_box: SongBox, fade_override: Optional[float], is_ura: bool):
         self._draw_yellow_box()
         if self.is_diff_select and self.tja is not None:
-            self._draw_tja_data_diff(is_ura)
+            self._draw_tja_data_diff(is_ura, song_box)
         else:
             fade = self.fade.attribute
             if fade_override is not None:
