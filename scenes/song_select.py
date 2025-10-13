@@ -66,6 +66,10 @@ class SongSelectScreen:
             self.background_fade_change = tex.get_animation(5)
             self.diff_selector_move_1 = tex.get_animation(26)
             self.diff_selector_move_2 = tex.get_animation(27)
+            self.blue_arrow_fade = tex.get_animation(29)
+            self.blue_arrow_move = tex.get_animation(30)
+            self.blue_arrow_fade.start()
+            self.blue_arrow_move.start()
             self.selected_diff_bounce = tex.get_animation(33)
             self.selected_diff_fadein = tex.get_animation(34)
             self.selected_diff_highlight_fade = tex.get_animation(35)
@@ -376,6 +380,8 @@ class SongSelectScreen:
         self.selected_diff_highlight_fade.update(current_time)
         self.selected_diff_text_resize.update(current_time)
         self.selected_diff_text_fadein.update(current_time)
+        self.blue_arrow_fade.update(current_time)
+        self.blue_arrow_move.update(current_time)
         self.chara.update(current_time, 100, False, False)
 
         if self.text_fade_out.is_finished:
@@ -506,6 +512,9 @@ class SongSelectScreen:
                 else:
                     box.draw(box.position + int(self.move_away.attribute), 95, self.is_ura, fade_override=self.diff_fade_out.attribute)
 
+        if self.state == State.BROWSING:
+            tex.draw_texture('global', 'arrow', index=0, x=-(self.blue_arrow_move.attribute*2), fade=self.blue_arrow_fade.attribute)
+            tex.draw_texture('global', 'arrow', index=1, mirror='horizontal', x=self.blue_arrow_move.attribute*2, fade=self.blue_arrow_fade.attribute)
         tex.draw_texture('global', 'footer')
 
         self.ura_switch_animation.draw()
@@ -1095,6 +1104,10 @@ class DiffSortSelect:
         self.bounce_down_1 = tex.get_animation(23)
         self.bounce_up_2 = tex.get_animation(24)
         self.bounce_down_2 = tex.get_animation(25)
+        self.blue_arrow_fade = tex.get_animation(29)
+        self.blue_arrow_move = tex.get_animation(30)
+        self.blue_arrow_fade.start()
+        self.blue_arrow_move.start()
         self.bg_resize.start()
         self.diff_fade_in.start()
         self.prev_diff = prev_diff
@@ -1292,6 +1305,10 @@ class DiffSortSelect:
                     tex.draw_texture('diff_sort', 'small_box_text', x=(i*245), y=y, frame=i)
         else:
             tex.draw_texture('diff_sort', 'pongos')
+            if self.selected_level != 1:
+                tex.draw_texture('diff_sort', 'arrow', index=0, x=-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
+            if self.selected_level != self.limits[self.selected_box]:
+                tex.draw_texture('diff_sort', 'arrow', index=1, mirror='horizontal', x=self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
         self.draw_statistics()
 
     def draw(self):
