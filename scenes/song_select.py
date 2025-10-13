@@ -152,7 +152,7 @@ class SongSelectScreen:
                 #audio.play_sound(self.sound_cancel)
             elif isinstance(selected_item, Directory) and selected_item.collection == Directory.COLLECTIONS[3]:
                 self.state = State.DIFF_SORTING
-                self.diff_sort_selector = DiffSortSelect()
+                self.diff_sort_selector = DiffSortSelect(self.navigator.diff_sort_statistics, self.navigator.diff_sort_diff, self.navigator.diff_sort_level)
                 self.text_fade_in.start()
                 self.text_fade_out.start()
             else:
@@ -1045,7 +1045,7 @@ class UraSwitchAnimation:
         tex.draw_texture('diff_select', 'ura_switch', frame=self.texture_change.attribute, fade=self.fade_out.attribute)
 
 class DiffSortSelect:
-    def __init__(self):
+    def __init__(self, statistics: dict[int, dict[int, list[int]]], prev_diff: int, prev_level: int):
         self.selected_box = -1
         self.selected_level = 1
         self.in_level_select = False
@@ -1063,6 +1063,17 @@ class DiffSortSelect:
         self.bounce_down_2 = tex.get_animation(25)
         self.bg_resize.start()
         self.diff_fade_in.start()
+        self.prev_diff = prev_diff
+        self.prev_level = prev_level
+        self.diff_sort_statistics = statistics
+        self.diff_sort_sum_stat = {
+            course: [
+                sum(stats[0] for stats in levels.values()),
+                sum(stats[1] for stats in levels.values()),
+                sum(stats[2] for stats in levels.values())
+            ]
+            for course, levels in self.diff_sort_statistics.items()
+        }
 
     def update(self, current_ms):
         self.bg_resize.update(current_ms)
@@ -1134,6 +1145,69 @@ class DiffSortSelect:
         else:
             self.selected_box = min(self.selected_box + 1, self.num_boxes - 1)
 
+    def draw_statistics(self):
+        tex.draw_texture('diff_sort', f'stat_bg_{global_data.player_num}p')
+        tex.draw_texture('diff_sort', 'stat_overlay')
+        tex.draw_texture('diff_sort', 'stat_diff', frame=min(self.selected_box, 3))
+        if self.in_level_select or self.selected_box == 5:
+            tex.draw_texture('diff_sort', 'stat_starx')
+            if self.selected_box == 5:
+                tex.draw_texture('diff_sort', 'stat_prev')
+                counter = str(self.prev_level)
+            else:
+                counter = str(self.selected_level)
+            margin = 25
+            total_width = len(counter) * margin
+            for i, digit in enumerate(counter):
+                tex.draw_texture('diff_sort', 'stat_num_star', frame=int(digit), x=70-(len(counter) - i) * margin, y=-108)
+            counter = str(self.diff_sort_statistics[self.selected_box][self.selected_level][0])
+            if self.selected_box == 5:
+                counter = str(self.diff_sort_statistics[self.prev_diff][self.prev_level][0])
+            margin = 23
+            total_width = len(counter) * margin
+            for i, digit in enumerate(counter):
+                tex.draw_texture('diff_sort', 'stat_num', frame=int(digit), x=-(total_width//2)+(i*margin))
+
+            for j in range(2):
+                if self.selected_box == 5:
+                    counter = str(self.diff_sort_statistics[self.prev_diff][self.prev_level][0])
+                else:
+                    counter = str(self.diff_sort_statistics[self.selected_box][self.selected_level][0])
+                margin = 10
+                total_width = len(counter) * margin
+                for i, digit in enumerate(counter):
+                    tex.draw_texture('diff_sort', 'stat_num_small', index=j, frame=int(digit), x=-(total_width//2)+(i*margin))
+
+            for j in range(2):
+                if self.selected_box == 5:
+                    counter = str(self.diff_sort_statistics[self.prev_diff][self.prev_level][j+1])
+                else:
+                    counter = str(self.diff_sort_statistics[self.selected_box][self.selected_level][j+1])
+                margin = 25
+                total_width = len(counter) * margin
+                for i, digit in enumerate(counter):
+                    tex.draw_texture('diff_sort', 'stat_num_star', index=j, frame=int(digit), x=-(len(counter) - i) * margin)
+        else:
+            counter = str(self.diff_sort_sum_stat[self.selected_box][0])
+            margin = 23
+            total_width = len(counter) * margin
+            for i, digit in enumerate(counter):
+                tex.draw_texture('diff_sort', 'stat_num', frame=int(digit), x=-(total_width//2)+(i*margin))
+
+            for j in range(2):
+                counter = str(self.diff_sort_sum_stat[self.selected_box][0])
+                margin = 10
+                total_width = len(counter) * margin
+                for i, digit in enumerate(counter):
+                    tex.draw_texture('diff_sort', 'stat_num_small', index=j, frame=int(digit), x=-(total_width//2)+(i*margin))
+
+            for j in range(2):
+                counter = str(self.diff_sort_sum_stat[self.selected_box][j+1])
+                margin = 25
+                total_width = len(counter) * margin
+                for i, digit in enumerate(counter):
+                    tex.draw_texture('diff_sort', 'stat_num_star', index=j, frame=int(digit), x=-(len(counter) - i) * margin)
+
     def draw_diff_select(self):
         tex.draw_texture('diff_sort', 'background', scale=self.bg_resize.attribute, center=True)
 
@@ -1153,6 +1227,9 @@ class DiffSortSelect:
         for i in range(self.num_boxes):
             if i < 4:
                 tex.draw_texture('diff_sort', 'box_diff', x=(100*i), frame=i)
+
+        if 0 <= self.selected_box <= 3 or self.selected_box == 5:
+            self.draw_statistics()
 
     def draw_level_select(self):
         tex.draw_texture('diff_sort', 'background', scale=self.bg_resize.attribute, center=True)
@@ -1181,6 +1258,7 @@ class DiffSortSelect:
                     tex.draw_texture('diff_sort', 'small_box_text', x=(i*245), y=y, frame=i)
         else:
             tex.draw_texture('diff_sort', 'pongos')
+        self.draw_statistics()
 
     def draw(self):
         ray.draw_rectangle(0, 0, 1280, 720, ray.fade(ray.BLACK, 0.6))
@@ -1627,6 +1705,7 @@ class FileNavigator:
         self.selected_index = 0
         self.diff_sort_diff = 4
         self.diff_sort_level = 10
+        self.diff_sort_statistics = dict()
         self.history = []
         self.box_open = False
         self.genre_bg = None
@@ -1754,6 +1833,29 @@ class FileNavigator:
                 song_key = str(tja_path)
                 if song_key not in self.all_song_files:
                     song_obj = SongFile(tja_path, tja_path.name, texture_index)
+                    song_obj.box.get_scores()
+                    for course in song_obj.tja.metadata.course_data:
+                        level = song_obj.tja.metadata.course_data[course].level
+
+                        scores = song_obj.box.scores.get(course)
+                        if scores is not None:
+                            is_cleared = scores[4] == 1
+                            is_full_combo = scores[3] == 0
+                        else:
+                            is_cleared = False
+                            is_full_combo = False
+
+                        if course not in self.diff_sort_statistics:
+                            self.diff_sort_statistics[course] = {}
+
+                        if level not in self.diff_sort_statistics[course]:
+                            self.diff_sort_statistics[course][level] = [1, int(is_full_combo), int(is_cleared)]
+                        else:
+                            self.diff_sort_statistics[course][level][0] += 1
+                            if is_full_combo:
+                                self.diff_sort_statistics[course][level][1] += 1
+                            elif is_cleared:
+                                self.diff_sort_statistics[course][level][2] += 1
                     self.song_count += 1
                     global_data.song_progress = self.song_count / global_data.total_songs
                     if song_obj.is_recent:
@@ -1762,10 +1864,7 @@ class FileNavigator:
 
                 content_items.append(self.all_song_files[song_key])
 
-            # Store content for this directory
             self.directory_contents[dir_key] = content_items
-
-            # OPTION 2: Mark directory for lazy crown calculation
             self.crown_cache_dirty.add(dir_key)
 
         else:

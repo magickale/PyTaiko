@@ -245,13 +245,16 @@ class Player:
             self.end_time = self.play_notes[-1].hit_ms
             if self.branch_m:
                 for section in self.branch_m:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+                    if section.play_notes:
+                        self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
             if self.branch_e:
                 for section in self.branch_e:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+                    if section.play_notes:
+                        self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
             if self.branch_n:
                 for section in self.branch_n:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+                    if section.play_notes:
+                        self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
         else:
             self.play_notes, self.draw_note_list, self.draw_bar_list = deque(), deque(), deque()
             self.end_time = 0
