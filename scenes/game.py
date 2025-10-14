@@ -11,7 +11,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.chara_2d import Chara2D
-from libs.global_objects import Nameplate
+from libs.global_objects import AllNetIcon, Nameplate
 from libs.texture import tex
 from libs.tja import (
     Balloon,
@@ -107,6 +107,7 @@ class GameScreen:
                 scene_preset = ''
             self.background = Background(global_data.player_num, self.bpm, scene_preset=scene_preset)
             self.transition = Transition(session_data.song_title, subtitle, is_second=True)
+            self.allnet_indicator = AllNetIcon()
             self.transition.start()
 
     def on_screen_end(self, next_screen):
@@ -183,7 +184,7 @@ class GameScreen:
             session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
             session_data.result_gauge_length = self.player_1.gauge.gauge_length
             if self.end_ms != 0:
-                if current_time >= self.end_ms + 500:
+                if current_time >= self.end_ms + 1000:
                     if self.player_1.ending_anim is None:
                         if session_data.result_bad == 0:
                             self.player_1.ending_anim = FCAnimation()
@@ -220,6 +221,7 @@ class GameScreen:
         self.song_info.draw()
         self.transition.draw()
         self.result_transition.draw()
+        self.allnet_indicator.draw()
 
     def draw_3d(self):
         self.player_1.draw_3d()

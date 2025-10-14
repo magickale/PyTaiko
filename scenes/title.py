@@ -2,10 +2,12 @@ import random
 from pathlib import Path
 
 from libs.audio import audio
+from libs.global_objects import AllNetIcon, CoinOverlay, EntryOverlay
 from libs.texture import tex
 from libs.utils import (
     get_current_ms,
     global_data,
+    global_tex,
     is_l_don_pressed,
     is_r_don_pressed,
 )
@@ -24,6 +26,9 @@ class TitleScreen:
         video_dir = Path(global_data.config["paths"]["video_path"]) / "attract_videos"
         self.attract_video_list = [file for file in video_dir.glob("**/*.mp4")]
         self.screen_init = False
+        self.coin_overlay = CoinOverlay()
+        self.allnet_indicator = AllNetIcon()
+        self.entry_overlay = EntryOverlay()
 
     def load_sounds(self):
         sounds_dir = Path("Sounds")
@@ -44,6 +49,7 @@ class TitleScreen:
             self.attract_video = None
             self.warning_board = None
             self.fade_out = tex.get_animation(13)
+            self.text_overlay_fade = tex.get_animation(14)
 
     def on_screen_end(self) -> str:
         if self.op_video is not None:
@@ -86,6 +92,7 @@ class TitleScreen:
     def update(self):
         self.on_screen_start()
 
+        self.text_overlay_fade.update(get_current_ms())
         self.fade_out.update(get_current_ms())
         if self.fade_out.is_finished:
             self.fade_out.update(get_current_ms())
@@ -106,6 +113,12 @@ class TitleScreen:
             self.attract_video.draw()
 
         tex.draw_texture('movie', 'background', fade=self.fade_out.attribute)
+        self.coin_overlay.draw()
+        self.allnet_indicator.draw()
+        self.entry_overlay.draw(x=155, y=-10)
+
+        global_tex.draw_texture('overlay', 'hit_taiko_to_start', index=0, fade=self.text_overlay_fade.attribute)
+        global_tex.draw_texture('overlay', 'hit_taiko_to_start', index=1, fade=self.text_overlay_fade.attribute)
 
     def draw_3d(self):
         pass

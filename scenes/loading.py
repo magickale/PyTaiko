@@ -3,6 +3,7 @@ import threading
 import pyray as ray
 
 from libs.animation import Animation
+from libs.global_objects import AllNetIcon
 from libs.song_hash import build_song_hashes
 from libs.texture import tex
 from libs.utils import get_current_ms, global_data
@@ -30,6 +31,7 @@ class LoadScreen:
         self.navigator_thread = None
 
         self.fade_in = None
+        self.allnet_indicator = AllNetIcon()
 
     def _load_song_hashes(self):
         """Background thread function to load song hashes"""
@@ -104,5 +106,6 @@ class LoadScreen:
 
         if self.fade_in is not None:
             ray.draw_rectangle(0, 0, self.width, self.height, ray.fade(ray.WHITE, self.fade_in.attribute))
+        self.allnet_indicator.draw()
     def draw_3d(self):
         pass

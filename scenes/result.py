@@ -5,7 +5,7 @@ import pyray as ray
 from libs import utils
 from libs.audio import audio
 from libs.chara_2d import Chara2D
-from libs.global_objects import Nameplate
+from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate
 from libs.texture import tex
 from libs.utils import (
     OutlinedText,
@@ -58,6 +58,8 @@ class ResultScreen:
             self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
             self.chara = Chara2D(global_data.player_num - 1, 100)
             self.score_animator = ScoreAnimator(session_data.result_score)
+            self.coin_overlay = CoinOverlay()
+            self.allnet_indicator = AllNetIcon()
             self.score = ''
             self.good = ''
             self.ok = ''
@@ -261,6 +263,8 @@ class ResultScreen:
 
         self.fade_in.draw()
         ray.draw_rectangle(0, 0, self.width, self.height, ray.fade(ray.BLACK, self.fade_out.attribute))
+        self.coin_overlay.draw()
+        self.allnet_indicator.draw()
 
     def draw_3d(self):
         pass
@@ -502,7 +506,7 @@ class Gauge:
             tex.draw_texture('gauge', 'clear', scale=scale, fade=self.gauge_fade_in.attribute, index=self.difficulty)
             if self.state == State.RAINBOW:
                 tex.draw_texture('gauge', 'tamashii_fire', scale=0.75 * scale, center=True, frame=self.tamashii_fire_change.attribute, fade=self.gauge_fade_in.attribute)
-                tex.draw_texture('gauge', 'tamashii', scale=scale, fade=self.gauge_fade_in.attribute)
+            tex.draw_texture('gauge', 'tamashii', scale=scale, fade=self.gauge_fade_in.attribute)
             if self.state == State.RAINBOW and self.tamashii_fire_change.attribute in (0, 1, 4, 5):
                 tex.draw_texture('gauge', 'tamashii_overlay', scale=scale, fade=min(0.5, self.gauge_fade_in.attribute))
         else:

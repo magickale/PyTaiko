@@ -1,7 +1,7 @@
 from enum import Enum
 import pyray as ray
 
-from libs.utils import OutlinedText, global_tex
+from libs.utils import OutlinedText, get_config, global_tex
 
 
 class Nameplate:
@@ -77,3 +77,78 @@ class Indicator:
             tex.draw_texture('indicator', 'blue_arrow', index=1, x=x+self.blue_arrow_move.attribute, y=y, mirror='horizontal', fade=min(fade, self.blue_arrow_fade.attribute))
         else:
             tex.draw_texture('indicator', 'drum_don', fade=min(fade, self.don_fade.attribute), index=self.state.value, x=x, y=y)
+
+class CoinOverlay:
+    def __init__(self):
+        pass
+    def update(self, current_time_ms: float):
+        pass
+    def draw(self, x: int = 0, y: int = 0):
+        tex = global_tex
+        tex.draw_texture('overlay', 'free_play', x=x, y=y)
+
+class AllNetIcon:
+    def __init__(self):
+        pass
+    def update(self, current_time_ms: float):
+        pass
+    def draw(self, x: int = 0, y: int = 0):
+        tex = global_tex
+        tex.draw_texture('overlay', 'allnet_indicator', x=x, y=y, frame=0)
+
+class EntryOverlay:
+    def __init__(self):
+        self.online = False
+    def update(self, current_time_ms: float):
+        pass
+    def draw(self, x: int = 0, y: int = 0):
+        tex = global_tex
+        tex.draw_texture('overlay', 'banapass_or', x=x, y=y, frame=self.online)
+        tex.draw_texture('overlay', 'banapass_card', x=x, y=y, frame=self.online)
+        tex.draw_texture('overlay', 'banapass_osaifu_keitai', x=x, y=y, frame=self.online)
+        if not self.online:
+            tex.draw_texture('overlay', 'banapass_no', x=x, y=y, frame=self.online)
+
+        tex.draw_texture('overlay', 'camera', x=x, y=y, frame=0)
+
+class Timer:
+    def __init__(self, time: int, current_time_ms: float, confirm_func):
+        self.time = time
+        self.last_time = current_time_ms
+        self.counter = str(self.time)
+        self.num_resize = global_tex.get_animation(9)
+        self.highlight_resize = global_tex.get_animation(10)
+        self.highlight_fade = global_tex.get_animation(11)
+        self.confirm_func = confirm_func
+        self.is_finished = False
+        self.is_frozen = get_config()["general"]["timer_frozen"]
+    def update(self, current_time_ms: float):
+        if self.time == 0 and not self.is_finished:
+            self.is_finished = True
+            self.confirm_func()
+        self.num_resize.update(current_time_ms)
+        self.highlight_resize.update(current_time_ms)
+        self.highlight_fade.update(current_time_ms)
+        if self.is_frozen:
+            return
+        if current_time_ms >= self.last_time + 1000 and self.time > 0:
+            self.time -= 1
+            self.last_time = current_time_ms
+            self.counter = str(self.time)
+            if self.time < 10:
+                self.num_resize.start()
+                self.highlight_fade.start()
+                self.highlight_resize.start()
+    def draw(self, x: int = 0, y: int = 0):
+        tex = global_tex
+        if self.time < 10:
+            tex.draw_texture('timer', 'bg_red')
+            counter_name = 'counter_white'
+            tex.draw_texture('timer', 'highlight', fade=self.highlight_fade.attribute, scale=self.highlight_resize.attribute, center=True)
+        else:
+            tex.draw_texture('timer', 'bg')
+            counter_name = 'counter_black'
+        margin = 40
+        total_width = len(self.counter) * margin
+        for i, digit in enumerate(self.counter):
+            tex.draw_texture('timer', counter_name, frame=int(digit), x=-(total_width//2)+(i*margin), scale=self.num_resize.attribute, center=True)

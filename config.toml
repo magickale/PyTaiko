@@ -5,6 +5,7 @@ visual_offset = 0
 language = "ja"
 hard_judge = 108
 touch_enabled = false
+timer_frozen = true
 
 [nameplate]
 name = 'どんちゃん'

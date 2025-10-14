@@ -4,7 +4,7 @@ import pyray as ray
 
 from libs.audio import audio
 from libs.chara_2d import Chara2D
-from libs.global_objects import Nameplate, Indicator
+from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, EntryOverlay, Timer
 from libs.texture import tex
 from libs.utils import (
     OutlinedText,
@@ -44,6 +44,10 @@ class EntryScreen:
             plate_info = global_data.config['nameplate']
             self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False)
             self.indicator = Indicator(Indicator.State.SELECT)
+            self.coin_overlay = CoinOverlay()
+            self.allnet_indicator = AllNetIcon()
+            self.entry_overlay = EntryOverlay()
+            self.timer = Timer(60, get_current_ms(), self.box_manager.select_box)
             self.screen_init = True
             self.side_select_fade = tex.get_animation(0)
             self.bg_flicker = tex.get_animation(1)
@@ -125,6 +129,7 @@ class EntryScreen:
         self.nameplate_fadein.update(current_time)
         self.nameplate.update(current_time)
         self.indicator.update(current_time)
+        self.timer.update(current_time)
         self.chara.update(current_time, 100, False, False)
         if self.box_manager.is_finished():
             return self.on_screen_end(self.box_manager.selected_box())
@@ -223,6 +228,11 @@ class EntryScreen:
 
         if self.box_manager.is_finished():
             ray.draw_rectangle(0, 0, 1280, 720, ray.BLACK)
+
+        self.timer.draw()
+        self.entry_overlay.draw(y=-10)
+        self.coin_overlay.draw()
+        self.allnet_indicator.draw()
 
     def draw_3d(self):
         pass

@@ -11,7 +11,7 @@ from libs.animation import Animation, MoveAnimation
 from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.global_data import Modifiers
-from libs.global_objects import Nameplate, Indicator
+from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, Timer
 from libs.texture import tex
 from libs.tja import TJAParser, test_encodings
 from libs.transition import Transition
@@ -86,9 +86,13 @@ class SongSelectScreen:
             self.neiro_selector = None
             self.modifier_selector = None
             self.chara = Chara2D(global_data.player_num - 1, 100)
+            self.coin_overlay = CoinOverlay()
+            self.allnet_indicator = AllNetIcon()
             self.texture_index = SongBox.DEFAULT_INDEX
             self.last_texture_index = SongBox.DEFAULT_INDEX
             self.last_moved = get_current_ms()
+            self.timer_browsing = Timer(100, get_current_ms(), self.navigator.select_current_item)
+            self.timer_selected = Timer(40, get_current_ms(), self._confirm_selection)
             self.ura_toggle = 0
             self.is_ura = False
             self.screen_init = True
@@ -278,6 +282,8 @@ class SongSelectScreen:
         self.text_fade_out.reset()
         self.text_fade_in.reset()
         self.state = State.BROWSING
+        self.timer_browsing = Timer(100, get_current_ms(), self.navigator.select_current_item)
+        self.timer_selected = Timer(40, get_current_ms(), self._confirm_selection)
         self.navigator.reset_items()
 
 
@@ -383,6 +389,11 @@ class SongSelectScreen:
         self.blue_arrow_fade.update(current_time)
         self.blue_arrow_move.update(current_time)
         self.chara.update(current_time, 100, False, False)
+
+        if self.state == State.BROWSING or self.state == State.DIFF_SORTING:
+            self.timer_browsing.update(current_time)
+        elif self.state == State.SONG_SELECTED:
+            self.timer_selected.update(current_time)
 
         if self.text_fade_out.is_finished:
             self.selected_song = True
@@ -561,8 +572,17 @@ class SongSelectScreen:
         if self.modifier_selector is not None:
             self.modifier_selector.draw()
 
+        tex.draw_texture('global', 'song_num_bg', fade=0.75)
+        tex.draw_texture('global', 'song_num', frame=global_data.songs_played % 4)
+        if self.state == State.BROWSING or self.state == State.DIFF_SORTING:
+            self.timer_browsing.draw()
+        elif self.state == State.SONG_SELECTED:
+            self.timer_selected.draw()
+        self.coin_overlay.draw()
         if self.game_transition is not None:
             self.game_transition.draw()
+
+        self.allnet_indicator.draw()
 
     def draw_3d(self):
         pass
