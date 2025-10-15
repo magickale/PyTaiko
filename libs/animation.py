@@ -33,6 +33,7 @@ class BaseAnimation():
         self.is_finished = False
         self.attribute = 0
         self.is_started = False
+        self.is_reversing = False
         self.unlocked = False
         self.loop = loop
         self.lock_input = lock_input
@@ -142,6 +143,7 @@ class FadeAnimation(BaseAnimation):
                 self.delay = self.reverse_delay
                 self.initial_opacity, self.final_opacity = self.final_opacity, self.initial_opacity
                 self.reverse_delay = None
+                self.is_reversing = True
             else:
                 self.is_finished = True
         else:

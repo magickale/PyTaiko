@@ -182,6 +182,8 @@ class SongSelectScreen:
 
         if ray.is_key_pressed(ray.KeyboardKey.KEY_SPACE):
             success = self.navigator.add_favorite()
+            current_box = self.navigator.get_current_item().box
+            current_box.is_favorite = not current_box.is_favorite
             if success:
                 audio.play_sound('add_favorite')
 
@@ -354,6 +356,8 @@ class SongSelectScreen:
         self.selected_difficulty = 7 - self.selected_difficulty
 
     def handle_input(self):
+        if audio.is_sound_playing(f'voice_start_song_{global_data.player_num}p'):
+            return
         if self.state == State.BROWSING:
             self.handle_input_browsing()
         elif self.state == State.SONG_SELECTED:
@@ -502,11 +506,15 @@ class SongSelectScreen:
         if (self.selected_song and self.state == State.SONG_SELECTED and self.selected_difficulty >= 0):
             if global_data.player_num == 2:
                 tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
+                if self.selected_diff_highlight_fade.is_reversing or self.selected_diff_highlight_fade.is_finished:
+                    tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
                 tex.draw_texture('global', 'background_diff_highlight', frame=min(3, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute, x=1025)
                 tex.draw_texture('global', 'bg_diff_text_bg', x=1025, fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
                 tex.draw_texture('global', 'bg_diff_text', frame=min(3, self.selected_difficulty), x=1025, fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
             else:
                 tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
+                if self.selected_diff_highlight_fade.is_reversing or self.selected_diff_highlight_fade.is_finished:
+                    tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
                 tex.draw_texture('global', 'background_diff_highlight', frame=min(3, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute)
                 tex.draw_texture('global', 'bg_diff_text_bg', fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
                 tex.draw_texture('global', 'bg_diff_text', frame=min(3, self.selected_difficulty), fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
@@ -638,6 +646,7 @@ class SongBox:
         self.history_wait = 0
         self.tja = tja
         self.hash = dict()
+        self.is_favorite = False
 
     def reset(self):
         if self.yellow_box is not None:
@@ -954,6 +963,8 @@ class YellowBox:
             tex.draw_texture('yellow_box', 'ex_data_limited_time', color=color)
         elif self.tja.ex_data.new:
             tex.draw_texture('yellow_box', 'ex_data_new_song', color=color)
+        if song_box.is_favorite:
+            tex.draw_texture('yellow_box', f'favorite_{global_data.player_num}p', color=color)
 
         for i in range(4):
             tex.draw_texture('yellow_box', 'difficulty_bar', frame=i, x=(i*60), color=color)
@@ -1849,6 +1860,12 @@ class FileNavigator:
 
             self._generate_objects_recursive(root_path)
 
+        if self.favorite_folder is not None:
+            song_list = self._read_song_list(self.favorite_folder.path)
+            for song_obj in song_list:
+                if str(song_obj) in self.all_song_files:
+                    self.all_song_files[str(song_obj)].box.is_favorite = True
+
         print(f"Object generation complete. "
                     f"Directories: {len(self.all_directories)}, "
                     f"Songs: {len(self.all_song_files)}")
@@ -2057,7 +2074,8 @@ class FileNavigator:
                             sibling_key = str(sibling_path)
                             if sibling_key in self.directory_contents:
                                 for item in self.directory_contents[sibling_key]:
-                                    temp_items.append(item)
+                                    if not isinstance(item, Directory):
+                                        temp_items.append(item)
                     content_items = random.sample(temp_items, 10)
 
             if content_items == [] or (selected_item is not None and selected_item.box.texture_index == 13):
