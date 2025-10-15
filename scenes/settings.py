@@ -36,6 +36,7 @@ class SettingsScreen:
         audio.device_type = global_data.config["audio"]["device_type"]
         audio.target_sample_rate = global_data.config["audio"]["sample_rate"]
         audio.buffer_size = global_data.config["audio"]["buffer_size"]
+        audio.volume_presets = global_data.config["volume"]
         audio.init_audio_device()
         return "ENTRY"
 

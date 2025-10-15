@@ -49,8 +49,8 @@ class SongSelectScreen:
             audio.load_screen_sounds('song_select')
             audio.set_sound_volume('ura_switch', 0.25)
             audio.set_sound_volume('add_favorite', 3.0)
-            audio.play_sound('bgm')
-            audio.play_sound('voice_enter')
+            audio.play_sound('bgm', 'music')
+            audio.play_sound('voice_enter', 'voice')
             self.background_move = tex.get_animation(0)
             self.move_away = tex.get_animation(1)
             self.diff_fade_out = tex.get_animation(2)
@@ -122,7 +122,7 @@ class SongSelectScreen:
         if self.demo_song is not None:
             audio.stop_music_stream(self.demo_song)
             audio.unload_music_stream(self.demo_song)
-            audio.play_sound('bgm')
+            audio.play_sound('bgm', 'music')
         self.demo_song = None
         self.navigator.get_current_item().box.wait = get_current_ms()
 
@@ -131,24 +131,24 @@ class SongSelectScreen:
             self.reset_demo_music()
             for _ in range(10):
                 self.navigator.navigate_left()
-            audio.play_sound('skip')
+            audio.play_sound('skip', 'sound')
             self.last_moved = get_current_ms()
         elif ray.is_key_pressed(ray.KeyboardKey.KEY_RIGHT_CONTROL) or (is_r_kat_pressed() and get_current_ms() <= self.last_moved + 50):
             self.reset_demo_music()
             for _ in range(10):
                 self.navigator.navigate_right()
-            audio.play_sound('skip')
+            audio.play_sound('skip', 'sound')
             self.last_moved = get_current_ms()
         elif is_l_kat_pressed():
             self.reset_demo_music()
             self.navigator.navigate_left()
-            audio.play_sound('kat')
+            audio.play_sound('kat', 'sound')
             self.last_moved = get_current_ms()
 
         elif is_r_kat_pressed():
             self.reset_demo_music()
             self.navigator.navigate_right()
-            audio.play_sound('kat')
+            audio.play_sound('kat', 'sound')
             self.last_moved = get_current_ms()
 
         # Select/Enter
@@ -156,7 +156,7 @@ class SongSelectScreen:
             selected_item = self.navigator.items[self.navigator.selected_index]
             if selected_item is not None and selected_item.box.is_back:
                 self.navigator.go_back()
-                audio.play_sound('cancel')
+                audio.play_sound('cancel', 'sound')
             elif isinstance(selected_item, Directory) and selected_item.collection == Directory.COLLECTIONS[3]:
                 self.state = State.DIFF_SORTING
                 self.diff_sort_selector = DiffSortSelect(self.navigator.diff_sort_statistics, self.navigator.diff_sort_diff, self.navigator.diff_sort_level)
@@ -171,8 +171,8 @@ class SongSelectScreen:
                     elif (4 in selected_song.tja.metadata.course_data and
                           3 not in selected_song.tja.metadata.course_data):
                         self.is_ura = True
-                    audio.play_sound('don')
-                    audio.play_sound('voice_select_diff')
+                    audio.play_sound('don', 'sound')
+                    audio.play_sound('voice_select_diff', 'voice')
                     self.move_away.start()
                     self.diff_fade_out.start()
                     self.text_fade_out.start()
@@ -185,7 +185,7 @@ class SongSelectScreen:
             current_box = self.navigator.get_current_item().box
             current_box.is_favorite = not current_box.is_favorite
             if success:
-                audio.play_sound('add_favorite')
+                audio.play_sound('add_favorite', 'sound')
 
     def handle_input_selected(self):
         # Handle song selection confirmation or cancel
@@ -195,28 +195,28 @@ class SongSelectScreen:
             elif is_r_kat_pressed():
                 self.neiro_selector.move_right()
             if is_l_don_pressed() or is_r_don_pressed():
-                audio.play_sound('don')
+                audio.play_sound('don', 'sound')
                 self.neiro_selector.confirm()
             return
         if self.modifier_selector is not None:
             if is_l_kat_pressed():
-                audio.play_sound('kat')
+                audio.play_sound('kat', 'sound')
                 self.modifier_selector.left()
             elif is_r_kat_pressed():
-                audio.play_sound('kat')
+                audio.play_sound('kat', 'sound')
                 self.modifier_selector.right()
             if is_l_don_pressed() or is_r_don_pressed():
-                audio.play_sound('don')
+                audio.play_sound('don', 'sound')
                 self.modifier_selector.confirm()
             return
         if is_l_don_pressed() or is_r_don_pressed():
             if self.selected_difficulty == -3:
                 self._cancel_selection()
             elif self.selected_difficulty == -2:
-                audio.play_sound('don')
+                audio.play_sound('don', 'sound')
                 self.modifier_selector = ModifierSelector()
             elif self.selected_difficulty == -1:
-                audio.play_sound('don')
+                audio.play_sound('don', 'sound')
                 self.neiro_selector = NeiroSelector()
             else:
                 self._confirm_selection()
@@ -228,7 +228,7 @@ class SongSelectScreen:
             return selected_song
 
         if is_l_kat_pressed() or is_r_kat_pressed():
-            audio.play_sound('kat')
+            audio.play_sound('kat', 'sound')
             selected_song = get_current_song()
             diffs = sorted(selected_song.tja.metadata.course_data)
             prev_diff = self.selected_difficulty
@@ -251,13 +251,13 @@ class SongSelectScreen:
             raise Exception("Diff sort selector was not able to be created")
         if is_l_kat_pressed():
             self.diff_sort_selector.input_left()
-            audio.play_sound('kat')
+            audio.play_sound('kat', 'sound')
         if is_r_kat_pressed():
             self.diff_sort_selector.input_right()
-            audio.play_sound('kat')
+            audio.play_sound('kat', 'sound')
         if is_l_don_pressed() or is_r_don_pressed():
             tuple = self.diff_sort_selector.input_select()
-            audio.play_sound('don')
+            audio.play_sound('don', 'sound')
             if tuple is None:
                 return
             diff, level = tuple
@@ -286,8 +286,8 @@ class SongSelectScreen:
 
     def _confirm_selection(self):
         """Confirm song selection and create game transition"""
-        audio.play_sound('don')
-        audio.play_sound(f'voice_start_song_{global_data.player_num}p')
+        audio.play_sound('don', 'sound')
+        audio.play_sound(f'voice_start_song_{global_data.player_num}p', 'voice')
         self.selected_diff_highlight_fade.start()
         self.selected_diff_text_resize.start()
         self.selected_diff_text_fadein.start()
@@ -352,7 +352,7 @@ class SongSelectScreen:
         self.ura_toggle = 0
         self.is_ura = not self.is_ura
         self.ura_switch_animation.start(not self.is_ura)
-        audio.play_sound('ura_switch')
+        audio.play_sound('ura_switch', 'sound')
         self.selected_difficulty = 7 - self.selected_difficulty
 
     def handle_input(self):
@@ -742,7 +742,7 @@ class SongBox:
             if get_current_ms() >= self.history_wait + 3000:
                 self.history_wait = get_current_ms()
             if self.tja is None and self.texture_index != 17 and not audio.is_sound_playing('voice_enter'):
-                audio.play_sound(f'genre_voice_{self.texture_index}')
+                audio.play_sound(f'genre_voice_{self.texture_index}', 'voice')
         elif not self.is_open and is_open_prev and audio.is_sound_playing(f'genre_voice_{self.texture_index}'):
             audio.stop_sound(f'genre_voice_{self.texture_index}')
         if self.tja_count is not None and self.tja_count > 0 and self.tja_count_text is None:
@@ -1167,7 +1167,7 @@ class DiffSortSelect:
             ]
             for course, levels in self.diff_sort_statistics.items()
         }
-        audio.play_sound('voice_diff_sort_enter')
+        audio.play_sound('voice_diff_sort_enter', 'voice')
 
     def update(self, current_ms):
         self.bg_resize.update(current_ms)
@@ -1210,7 +1210,7 @@ class DiffSortSelect:
             self.bounce_up_2.start()
             self.bounce_down_2.start()
             self.confirm_index = 1
-            audio.play_sound('voice_diff_sort_confirm')
+            audio.play_sound('voice_diff_sort_confirm', 'voice')
             return None
         if self.selected_box == -1:
             return (-1, -1)
@@ -1218,7 +1218,7 @@ class DiffSortSelect:
             return (0, -1)
         elif self.selected_box == 4:
             return self.get_random_sort()
-        audio.play_sound('voice_diff_sort_level')
+        audio.play_sound('voice_diff_sort_level', 'voice')
         self.in_level_select = True
         self.bg_resize.start()
         self.diff_fade_in.start()
@@ -1374,7 +1374,7 @@ class NeiroSelector:
             self.sounds = neiro_list.readlines()
             self.sounds.append('無音')
         self.load_sound()
-        audio.play_sound(f'voice_hitsound_select_{global_data.player_num}p')
+        audio.play_sound(f'voice_hitsound_select_{global_data.player_num}p', 'voice')
         self.is_finished = False
         self.is_confirmed = False
         self.move = tex.get_animation(28)
@@ -1408,7 +1408,7 @@ class NeiroSelector:
         self.direction = -1
         if self.selected_sound == len(self.sounds):
             return
-        audio.play_sound(self.curr_sound)
+        audio.play_sound(self.curr_sound, 'hitsound')
 
     def move_right(self):
         if self.move.is_started and not self.move.is_finished:
@@ -1423,7 +1423,7 @@ class NeiroSelector:
         self.direction = 1
         if self.selected_sound == len(self.sounds):
             return
-        audio.play_sound(self.curr_sound)
+        audio.play_sound(self.curr_sound, 'hitsound')
 
     def confirm(self):
         if self.move.is_started and not self.move.is_finished:
@@ -1503,7 +1503,7 @@ class ModifierSelector:
         self.move_sideways = tex.get_animation(31)
         self.fade_sideways = tex.get_animation(32)
         self.direction = -1
-        audio.play_sound(f'voice_options_{global_data.player_num}p')
+        audio.play_sound(f'voice_options_{global_data.player_num}p', 'sound')
         self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, ray.BLACK, outline_thickness=3.5) for mod in self.mods]
         self.text_true = OutlinedText('する', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
         self.text_false = OutlinedText('しない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)

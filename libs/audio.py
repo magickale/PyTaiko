@@ -126,7 +126,7 @@ except OSError as e:
     raise
 
 class AudioEngine:
-    def __init__(self, device_type: int, sample_rate: float, buffer_size: int):
+    def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: dict[str, float]):
         self.device_type = device_type
         if sample_rate == -1:
             sample_rate = 44100
@@ -135,6 +135,7 @@ class AudioEngine:
         self.sounds = {}
         self.music_streams = {}
         self.audio_device_ready = False
+        self.volume_presets = volume_presets
 
         self.sounds_path = Path("Sounds")
 
@@ -236,14 +237,20 @@ class AudioEngine:
         for name in list(self.sounds.keys()):
             self.unload_sound(name)
 
-    def play_sound(self, name: str) -> None:
+    def play_sound(self, name: str, volume_preset: str) -> None:
         """Play a sound"""
         if name == 'don':
+            if volume_preset:
+                lib.set_sound_volume(self.don, self.volume_presets[volume_preset]) # type: ignore
             lib.play_sound(self.don) # type: ignore
         elif name == 'kat':
+            if volume_preset:
+                lib.set_sound_volume(self.kat, self.volume_presets[volume_preset]) # type: ignore
             lib.play_sound(self.kat) # type: ignore
         elif name in self.sounds:
             sound = self.sounds[name]
+            if volume_preset:
+                lib.set_sound_volume(sound, self.volume_presets[volume_preset]) # type: ignore
             lib.play_sound(sound) # type: ignore
         else:
             print(f"Sound {name} not found")
@@ -297,11 +304,13 @@ class AudioEngine:
             print(f"Failed to load music: {file_path}")
             return ""
 
-    def play_music_stream(self, name: str) -> None:
+    def play_music_stream(self, name: str, volume_preset: str = '') -> None:
         """Play a music stream"""
         if name in self.music_streams:
             music = self.music_streams[name]
             lib.seek_music_stream(music, 0) # type: ignore
+            if volume_preset:
+                lib.set_music_volume(music, self.volume_presets[volume_preset]) # type: ignore
             lib.play_music_stream(music) # type: ignore
         else:
             print(f"Music stream {name} not found")
@@ -380,5 +389,5 @@ class AudioEngine:
             print(f"Music stream {name} not found")
 
 # Create the global audio instance
-audio = AudioEngine(get_config()["audio"]["device_type"], get_config()["audio"]["sample_rate"], get_config()["audio"]["buffer_size"])
+audio = AudioEngine(get_config()["audio"]["device_type"], get_config()["audio"]["sample_rate"], get_config()["audio"]["buffer_size"], get_config()["volume"])
 audio.set_master_volume(0.75)

@@ -33,7 +33,7 @@ class VideoPlayer:
         if self.is_finished_list[1]:
             return
         if not self.audio_played:
-            audio.play_music_stream(self.audio)
+            audio.play_music_stream(self.audio, 'music')
             self.audio_played = True
         audio.update_music_stream(self.audio)
         self.is_finished_list[1] = audio.get_music_time_length(self.audio) <= audio.get_music_time_played(self.audio)

@@ -51,7 +51,7 @@ class EntryScreen:
             self.side_select_fade.start()
             self.chara = Chara2D(0, 100)
             self.announce_played = False
-            audio.play_sound('bgm')
+            audio.play_sound('bgm', 'music')
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
@@ -77,8 +77,8 @@ class EntryScreen:
                 self.cloud_resize_loop.start()
                 self.cloud_texture_change.start()
                 self.cloud_fade.start()
-                audio.play_sound('cloud')
-                audio.play_sound(f'entry_start_{global_data.player_num}p')
+                audio.play_sound('cloud', 'sound')
+                audio.play_sound(f'entry_start_{global_data.player_num}p', 'voice')
                 plate_info = global_data.config['nameplate']
                 self.nameplate.unload()
                 self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
@@ -88,22 +88,22 @@ class EntryScreen:
                     self.chara = Chara2D(1, 100)
                 else:
                     self.chara = Chara2D(0, 100)
-                audio.play_sound('don')
+                audio.play_sound('don', 'sound')
             if is_l_kat_pressed():
-                audio.play_sound('kat')
+                audio.play_sound('kat', 'sound')
                 self.side = max(0, self.side - 1)
             if is_r_kat_pressed():
-                audio.play_sound('kat')
+                audio.play_sound('kat', 'sound')
                 self.side = min(2, self.side + 1)
         elif self.state == State.SELECT_MODE:
             if is_l_don_pressed() or is_r_don_pressed():
-                audio.play_sound('don')
+                audio.play_sound('don', 'sound')
                 self.box_manager.select_box()
             if is_l_kat_pressed():
-                audio.play_sound('kat')
+                audio.play_sound('kat', 'sound')
                 self.box_manager.move_left()
             if is_r_kat_pressed():
-                audio.play_sound('kat')
+                audio.play_sound('kat', 'sound')
                 self.box_manager.move_right()
 
     def update(self):
@@ -127,7 +127,7 @@ class EntryScreen:
         if self.box_manager.is_finished():
             return self.on_screen_end(self.box_manager.selected_box())
         if self.cloud_fade.is_finished and not audio.is_sound_playing(f'entry_start_{global_data.player_num}p') and not self.announce_played:
-            audio.play_sound('select_mode')
+            audio.play_sound('select_mode', 'voice')
             self.announce_played = True
         return self.handle_input()
 

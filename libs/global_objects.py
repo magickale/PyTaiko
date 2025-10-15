@@ -137,16 +137,16 @@ class Timer:
             self.last_time = current_time_ms
             self.counter = str(self.time)
             if self.time < 10:
-                audio.play_sound('timer_blip')
+                audio.play_sound('timer_blip', 'sound')
                 self.num_resize.start()
                 self.highlight_fade.start()
                 self.highlight_resize.start()
             if self.time == 10:
-                audio.play_sound('voice_timer_10')
+                audio.play_sound('voice_timer_10', 'voice')
             elif self.time == 5:
-                audio.play_sound('voice_timer_5')
+                audio.play_sound('voice_timer_5', 'voice')
             elif self.time == 0:
-                audio.play_sound('voice_timer_0')
+                audio.play_sound('voice_timer_0', 'voice')
     def draw(self, x: int = 0, y: int = 0):
         tex = global_tex
         if self.time < 10:

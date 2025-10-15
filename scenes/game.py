@@ -206,7 +206,7 @@ class GameScreen:
                 if current_time >= self.end_ms + 8533.34:
                     if not self.result_transition.is_started:
                         self.result_transition.start()
-                        audio.play_sound('result_transition')
+                        audio.play_sound('result_transition', 'voice')
             else:
                 self.write_score()
                 self.end_ms = current_time
@@ -215,7 +215,7 @@ class GameScreen:
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
-            audio.play_sound('restart')
+            audio.play_sound('restart', 'sound')
             self.song_started = False
 
         if ray.is_key_pressed(ray.KeyboardKey.KEY_ESCAPE):
@@ -581,7 +581,7 @@ class Player:
             self.is_balloon = False
             note.popped = True
             self.balloon_anim.update(current_time, self.curr_balloon_count, note.popped)
-            audio.play_sound('balloon_pop')
+            audio.play_sound('balloon_pop', 'hitsound')
             self.note_correct(note, current_time)
             self.curr_balloon_count = 0
 
@@ -593,7 +593,7 @@ class Player:
         self.score += 100
         self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100))
         if self.curr_balloon_count == note.count:
-            audio.play_sound('kusudama_pop')
+            audio.play_sound('kusudama_pop', 'hitsound')
             self.is_balloon = False
             note.popped = True
             self.curr_balloon_count = 0
@@ -710,7 +710,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(note_type)
                 self.draw_drum_hit_list.append(DrumHitEffect(note_type, side))
 
-                audio.play_sound(sound)
+                audio.play_sound(sound, 'hitsound')
 
                 drum_value = 1 if note_type == 'DON' else 2
                 self.check_note(game_screen, drum_value, current_time)
@@ -736,7 +736,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(hit_type)
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.draw_drum_hit_list.append(DrumHitEffect(hit_type, self.autoplay_hit_side))
-                audio.play_sound(game_screen.sound_don)
+                audio.play_sound(game_screen.sound_don, 'hitsound')
                 note_type = 3 if note.type == 6 else 1
                 self.check_note(game_screen, note_type, current_time)
         else:
@@ -747,7 +747,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(hit_type)
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.draw_drum_hit_list.append(DrumHitEffect(hit_type, self.autoplay_hit_side))
-                audio.play_sound(game_screen.sound_don)
+                audio.play_sound(game_screen.sound_don, 'hitsound')
                 self.check_note(game_screen, 1, current_time)
 
             # Handle KAT notes
@@ -757,7 +757,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(hit_type)
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.draw_drum_hit_list.append(DrumHitEffect(hit_type, self.autoplay_hit_side))
-                audio.play_sound(game_screen.sound_kat)
+                audio.play_sound(game_screen.sound_kat, 'hitsound')
                 self.check_note(game_screen, 2, current_time)
 
     def evaluate_branch(self, current_ms):
@@ -1716,7 +1716,7 @@ class ComboAnnounce:
 
         self.fade.update(current_time_ms)
         if not self.audio_played:
-            audio.play_sound(f'combo_{self.combo}_{global_data.player_num}p')
+            audio.play_sound(f'combo_{self.combo}_{global_data.player_num}p', 'voice')
             self.audio_played = True
 
     def draw(self):
@@ -1815,7 +1815,7 @@ class FailAnimation:
         self.text_fade_in.start()
         self.name = 'in'
         self.frame = self.bachio_texture_change.attribute
-        audio.play_sound('fail')
+        audio.play_sound('fail', 'sound')
     def update(self, current_time_ms: float):
         self.bachio_fade_in.update(current_time_ms)
         self.bachio_texture_change.update(current_time_ms)
@@ -1859,7 +1859,7 @@ class ClearAnimation:
         self.draw_clear_full = False
         self.name = 'in'
         self.frame = 0
-        audio.play_sound('clear')
+        audio.play_sound('clear', 'sound')
 
     def update(self, current_time_ms: float):
         self.bachio_fade_in.update(current_time_ms)
@@ -1916,7 +1916,7 @@ class FCAnimation:
         self.draw_clear_full = False
         self.name = 'in'
         self.frame = 0
-        audio.play_sound('full_combo')
+        audio.play_sound('full_combo', 'sound')
 
     def update(self, current_time_ms: float):
         self.bachio_fade_in.update(current_time_ms)
@@ -1936,7 +1936,7 @@ class FCAnimation:
             self.bachio_move_up.start()
             self.fan_fade_in.start()
             self.fan_texture_change.start()
-            audio.play_sound('full_combo_voice')
+            audio.play_sound('full_combo_voice', 'voice')
         if self.clear_highlight_fade_in.attribute == 1.0:
             self.draw_clear_full = True
         for fade in self.clear_separate_fade_in:

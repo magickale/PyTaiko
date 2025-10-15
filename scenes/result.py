@@ -32,7 +32,7 @@ class ResultScreen:
             audio.load_screen_sounds('result')
             self.screen_init = True
             self.song_info = OutlinedText(session_data.song_title, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
-            audio.play_sound('bgm')
+            audio.play_sound('bgm', 'music')
             self.fade_in = FadeIn()
             self.fade_out = tex.get_animation(0)
             self.fade_in_bottom = tex.get_animation(1)
@@ -92,9 +92,9 @@ class ResultScreen:
                     curr_num = self.update_list[self.update_index][0]
                     setattr(self, self.update_list[self.update_index][0], self.score_animator.next_score())
                     if self.update_list[self.update_index] != curr_num:
-                        audio.play_sound('num_up')
+                        audio.play_sound('num_up', 'sound')
                     if self.score_animator.is_finished:
-                        audio.play_sound('don')
+                        audio.play_sound('don', 'sound')
                         self.score_delay += 750
                         if self.update_index == len(self.update_list) - 1:
                             self.is_skipped = True
@@ -112,7 +112,7 @@ class ResultScreen:
                 self.is_skipped = True
             else:
                 self.fade_out.start()
-            audio.play_sound('don')
+            audio.play_sound('don', 'sound')
 
     def update(self):
         self.on_screen_start()
@@ -280,7 +280,7 @@ class Crown:
         self.white_fadein.update(current_ms)
         self.gleam.update(current_ms)
         if self.resize_fix.is_finished and not self.sound_played:
-            audio.play_sound('crown')
+            audio.play_sound('crown', 'sound')
             self.sound_played = True
 
     def draw(self, crown_name: str):
