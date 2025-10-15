@@ -49,21 +49,17 @@ class GameScreen:
         self.song_started = False
         self.mask_shader = ray.load_shader("", "shader/mask.fs")
 
-    def load_sounds(self):
+    def load_hitsounds(self):
         sounds_dir = Path("Sounds")
         if global_data.hit_sound == -1:
-            self.sound_don = audio.load_sound(Path('none.wav'))
-            self.sound_kat = audio.load_sound(Path('none.wav'))
+            self.sound_don = audio.load_sound(Path('none.wav'), 'hitsound_don')
+            self.sound_kat = audio.load_sound(Path('none.wav'), 'hitsound_kat')
         if global_data.hit_sound == 0:
-            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.wav")
-            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.wav")
+            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.wav", 'hitsound_don')
+            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.wav", 'hitsound_kat')
         else:
-            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.ogg")
-            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.ogg")
-        self.sound_restart = audio.load_sound(sounds_dir / 'song_select' / 'Skip.ogg')
-        self.sound_balloon_pop = audio.load_sound(sounds_dir / "balloon_pop.wav")
-        self.sound_kusudama_pop = audio.load_sound(sounds_dir / "kusudama_pop.ogg")
-        self.sound_result_transition = audio.load_sound(sounds_dir / "result" / "VO_RESULT [1].ogg")
+            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.ogg", 'hitsound_don')
+            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.ogg", 'hitsound_kat')
 
     def init_tja(self, song: Path, difficulty: int):
         if song == Path(''):
@@ -78,8 +74,7 @@ class GameScreen:
                 self.movie = None
             session_data.song_title = self.tja.metadata.title.get(global_data.config['general']['language'].lower(), self.tja.metadata.title['en'])
             if self.tja.metadata.wave.exists() and self.tja.metadata.wave.is_file() and self.song_music is None:
-                self.song_music = audio.load_music_stream(self.tja.metadata.wave)
-                audio.normalize_music_stream(self.song_music, 0.1935)
+                self.song_music = audio.load_music_stream(self.tja.metadata.wave, 'song')
 
         self.player_1 = Player(self.tja, global_data.player_num, difficulty)
         if self.tja is not None:
@@ -91,9 +86,10 @@ class GameScreen:
             self.movie = None
             self.song_music = None
             tex.load_screen_textures('game')
+            audio.load_screen_sounds('game')
+            self.load_hitsounds()
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
-            self.load_sounds()
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
             self.song_info = SongInfo(session_data.song_title, session_data.genre_index)
             self.result_transition = ResultTransition(global_data.player_num)
@@ -113,8 +109,8 @@ class GameScreen:
     def on_screen_end(self, next_screen):
         self.screen_init = False
         tex.unload_textures()
-        if self.song_music is not None:
-            audio.unload_music_stream(self.song_music)
+        audio.unload_all_sounds()
+        audio.unload_all_music()
         self.song_started = False
         self.end_ms = 0
         self.movie = None
@@ -131,14 +127,24 @@ class GameScreen:
             cursor = con.cursor()
             notes, _, _, _ = TJAParser.notes_to_position(TJAParser(self.tja.file_path), self.player_1.difficulty)
             hash = self.tja.hash_note_data(notes)
-            check_query = "SELECT score FROM Scores WHERE hash = ? LIMIT 1"
+            check_query = "SELECT score, clear FROM Scores WHERE hash = ? LIMIT 1"
             cursor.execute(check_query, (hash,))
             result = cursor.fetchone()
-            if result is None or session_data.result_score > result[0]:
+            existing_score = result[0] if result is not None else None
+            existing_clear = result[1] if result is not None and len(result) > 1 and result[1] is not None else 0
+
+            # Determine clear value for this run: 2 for full combo (no bads), 1 for clear gauge, 0 otherwise
+            run_clear = 2 if session_data.result_bad == 0 else (1 if self.player_1.gauge.is_clear else 0)
+            best_clear = max(existing_clear, run_clear)
+
+            if result is None or (existing_score is not None and session_data.result_score > existing_score):
                 if result is None:
                     session_data.prev_score = 0
                 else:
-                    session_data.prev_score = result[0]
+                    if not isinstance(existing_score, int):
+                        session_data.prev_score = 0
+                    else:
+                        session_data.prev_score = existing_score
                 insert_query = '''
                 INSERT OR REPLACE INTO Scores (hash, en_name, jp_name, diff, score, good, ok, bad, drumroll, combo, clear)
                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -147,9 +153,14 @@ class GameScreen:
                         self.tja.metadata.title.get('ja', ''), self.player_1.difficulty,
                         session_data.result_score, session_data.result_good,
                         session_data.result_ok, session_data.result_bad,
-                        session_data.result_total_drumroll, session_data.result_max_combo, int(self.player_1.gauge.is_clear))
+                        session_data.result_total_drumroll, session_data.result_max_combo, best_clear)
                 cursor.execute(insert_query, data)
                 con.commit()
+            else:
+                # Score didn't improve; if clear improved, update only the clear column to preserve best crown
+                if run_clear > existing_clear:
+                    cursor.execute("UPDATE Scores SET clear = ? WHERE hash = ?", (run_clear, hash))
+                    con.commit()
 
     def update(self):
         self.on_screen_start()
@@ -178,7 +189,7 @@ class GameScreen:
         self.player_1.update(self, current_time)
         self.song_info.update(current_time)
         self.result_transition.update(current_time)
-        if self.result_transition.is_finished:
+        if self.result_transition.is_finished and not audio.is_sound_playing('result_transition'):
             return self.on_screen_end('RESULT')
         elif self.current_ms >= self.player_1.end_time:
             session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
@@ -195,7 +206,7 @@ class GameScreen:
                 if current_time >= self.end_ms + 8533.34:
                     if not self.result_transition.is_started:
                         self.result_transition.start()
-                        audio.play_sound(self.sound_result_transition)
+                        audio.play_sound('result_transition')
             else:
                 self.write_score()
                 self.end_ms = current_time
@@ -204,7 +215,7 @@ class GameScreen:
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
-            audio.play_sound(self.sound_restart)
+            audio.play_sound('restart')
             self.song_started = False
 
         if ray.is_key_pressed(ray.KeyboardKey.KEY_ESCAPE):
@@ -570,7 +581,7 @@ class Player:
             self.is_balloon = False
             note.popped = True
             self.balloon_anim.update(current_time, self.curr_balloon_count, note.popped)
-            audio.play_sound(game_screen.sound_balloon_pop)
+            audio.play_sound('balloon_pop')
             self.note_correct(note, current_time)
             self.curr_balloon_count = 0
 
@@ -582,7 +593,7 @@ class Player:
         self.score += 100
         self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100))
         if self.curr_balloon_count == note.count:
-            audio.play_sound(game_screen.sound_kusudama_pop)
+            audio.play_sound('kusudama_pop')
             self.is_balloon = False
             note.popped = True
             self.curr_balloon_count = 0
@@ -1696,6 +1707,7 @@ class ComboAnnounce:
         self.fade = Animation.create_fade(100)
         self.fade.start()
         self.is_finished = False
+        self.audio_played = False
 
     def update(self, current_time_ms: float):
         if current_time_ms >= self.wait + 1666.67 and not self.is_finished:
@@ -1703,6 +1715,9 @@ class ComboAnnounce:
             self.is_finished = True
 
         self.fade.update(current_time_ms)
+        if not self.audio_played:
+            audio.play_sound(f'combo_{self.combo}_{global_data.player_num}p')
+            self.audio_played = True
 
     def draw(self):
         if self.combo == 0:
@@ -1800,6 +1815,7 @@ class FailAnimation:
         self.text_fade_in.start()
         self.name = 'in'
         self.frame = self.bachio_texture_change.attribute
+        audio.play_sound('fail')
     def update(self, current_time_ms: float):
         self.bachio_fade_in.update(current_time_ms)
         self.bachio_texture_change.update(current_time_ms)
@@ -1843,6 +1859,7 @@ class ClearAnimation:
         self.draw_clear_full = False
         self.name = 'in'
         self.frame = 0
+        audio.play_sound('clear')
 
     def update(self, current_time_ms: float):
         self.bachio_fade_in.update(current_time_ms)
@@ -1899,6 +1916,7 @@ class FCAnimation:
         self.draw_clear_full = False
         self.name = 'in'
         self.frame = 0
+        audio.play_sound('full_combo')
 
     def update(self, current_time_ms: float):
         self.bachio_fade_in.update(current_time_ms)
@@ -1918,6 +1936,7 @@ class FCAnimation:
             self.bachio_move_up.start()
             self.fan_fade_in.start()
             self.fan_texture_change.start()
+            audio.play_sound('full_combo_voice')
         if self.clear_highlight_fade_in.attribute == 1.0:
             self.draw_clear_full = True
         for fade in self.clear_separate_fade_in:

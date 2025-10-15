@@ -43,21 +43,14 @@ class SongSelectScreen:
     def load_navigator(self):
         self.navigator = FileNavigator(self.root_dir)
 
-    def load_sounds(self):
-        sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "ka.wav")
-        self.sound_skip = audio.load_sound(sounds_dir / 'song_select' / 'Skip.ogg')
-        self.sound_ura_switch = audio.load_sound(sounds_dir / 'song_select' / 'SE_SELECT [4].ogg')
-        self.sound_add_favorite = audio.load_sound(sounds_dir / 'song_select' / 'add_favorite.ogg')
-        audio.set_sound_volume(self.sound_ura_switch, 0.25)
-        audio.set_sound_volume(self.sound_add_favorite, 3.0)
-        self.sound_bgm = audio.load_sound(sounds_dir / "song_select" / "JINGLE_GENRE [1].ogg")
-
     def on_screen_start(self):
         if not self.screen_init:
             tex.load_screen_textures('song_select')
-            self.load_sounds()
+            audio.load_screen_sounds('song_select')
+            audio.set_sound_volume('ura_switch', 0.25)
+            audio.set_sound_volume('add_favorite', 3.0)
+            audio.play_sound('bgm')
+            audio.play_sound('voice_enter')
             self.background_move = tex.get_animation(0)
             self.move_away = tex.get_animation(1)
             self.diff_fade_out = tex.get_animation(2)
@@ -120,6 +113,7 @@ class SongSelectScreen:
             self.reset_demo_music()
             self.navigator.reset_items()
             audio.unload_all_sounds()
+            audio.unload_all_music()
             tex.unload_textures()
             self.nameplate.unload()
         return next_screen
@@ -128,7 +122,7 @@ class SongSelectScreen:
         if self.demo_song is not None:
             audio.stop_music_stream(self.demo_song)
             audio.unload_music_stream(self.demo_song)
-            audio.play_sound(self.sound_bgm)
+            audio.play_sound('bgm')
         self.demo_song = None
         self.navigator.get_current_item().box.wait = get_current_ms()
 
@@ -137,24 +131,24 @@ class SongSelectScreen:
             self.reset_demo_music()
             for _ in range(10):
                 self.navigator.navigate_left()
-            audio.play_sound(self.sound_skip)
+            audio.play_sound('skip')
             self.last_moved = get_current_ms()
         elif ray.is_key_pressed(ray.KeyboardKey.KEY_RIGHT_CONTROL) or (is_r_kat_pressed() and get_current_ms() <= self.last_moved + 50):
             self.reset_demo_music()
             for _ in range(10):
                 self.navigator.navigate_right()
-            audio.play_sound(self.sound_skip)
+            audio.play_sound('skip')
             self.last_moved = get_current_ms()
         elif is_l_kat_pressed():
             self.reset_demo_music()
             self.navigator.navigate_left()
-            audio.play_sound(self.sound_kat)
+            audio.play_sound('kat')
             self.last_moved = get_current_ms()
 
         elif is_r_kat_pressed():
             self.reset_demo_music()
             self.navigator.navigate_right()
-            audio.play_sound(self.sound_kat)
+            audio.play_sound('kat')
             self.last_moved = get_current_ms()
 
         # Select/Enter
@@ -162,7 +156,7 @@ class SongSelectScreen:
             selected_item = self.navigator.items[self.navigator.selected_index]
             if selected_item is not None and selected_item.box.is_back:
                 self.navigator.go_back()
-                #audio.play_sound(self.sound_cancel)
+                audio.play_sound('cancel')
             elif isinstance(selected_item, Directory) and selected_item.collection == Directory.COLLECTIONS[3]:
                 self.state = State.DIFF_SORTING
                 self.diff_sort_selector = DiffSortSelect(self.navigator.diff_sort_statistics, self.navigator.diff_sort_diff, self.navigator.diff_sort_level)
@@ -177,7 +171,8 @@ class SongSelectScreen:
                     elif (4 in selected_song.tja.metadata.course_data and
                           3 not in selected_song.tja.metadata.course_data):
                         self.is_ura = True
-                    audio.play_sound(self.sound_don)
+                    audio.play_sound('don')
+                    audio.play_sound('voice_select_diff')
                     self.move_away.start()
                     self.diff_fade_out.start()
                     self.text_fade_out.start()
@@ -188,7 +183,7 @@ class SongSelectScreen:
         if ray.is_key_pressed(ray.KeyboardKey.KEY_SPACE):
             success = self.navigator.add_favorite()
             if success:
-                audio.play_sound(self.sound_add_favorite)
+                audio.play_sound('add_favorite')
 
     def handle_input_selected(self):
         # Handle song selection confirmation or cancel
@@ -198,28 +193,28 @@ class SongSelectScreen:
             elif is_r_kat_pressed():
                 self.neiro_selector.move_right()
             if is_l_don_pressed() or is_r_don_pressed():
-                audio.play_sound(self.sound_don)
+                audio.play_sound('don')
                 self.neiro_selector.confirm()
             return
         if self.modifier_selector is not None:
             if is_l_kat_pressed():
-                audio.play_sound(self.sound_kat)
+                audio.play_sound('kat')
                 self.modifier_selector.left()
             elif is_r_kat_pressed():
-                audio.play_sound(self.sound_kat)
+                audio.play_sound('kat')
                 self.modifier_selector.right()
             if is_l_don_pressed() or is_r_don_pressed():
-                audio.play_sound(self.sound_don)
+                audio.play_sound('don')
                 self.modifier_selector.confirm()
             return
         if is_l_don_pressed() or is_r_don_pressed():
             if self.selected_difficulty == -3:
                 self._cancel_selection()
             elif self.selected_difficulty == -2:
-                audio.play_sound(self.sound_don)
+                audio.play_sound('don')
                 self.modifier_selector = ModifierSelector()
             elif self.selected_difficulty == -1:
-                audio.play_sound(self.sound_don)
+                audio.play_sound('don')
                 self.neiro_selector = NeiroSelector()
             else:
                 self._confirm_selection()
@@ -231,7 +226,7 @@ class SongSelectScreen:
             return selected_song
 
         if is_l_kat_pressed() or is_r_kat_pressed():
-            audio.play_sound(self.sound_kat)
+            audio.play_sound('kat')
             selected_song = get_current_song()
             diffs = sorted(selected_song.tja.metadata.course_data)
             prev_diff = self.selected_difficulty
@@ -254,13 +249,13 @@ class SongSelectScreen:
             raise Exception("Diff sort selector was not able to be created")
         if is_l_kat_pressed():
             self.diff_sort_selector.input_left()
-            audio.play_sound(self.sound_kat)
+            audio.play_sound('kat')
         if is_r_kat_pressed():
             self.diff_sort_selector.input_right()
-            audio.play_sound(self.sound_kat)
+            audio.play_sound('kat')
         if is_l_don_pressed() or is_r_don_pressed():
             tuple = self.diff_sort_selector.input_select()
-            audio.play_sound(self.sound_don)
+            audio.play_sound('don')
             if tuple is None:
                 return
             diff, level = tuple
@@ -289,7 +284,8 @@ class SongSelectScreen:
 
     def _confirm_selection(self):
         """Confirm song selection and create game transition"""
-        audio.play_sound(self.sound_don)
+        audio.play_sound('don')
+        audio.play_sound(f'voice_start_song_{global_data.player_num}p')
         self.selected_diff_highlight_fade.start()
         self.selected_diff_text_resize.start()
         self.selected_diff_text_fadein.start()
@@ -354,7 +350,7 @@ class SongSelectScreen:
         self.ura_toggle = 0
         self.is_ura = not self.is_ura
         self.ura_switch_animation.start(not self.is_ura)
-        audio.play_sound(self.sound_ura_switch)
+        audio.play_sound('ura_switch')
         self.selected_difficulty = 7 - self.selected_difficulty
 
     def handle_input(self):
@@ -431,7 +427,7 @@ class SongSelectScreen:
             if self.modifier_selector.is_finished:
                 self.modifier_selector = None
 
-        if self.selected_diff_highlight_fade.is_finished and self.game_transition is None:
+        if self.selected_diff_highlight_fade.is_finished and not audio.is_sound_playing(f'voice_start_song_{global_data.player_num}p') and self.game_transition is None:
             selected_song = self.navigator.get_current_item()
             if not isinstance(selected_song, SongFile):
                 raise Exception("picked directory")
@@ -450,10 +446,10 @@ class SongSelectScreen:
                 if self.demo_song is None and get_current_ms() >= song.box.wait + (83.33*3):
                     song.box.get_scores()
                     if song.tja.metadata.wave.exists() and song.tja.metadata.wave.is_file():
-                        self.demo_song = audio.load_music_stream(song.tja.metadata.wave)
+                        self.demo_song = audio.load_music_stream(song.tja.metadata.wave, 'demo_song')
                         audio.play_music_stream(self.demo_song)
                         audio.seek_music_stream(self.demo_song, song.tja.metadata.demostart)
-                        audio.stop_sound(self.sound_bgm)
+                        audio.stop_sound('bgm')
             if song.box.is_open:
                 current_box = song.box
                 if not current_box.is_back and get_current_ms() >= song.box.wait + (83.33*3):
@@ -623,6 +619,10 @@ class SongBox:
         self.target_position = -1
         self.is_open = False
         self.is_back = self.texture_index == SongBox.BACK_INDEX
+        if self.is_back:
+            for i in range(1, 16):
+                if audio.is_sound_playing(f'genre_voice_{i}'):
+                    audio.stop_sound(f'genre_voice_{i}')
         self.name = None
         self.black_name = None
         self.hori_name = None
@@ -732,6 +732,10 @@ class SongBox:
             self.wait = get_current_ms()
             if get_current_ms() >= self.history_wait + 3000:
                 self.history_wait = get_current_ms()
+            if self.tja is None and self.texture_index != 17 and not audio.is_sound_playing('voice_enter'):
+                audio.play_sound(f'genre_voice_{self.texture_index}')
+        elif not self.is_open and is_open_prev and audio.is_sound_playing(f'genre_voice_{self.texture_index}'):
+            audio.stop_sound(f'genre_voice_{self.texture_index}')
         if self.tja_count is not None and self.tja_count > 0 and self.tja_count_text is None:
             self.tja_count_text = OutlinedText(str(self.tja_count), 35, ray.WHITE, ray.BLACK, outline_thickness=5)#, horizontal_spacing=1.2)
         if self.box_texture is None and self.box_texture_path is not None:
@@ -771,11 +775,11 @@ class SongBox:
         if valid_scores:
             highest_key = max(valid_scores.keys())
             score = self.scores[highest_key]
-            if score and score[2] == 0 and score[3] == 0:
+            if score and ((score[4] == 2 and score[2] == 0) or (score[2] == 0 and score[3] == 0)):
                 tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(4, highest_key))
-            elif score and score[3] == 0:
+            elif score and ((score[4] == 2) or (score[3] == 0)):
                 tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(4, highest_key))
-            elif score and score[4] == 1:
+            elif score and score[4] >= 1:
                 tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(4, highest_key))
         if self.crown: #Folder lamp
             highest_crown = max(self.crown)
@@ -934,11 +938,11 @@ class YellowBox:
         for diff in self.tja.metadata.course_data:
             if diff >= 4:
                 continue
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*60), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][3] == 0:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2) or (song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*60), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == 1:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] >= 1:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*60), color=color)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*60), fade=min(fade, 0.25))
 
@@ -974,11 +978,11 @@ class YellowBox:
         for diff in self.tja.metadata.course_data:
             if diff >= 4:
                 continue
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][3] == 0:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2) or (song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == 1:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] >= 1:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*115)+8, y=-120, fade=min(self.fade_in.attribute, 0.25))
 
@@ -1152,6 +1156,7 @@ class DiffSortSelect:
             ]
             for course, levels in self.diff_sort_statistics.items()
         }
+        audio.play_sound('voice_diff_sort_enter')
 
     def update(self, current_ms):
         self.bg_resize.update(current_ms)
@@ -1194,6 +1199,7 @@ class DiffSortSelect:
             self.bounce_up_2.start()
             self.bounce_down_2.start()
             self.confirm_index = 1
+            audio.play_sound('voice_diff_sort_confirm')
             return None
         if self.selected_box == -1:
             return (-1, -1)
@@ -1201,6 +1207,7 @@ class DiffSortSelect:
             return (0, -1)
         elif self.selected_box == 4:
             return self.get_random_sort()
+        audio.play_sound('voice_diff_sort_level')
         self.in_level_select = True
         self.bg_resize.start()
         self.diff_fade_in.start()
@@ -1356,6 +1363,7 @@ class NeiroSelector:
             self.sounds = neiro_list.readlines()
             self.sounds.append('無音')
         self.load_sound()
+        audio.play_sound(f'voice_hitsound_select_{global_data.player_num}p')
         self.is_finished = False
         self.is_confirmed = False
         self.move = tex.get_animation(28)
@@ -1372,9 +1380,9 @@ class NeiroSelector:
         if self.selected_sound == len(self.sounds):
             return
         if self.selected_sound == 0:
-            self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.wav")
+            self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.wav", 'hit_sound')
         else:
-            self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.ogg")
+            self.curr_sound = audio.load_sound(Path("Sounds") / "hit_sounds" / str(self.selected_sound) / "don.ogg", 'hit_sound')
 
     def move_left(self):
         if self.move.is_started and not self.move.is_finished:
@@ -1484,6 +1492,7 @@ class ModifierSelector:
         self.move_sideways = tex.get_animation(31)
         self.fade_sideways = tex.get_animation(32)
         self.direction = -1
+        audio.play_sound(f'voice_options_{global_data.player_num}p')
         self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, ray.BLACK, outline_thickness=3.5) for mod in self.mods]
         self.text_true = OutlinedText('する', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
         self.text_false = OutlinedText('しない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
@@ -1921,8 +1930,8 @@ class FileNavigator:
 
                         scores = song_obj.box.scores.get(course)
                         if scores is not None:
-                            is_cleared = scores[4] == 1
-                            is_full_combo = scores[3] == 0
+                            is_cleared = scores[4] >= 1
+                            is_full_combo = (scores[4] == 2) or (scores[3] == 0)
                         else:
                             is_cleared = False
                             is_full_combo = False
@@ -2181,11 +2190,11 @@ class FileNavigator:
                     all_scores[diff].append(song_obj.box.scores[diff])
 
         for diff in all_scores:
-            if all(score is not None and score[2] == 0 and score[3] == 0 for score in all_scores[diff]):
+            if all(score is not None and ((score[4] == 2 and score[2] == 0) or (score[2] == 0 and score[3] == 0)) for score in all_scores[diff]):
                 crowns[diff] = 'DFC'
-            elif all(score is not None and score[3] == 0 for score in all_scores[diff]):
+            elif all(score is not None and ((score[4] == 2) or (score[3] == 0)) for score in all_scores[diff]):
                 crowns[diff] = 'FC'
-            elif all(score is not None and score[4] == 1 for score in all_scores[diff]):
+            elif all(score is not None and score[4] >= 1 for score in all_scores[diff]):
                 crowns[diff] = 'CLEAR'
 
         self.directory_crowns[dir_key] = crowns

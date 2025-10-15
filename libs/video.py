@@ -14,7 +14,7 @@ class VideoPlayer:
         self.video = VideoFileClip(path)
         if self.video.audio is not None:
             self.video.audio.write_audiofile("cache/temp_audio.wav")
-            self.audio = audio.load_music_stream(Path("cache/temp_audio.wav"))
+            self.audio = audio.load_music_stream(Path("cache/temp_audio.wav"), 'video')
 
         self.buffer_size = 10  # Number of frames to keep in memory
         self.frame_buffer: dict[float, ray.Texture] = dict()  # Dictionary to store frames {timestamp: texture}

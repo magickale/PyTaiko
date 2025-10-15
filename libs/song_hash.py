@@ -158,7 +158,7 @@ def build_song_hashes(output_dir=Path("cache")):
                     continue
                 if imported_clears[i] == 2:
                     bads = 0
-                    clear = 1
+                    clear = 2
                 elif imported_clears[i] == 1:
                     bads = None
                     clear = 1

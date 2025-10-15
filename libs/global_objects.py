@@ -2,6 +2,7 @@ from enum import Enum
 import pyray as ray
 
 from libs.utils import OutlinedText, get_config, global_tex
+from libs.audio import audio
 
 
 class Nameplate:
@@ -123,7 +124,7 @@ class Timer:
         self.is_finished = False
         self.is_frozen = get_config()["general"]["timer_frozen"]
     def update(self, current_time_ms: float):
-        if self.time == 0 and not self.is_finished:
+        if self.time == 0 and not self.is_finished and not audio.is_sound_playing('voice_timer_0'):
             self.is_finished = True
             self.confirm_func()
         self.num_resize.update(current_time_ms)
@@ -136,9 +137,16 @@ class Timer:
             self.last_time = current_time_ms
             self.counter = str(self.time)
             if self.time < 10:
+                audio.play_sound('timer_blip')
                 self.num_resize.start()
                 self.highlight_fade.start()
                 self.highlight_resize.start()
+            if self.time == 10:
+                audio.play_sound('voice_timer_10')
+            elif self.time == 5:
+                audio.play_sound('voice_timer_5')
+            elif self.time == 0:
+                audio.play_sound('voice_timer_0')
     def draw(self, x: int = 0, y: int = 0):
         tex = global_tex
         if self.time < 10:

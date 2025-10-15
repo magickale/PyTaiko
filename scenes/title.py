@@ -30,20 +30,11 @@ class TitleScreen:
         self.allnet_indicator = AllNetIcon()
         self.entry_overlay = EntryOverlay()
 
-    def load_sounds(self):
-        sounds_dir = Path("Sounds")
-        title_dir = sounds_dir / "title"
-        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
-        self.sound_bachi_swipe = audio.load_sound(title_dir / "SE_ATTRACT_2.ogg")
-        self.sound_bachi_hit = audio.load_sound(title_dir / "SE_ATTRACT_3.ogg")
-        self.sound_warning_message = audio.load_sound(title_dir / "VO_ATTRACT_3.ogg")
-        self.sound_warning_error = audio.load_sound(title_dir / "SE_ATTRACT_1.ogg")
-
     def on_screen_start(self):
         if not self.screen_init:
             self.screen_init = True
             tex.load_screen_textures('title')
-            self.load_sounds()
+            audio.load_screen_sounds('title')
             self.state = State.OP_VIDEO
             self.op_video = None
             self.attract_video = None
@@ -57,15 +48,16 @@ class TitleScreen:
         if self.attract_video is not None:
             self.attract_video.stop()
         audio.unload_all_sounds()
+        audio.unload_all_music()
         tex.unload_textures()
         self.screen_init = False
         return "ENTRY"
 
-    def scene_manager(self):
+    def scene_manager(self, current_time):
         if self.state == State.OP_VIDEO:
             if self.op_video is None:
                 self.op_video = VideoPlayer(random.choice(self.op_video_list))
-                self.op_video.start(get_current_ms())
+                self.op_video.start(current_time)
             self.op_video.update()
             if self.op_video.is_finished():
                 self.op_video.stop()
@@ -73,15 +65,15 @@ class TitleScreen:
                 self.state = State.WARNING
         elif self.state == State.WARNING:
             if self.warning_board is None:
-                self.warning_board = WarningScreen(get_current_ms())
-            self.warning_board.update(get_current_ms(), self)
+                self.warning_board = WarningScreen(current_time)
+            self.warning_board.update(current_time)
             if self.warning_board.is_finished:
                 self.state = State.ATTRACT_VIDEO
                 self.warning_board = None
         elif self.state == State.ATTRACT_VIDEO:
             if self.attract_video is None:
                 self.attract_video = VideoPlayer(random.choice(self.attract_video_list))
-                self.attract_video.start(get_current_ms())
+                self.attract_video.start(current_time)
             self.attract_video.update()
             if self.attract_video.is_finished():
                 self.attract_video.stop()
@@ -91,17 +83,18 @@ class TitleScreen:
 
     def update(self):
         self.on_screen_start()
+        current_time = get_current_ms()
 
-        self.text_overlay_fade.update(get_current_ms())
-        self.fade_out.update(get_current_ms())
+        self.text_overlay_fade.update(current_time)
+        self.fade_out.update(current_time)
         if self.fade_out.is_finished:
-            self.fade_out.update(get_current_ms())
+            self.fade_out.update(current_time)
             return self.on_screen_end()
 
-        self.scene_manager()
+        self.scene_manager(current_time)
         if is_l_don_pressed() or is_r_don_pressed():
             self.fade_out.start()
-            audio.play_sound(self.sound_don)
+            audio.play_sound('don')
 
     def draw(self):
         if self.state == State.OP_VIDEO and self.op_video is not None:
@@ -134,13 +127,13 @@ class WarningScreen:
             self.fadein_2.start()
             self.sound_played = False
 
-        def update(self, current_ms: float, sound):
+        def update(self, current_ms: float):
             self.resize.update(current_ms)
             self.fadein.update(current_ms)
             self.fadein_2.update(current_ms)
 
             if self.resize.attribute > 1 and not self.sound_played:
-                audio.play_sound(sound)
+                audio.play_sound('error')
                 self.sound_played = True
 
         def draw_bg(self):
@@ -156,9 +149,9 @@ class WarningScreen:
 
             self.sound_played = False
 
-        def update(self, current_ms: float, sound):
+        def update(self, current_ms: float):
             if not self.sound_played:
-                audio.play_sound(sound)
+                audio.play_sound('bachi_hit')
                 self.sound_played = True
                 self.fadein.start()
                 self.resize.start()
@@ -241,22 +234,22 @@ class WarningScreen:
 
         self.is_finished = False
 
-    def update(self, current_ms: float, title_screen: TitleScreen):
+    def update(self, current_ms: float):
         self.board.update(current_ms)
         self.fade_in.update(current_ms)
         self.fade_out.update(current_ms)
         delay = 566.67
         elapsed_time = current_ms - self.start_ms
-        self.warning_x.update(current_ms, title_screen.sound_warning_error)
+        self.warning_x.update(current_ms)
         self.characters.update(current_ms)
 
         if self.characters.is_finished:
-            self.warning_bachi_hit.update(current_ms, title_screen.sound_bachi_hit)
+            self.warning_bachi_hit.update(current_ms)
         else:
             self.fade_out.delay = elapsed_time + 500
-            if delay <= elapsed_time and not audio.is_sound_playing(title_screen.sound_bachi_swipe):
-                audio.play_sound(title_screen.sound_warning_message)
-                audio.play_sound(title_screen.sound_bachi_swipe)
+            if delay <= elapsed_time and not audio.is_sound_playing('bachi_swipe'):
+                audio.play_sound('warning_voiceover')
+                audio.play_sound('bachi_swipe')
 
         self.is_finished = self.fade_out.is_finished
 

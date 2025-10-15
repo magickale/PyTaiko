@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pyray as ray
 
 from libs.audio import audio
@@ -25,19 +23,10 @@ class EntryScreen:
     def __init__(self):
         self.screen_init = False
 
-    def load_textures(self):
-        tex.load_screen_textures('entry')
-
-    def load_sounds(self):
-        sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "ka.wav")
-        self.bgm = audio.load_sound(sounds_dir / "entry" / "JINGLE_ENTRY [1].ogg")
-
     def on_screen_start(self):
         if not self.screen_init:
-            self.load_textures()
-            self.load_sounds()
+            tex.load_screen_textures('entry')
+            audio.load_screen_sounds('entry')
             self.side = 1
             self.box_manager = BoxManager()
             self.state = State.SELECT_SIDE
@@ -61,15 +50,16 @@ class EntryScreen:
             self.nameplate_fadein = tex.get_animation(12)
             self.side_select_fade.start()
             self.chara = Chara2D(0, 100)
-            audio.play_sound(self.bgm)
+            self.announce_played = False
+            audio.play_sound('bgm')
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
-        global_data.player_num = round((self.side/3) + 1)
-        audio.stop_sound(self.bgm)
+        audio.stop_sound('bgm')
         self.nameplate.unload()
         tex.unload_textures()
         audio.unload_all_sounds()
+        audio.unload_all_music()
         return next_screen
 
     def handle_input(self):
@@ -79,6 +69,7 @@ class EntryScreen:
             if is_l_don_pressed() or is_r_don_pressed():
                 if self.side == 1:
                     return self.on_screen_end("TITLE")
+                global_data.player_num = round((self.side/3) + 1)
                 self.drum_move_1.start()
                 self.drum_move_2.start()
                 self.drum_move_3.start()
@@ -86,31 +77,33 @@ class EntryScreen:
                 self.cloud_resize_loop.start()
                 self.cloud_texture_change.start()
                 self.cloud_fade.start()
+                audio.play_sound('cloud')
+                audio.play_sound(f'entry_start_{global_data.player_num}p')
                 plate_info = global_data.config['nameplate']
                 self.nameplate.unload()
-                self.nameplate = Nameplate(plate_info['name'], plate_info['title'], round((self.side/3) + 1), plate_info['dan'], plate_info['gold'])
+                self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
                 self.nameplate_fadein.start()
                 self.state = State.SELECT_MODE
                 if self.side == 2:
                     self.chara = Chara2D(1, 100)
                 else:
                     self.chara = Chara2D(0, 100)
-                audio.play_sound(self.sound_don)
+                audio.play_sound('don')
             if is_l_kat_pressed():
-                audio.play_sound(self.sound_kat)
+                audio.play_sound('kat')
                 self.side = max(0, self.side - 1)
             if is_r_kat_pressed():
-                audio.play_sound(self.sound_kat)
+                audio.play_sound('kat')
                 self.side = min(2, self.side + 1)
         elif self.state == State.SELECT_MODE:
             if is_l_don_pressed() or is_r_don_pressed():
-                audio.play_sound(self.sound_don)
+                audio.play_sound('don')
                 self.box_manager.select_box()
             if is_l_kat_pressed():
-                audio.play_sound(self.sound_kat)
+                audio.play_sound('kat')
                 self.box_manager.move_left()
             if is_r_kat_pressed():
-                audio.play_sound(self.sound_kat)
+                audio.play_sound('kat')
                 self.box_manager.move_right()
 
     def update(self):
@@ -133,6 +126,9 @@ class EntryScreen:
         self.chara.update(current_time, 100, False, False)
         if self.box_manager.is_finished():
             return self.on_screen_end(self.box_manager.selected_box())
+        if self.cloud_fade.is_finished and not audio.is_sound_playing(f'entry_start_{global_data.player_num}p') and not self.announce_played:
+            audio.play_sound('select_mode')
+            self.announce_played = True
         return self.handle_input()
 
     def draw_background(self):

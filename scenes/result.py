@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pyray as ray
 
 from libs import utils
@@ -28,23 +26,13 @@ class ResultScreen:
         self.height = 720
         self.screen_init = False
 
-    def load_textures(self):
-        tex.load_screen_textures('result')
-
-    def load_sounds(self):
-        sounds_dir = Path("Sounds")
-        self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "don.wav")
-        self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / "0" / "ka.wav")
-        self.sound_num_up = audio.load_sound(sounds_dir / "result" / "SE_RESULT [4].ogg")
-        self.bgm = audio.load_sound(sounds_dir / "result" / "JINGLE_SEISEKI [1].ogg")
-
     def on_screen_start(self):
         if not self.screen_init:
-            self.load_textures()
-            self.load_sounds()
+            tex.load_screen_textures('result')
+            audio.load_screen_sounds('result')
             self.screen_init = True
             self.song_info = OutlinedText(session_data.song_title, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
-            audio.play_sound(self.bgm)
+            audio.play_sound('bgm')
             self.fade_in = FadeIn()
             self.fade_out = tex.get_animation(0)
             self.fade_in_bottom = tex.get_animation(1)
@@ -86,7 +74,9 @@ class ResultScreen:
         self.screen_init = False
         global_data.songs_played += 1
         tex.unload_textures()
-        audio.stop_sound(self.bgm)
+        audio.stop_sound('bgm')
+        audio.unload_all_sounds()
+        audio.unload_all_music()
         utils.session_data = utils.reset_session()
         return "SONG_SELECT"
 
@@ -102,9 +92,9 @@ class ResultScreen:
                     curr_num = self.update_list[self.update_index][0]
                     setattr(self, self.update_list[self.update_index][0], self.score_animator.next_score())
                     if self.update_list[self.update_index] != curr_num:
-                        audio.play_sound(self.sound_num_up)
+                        audio.play_sound('num_up')
                     if self.score_animator.is_finished:
-                        audio.play_sound(self.sound_don)
+                        audio.play_sound('don')
                         self.score_delay += 750
                         if self.update_index == len(self.update_list) - 1:
                             self.is_skipped = True
@@ -122,7 +112,7 @@ class ResultScreen:
                 self.is_skipped = True
             else:
                 self.fade_out.start()
-            audio.play_sound(self.sound_don)
+            audio.play_sound('don')
 
     def update(self):
         self.on_screen_start()
@@ -281,7 +271,6 @@ class Crown:
         self.white_fadein.start()
         self.gleam.start()
         self.fadein.start()
-        self.sound = audio.load_sound(Path('Sounds/result/SE_RESULT [1].ogg'))
         self.sound_played = False
 
     def update(self, current_ms: float):
@@ -291,7 +280,7 @@ class Crown:
         self.white_fadein.update(current_ms)
         self.gleam.update(current_ms)
         if self.resize_fix.is_finished and not self.sound_played:
-            audio.play_sound(self.sound)
+            audio.play_sound('crown')
             self.sound_played = True
 
     def draw(self, crown_name: str):

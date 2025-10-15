@@ -56,6 +56,13 @@ def create_song_db():
         '''
         cursor.execute(create_table_query)
         con.commit()
+        # Migrate existing records: set clear=2 for full combos (bad=0)
+        cursor.execute("""
+            UPDATE Scores
+            SET clear = 2
+            WHERE bad = 0 AND (clear IS NULL OR clear <> 2)
+        """)
+        con.commit()
         print("Scores database created successfully")
 
 def main():

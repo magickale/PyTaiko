@@ -1,8 +1,6 @@
 import cffi
 import platform
 from pathlib import Path
-from typing import Optional
-import numpy as np
 
 from libs.utils import get_config
 
@@ -107,7 +105,7 @@ ffi.cdef("""
 # gcc -shared -fPIC -o libaudio.so audio.c -lportaudio -lsndfile -lpthread
 try:
     if platform.system() == "Windows":
-        lib = ffi.dlopen("libaudio.dll")  # or "libaudio.dll" if that's the compiled name
+        lib = ffi.dlopen("libaudio.dll")
     elif platform.system() == "Darwin":
         lib = ffi.dlopen("./libaudio.dylib")
     else:  # Assume Linux/Unix
@@ -134,11 +132,11 @@ class AudioEngine:
             sample_rate = 44100
         self.target_sample_rate = sample_rate
         self.buffer_size = buffer_size
-        self.sounds = {}  # sound_id -> sound struct
-        self.music_streams = {}  # music_id -> music struct
-        self.sound_counter = 0
-        self.music_counter = 0
+        self.sounds = {}
+        self.music_streams = {}
         self.audio_device_ready = False
+
+        self.sounds_path = Path("Sounds")
 
     def list_host_apis(self):
         lib.list_host_apis() # type: ignore
@@ -148,6 +146,10 @@ class AudioEngine:
         try:
             lib.init_audio_device(self.device_type, self.target_sample_rate, self.buffer_size) # type: ignore
             self.audio_device_ready = lib.is_audio_device_ready() # type: ignore
+            file_path_str = str(self.sounds_path / 'don.wav').encode('utf-8')
+            self.don = lib.load_sound(file_path_str) # type: ignore
+            file_path_str = str(self.sounds_path / 'ka.wav').encode('utf-8')
+            self.kat = lib.load_sound(file_path_str) # type: ignore
             if self.audio_device_ready:
                 print("Audio device initialized successfully")
             return self.audio_device_ready
@@ -164,6 +166,8 @@ class AudioEngine:
             for music_id in list(self.music_streams.keys()):
                 self.unload_music_stream(music_id)
 
+            lib.unload_sound(self.don) # type: ignore
+            lib.unload_sound(self.kat) # type: ignore
             lib.close_audio_device() # type: ignore
             self.audio_device_ready = False
             print("Audio device closed")
@@ -183,18 +187,16 @@ class AudioEngine:
         return lib.get_master_volume() # type: ignore
 
     # Sound management
-    def load_sound(self, file_path: Path) -> str:
+    def load_sound(self, file_path: Path, name: str) -> str:
         """Load a sound file and return sound ID"""
         try:
             file_path_str = str(file_path).encode('utf-8')
             sound = lib.load_sound(file_path_str) # type: ignore
 
             if lib.is_sound_valid(sound): # type: ignore
-                sound_id = f"sound_{self.sound_counter}"
-                self.sounds[sound_id] = sound
-                self.sound_counter += 1
-                print(f"Loaded sound from {file_path} as {sound_id}")
-                return sound_id
+                self.sounds[name] = sound
+                print(f"Loaded sound from {file_path} as {name}")
+                return name
             else:
                 print(f"Failed to load sound: {file_path}")
                 return ""
@@ -202,164 +204,180 @@ class AudioEngine:
             print(f"Error loading sound {file_path}: {e}")
             return ""
 
-    def unload_sound(self, sound_id: str) -> None:
-        """Unload a sound"""
-        if sound_id in self.sounds:
-            lib.unload_sound(self.sounds[sound_id]) # type: ignore
-            del self.sounds[sound_id]
+    def unload_sound(self, name: str) -> None:
+        """Unload a sound by name"""
+        if name in self.sounds:
+            lib.unload_sound(self.sounds[name]) # type: ignore
+            del self.sounds[name]
+            print(f"Unloaded sound {name}")
+        else:
+            print(f"Sound {name} not found")
 
-    def unload_all_sounds(self) -> None:
+    def load_screen_sounds(self, screen_name: str) -> None:
+        """Load sounds for a given screen"""
+        path = self.sounds_path / screen_name
+        for sound in path.iterdir():
+            if sound.is_dir():
+                for file in sound.iterdir():
+                    self.load_sound(file, sound.stem + '_' + file.stem)
+            if sound.is_file():
+                self.load_sound(sound, sound.stem)
+
+        path = self.sounds_path / 'global'
+        for sound in path.iterdir():
+            if sound.is_dir():
+                for file in sound.iterdir():
+                    self.load_sound(file, sound.stem + '_' + file.stem)
+            if sound.is_file():
+                self.load_sound(sound, sound.stem)
+
+    def unload_all_sounds(self):
         """Unload all sounds"""
-        for sound_id in list(self.sounds.keys()):
-            self.unload_sound(sound_id)
+        for name in list(self.sounds.keys()):
+            self.unload_sound(name)
 
-    def play_sound(self, sound_id: str) -> None:
+    def play_sound(self, name: str) -> None:
         """Play a sound"""
-        if sound_id in self.sounds:
-            lib.play_sound(self.sounds[sound_id]) # type: ignore
+        if name == 'don':
+            lib.play_sound(self.don) # type: ignore
+        elif name == 'kat':
+            lib.play_sound(self.kat) # type: ignore
+        elif name in self.sounds:
+            sound = self.sounds[name]
+            lib.play_sound(sound) # type: ignore
+        else:
+            print(f"Sound {name} not found")
 
-    def stop_sound(self, sound_id: str) -> None:
+    def stop_sound(self, name: str) -> None:
         """Stop a sound"""
-        if sound_id in self.sounds:
-            lib.stop_sound(self.sounds[sound_id]) # type: ignore
+        if name == 'don':
+            lib.stop_sound(self.don) # type: ignore
+        elif name == 'kat':
+            lib.stop_sound(self.kat) # type: ignore
+        if name in self.sounds:
+            sound = self.sounds[name]
+            lib.stop_sound(sound) # type: ignore
+        else:
+            print(f"Sound {name} not found")
 
-    def pause_sound(self, sound_id: str) -> None:
-        """Pause a sound"""
-        if sound_id in self.sounds:
-            lib.pause_sound(self.sounds[sound_id]) # type: ignore
+    def is_sound_playing(self, name: str) -> bool:
+        if name == 'don':
+            return lib.is_sound_playing(self.don) # type: ignore
+        elif name == 'kat':
+            return lib.is_sound_playing(self.kat) # type: ignore
+        if name in self.sounds:
+            sound = self.sounds[name]
+            return lib.is_sound_playing(sound) # type: ignore
+        else:
+            print(f"Sound {name} not found")
+            return False
 
-    def resume_sound(self, sound_id: str) -> None:
-        """Resume a sound"""
-        if sound_id in self.sounds:
-            lib.resume_sound(self.sounds[sound_id]) # type: ignore
-
-    def is_sound_valid(self, sound_id: str) -> bool:
-        """Check if sound is valid"""
-        if sound_id in self.sounds:
-            return lib.is_sound_valid(self.sounds[sound_id]) # type: ignore
-        return False
-
-    def is_sound_playing(self, sound_id: str) -> bool:
-        """Check if sound is playing"""
-        if sound_id in self.sounds:
-            return lib.is_sound_playing(self.sounds[sound_id]) # type: ignore
-        return False
-
-    def set_sound_volume(self, sound_id: str, volume: float) -> None:
-        """Set sound volume"""
-        if sound_id in self.sounds:
-            lib.set_sound_volume(self.sounds[sound_id], max(0.0, volume)) # type: ignore
-
-    def set_sound_pan(self, sound_id: str, pan: float) -> None:
-        """Set sound pan (0.0 = left, 0.5 = center, 1.0 = right)"""
-        if sound_id in self.sounds:
-            lib.set_sound_pan(self.sounds[sound_id], max(0.0, min(1.0, pan))) # type: ignore
-
-    def normalize_sound(self, sound_id: str, rms: float) -> None:
-        """Normalize sound - Note: This would need to be implemented in C"""
-        # The C implementation doesn't have normalize function yet
-        # You'd need to add this to your C code
-        print(f"Warning: normalize_sound not implemented in C backend")
+    def set_sound_volume(self, name: str, volume: float) -> None:
+        if name == 'don':
+            lib.set_sound_volume(self.don, volume) # type: ignore
+        elif name == 'kat':
+            lib.set_sound_volume(self.kat, volume) # type: ignore
+        elif name in self.sounds:
+            sound = self.sounds[name]
+            lib.set_sound_volume(sound, volume) # type: ignore
+        else:
+            print(f"Sound {name} not found")
 
     # Music management
-    def load_music_stream(self, file_path: Path, normalize: Optional[float] = None) -> str:
+    def load_music_stream(self, file_path: Path, name: str) -> str:
         """Load a music stream and return music ID"""
-        try:
-            file_path_str = str(file_path).encode('utf-8')
-            music = lib.load_music_stream(file_path_str) # type: ignore
+        file_path_str = str(file_path).encode('utf-8')
+        music = lib.load_music_stream(file_path_str) # type: ignore
 
-            if lib.is_music_valid(music): # type: ignore
-                music_id = f"music_{self.music_counter}"
-                self.music_streams[music_id] = music
-                self.music_counter += 1
-                print(f"Loaded music stream from {file_path} as {music_id}")
-                return music_id
-            else:
-                print(f"Failed to load music: {file_path}")
-                return ""
-        except Exception as e:
-            print(f"Error loading music {file_path}: {e}")
+        if lib.is_music_valid(music): # type: ignore
+            self.music_streams[name] = music
+            print(f"Loaded music stream from {file_path} as {name}")
+            return name
+        else:
+            print(f"Failed to load music: {file_path}")
             return ""
 
-    def load_music_stream_from_data(self, audio_array: np.ndarray, sample_rate: int = 44100) -> str:
-        """Load music from numpy array - would need C implementation"""
-        print("Warning: load_music_stream_from_data not implemented in C backend")
-        return ""
-
-    def unload_music_stream(self, music_id: str) -> None:
-        """Unload a music stream"""
-        if music_id in self.music_streams:
-            lib.unload_music_stream(self.music_streams[music_id]) # type: ignore
-            del self.music_streams[music_id]
-
-    def is_music_valid(self, music_id: str) -> bool:
-        """Check if music is valid"""
-        if music_id in self.music_streams:
-            return lib.is_music_valid(self.music_streams[music_id]) # type: ignore
-        return False
-
-    def play_music_stream(self, music_id: str) -> None:
+    def play_music_stream(self, name: str) -> None:
         """Play a music stream"""
-        if music_id in self.music_streams:
-            lib.seek_music_stream(self.music_streams[music_id], 0) # type: ignore
-            lib.play_music_stream(self.music_streams[music_id]) # type: ignore
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            lib.seek_music_stream(music, 0) # type: ignore
+            lib.play_music_stream(music) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
 
-    def stop_music_stream(self, music_id: str) -> None:
+    def update_music_stream(self, name: str) -> None:
+        """Update a music stream"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            lib.update_music_stream(music) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
+
+    def get_music_time_length(self, name: str) -> float:
+        """Get the time length of a music stream"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            return lib.get_music_time_length(music) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
+            return 0.0
+
+    def get_music_time_played(self, name: str) -> float:
+        """Get the time played of a music stream"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            return lib.get_music_time_played(music) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
+            return 0.0
+
+    def set_music_volume(self, name: str, volume: float) -> None:
+        """Set the volume of a music stream"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            lib.set_music_volume(music, volume) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
+
+    def is_music_stream_playing(self, name: str) -> bool:
+        """Check if a music stream is playing"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            return lib.is_music_stream_playing(music) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
+            return False
+
+    def stop_music_stream(self, name: str) -> None:
         """Stop a music stream"""
-        if music_id in self.music_streams:
-            lib.stop_music_stream(self.music_streams[music_id]) # type: ignore
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            lib.stop_music_stream(music) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
 
-    def pause_music_stream(self, music_id: str) -> None:
-        """Pause a music stream"""
-        if music_id in self.music_streams:
-            lib.pause_music_stream(self.music_streams[music_id]) # type: ignore
+    def unload_music_stream(self, name: str) -> None:
+        """Unload a music stream"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            lib.unload_music_stream(music) # type: ignore
+            del self.music_streams[name]
+        else:
+            print(f"Music stream {name} not found")
 
-    def resume_music_stream(self, music_id: str) -> None:
-        """Resume a music stream"""
-        if music_id in self.music_streams:
-            lib.resume_music_stream(self.music_streams[music_id]) # type: ignore
+    def unload_all_music(self) -> None:
+        """Unload all music streams"""
+        for music_id in list(self.music_streams.keys()):
+            self.unload_music_stream(music_id)
 
-    def is_music_stream_playing(self, music_id: str) -> bool:
-        """Check if music stream is playing"""
-        if music_id in self.music_streams:
-            return lib.is_music_stream_playing(self.music_streams[music_id]) # type: ignore
-        return False
-
-    def seek_music_stream(self, music_id: str, position: float) -> None:
-        """Seek music stream to position in seconds"""
-        if music_id in self.music_streams:
-            lib.seek_music_stream(self.music_streams[music_id], position) # type: ignore
-
-    def update_music_stream(self, music_id: str) -> None:
-        """Update music stream (fill buffers)"""
-        if music_id in self.music_streams:
-            lib.update_music_stream(self.music_streams[music_id]) # type: ignore
-
-    def set_music_volume(self, music_id: str, volume: float) -> None:
-        """Set music volume"""
-        if music_id in self.music_streams:
-            lib.set_music_volume(self.music_streams[music_id], max(0.0, min(1.0, volume))) # type: ignore
-
-    def set_music_pan(self, music_id: str, pan: float) -> None:
-        """Set music pan"""
-        if music_id in self.music_streams:
-            lib.set_music_pan(self.music_streams[music_id], max(0.0, min(1.0, pan))) # type: ignore
-
-    def normalize_music_stream(self, music_id: str, rms: float) -> None:
-        """Normalize music stream - would need C implementation"""
-        print("Warning: normalize_music_stream not implemented in C backend")
-
-    def get_music_time_length(self, music_id: str) -> float:
-        """Get total music length in seconds"""
-        if music_id in self.music_streams:
-            return lib.get_music_time_length(self.music_streams[music_id]) # type: ignore
-        return 0.0
-
-    def get_music_time_played(self, music_id: str) -> float:
-        """Get current music position in seconds"""
-        if music_id in self.music_streams:
-            return lib.get_music_time_played(self.music_streams[music_id]) # type: ignore
-        return 0.0
+    def seek_music_stream(self, name: str, position: float) -> None:
+        """Seek a music stream to a specific position"""
+        if name in self.music_streams:
+            music = self.music_streams[name]
+            lib.seek_music_stream(music, position) # type: ignore
+        else:
+            print(f"Music stream {name} not found")
 
 # Create the global audio instance
 audio = AudioEngine(get_config()["audio"]["device_type"], get_config()["audio"]["sample_rate"], get_config()["audio"]["buffer_size"])
