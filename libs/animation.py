@@ -53,6 +53,7 @@ class BaseAnimation():
             global_data.input_locked -= 1
 
     def restart(self) -> None:
+        """Restarts the animation."""
         self.start_ms = get_current_ms()
         self.is_finished = False
         self.delay = self.delay_saved
@@ -61,20 +62,25 @@ class BaseAnimation():
             global_data.input_locked += 1
 
     def start(self) -> None:
+        """Starts the animation. Functionally the same as
+        restart() if it has been called before"""
         self.is_started = True
         self.restart()
 
     def pause(self):
+        """Pauses the animation."""
         self.is_started = False
         if self.lock_input:
             global_data.input_locked -= 1
 
     def unpause(self):
+        """Unpauses the animation."""
         self.is_started = True
         if self.lock_input:
             global_data.input_locked += 1
 
     def reset(self):
+        """Resets the animation without starting it."""
         self.restart()
         self.pause()
 
@@ -228,8 +234,6 @@ class TextureChangeAnimation(BaseAnimation):
             self.is_finished = True
 
 class TextStretchAnimation(BaseAnimation):
-    def __init__(self, duration: float, loop: bool = False, lock_input: bool = False, delay: float = 0.0) -> None:
-        super().__init__(duration, loop=loop, lock_input=lock_input, delay=delay)
     def update(self, current_time_ms: float) -> None:
         if not self.is_started:
             return
@@ -386,6 +390,8 @@ ANIMATION_CLASSES = {
 }
 
 def parse_animations(animation_json):
+    """Processes animations from a json file, including
+    ones with references to other animations, returns a dictionary"""
     raw_anims = {}
     for item in animation_json:
         if "id" not in item:
