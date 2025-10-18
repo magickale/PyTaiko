@@ -115,15 +115,15 @@ def build_song_hashes(output_dir=Path("cache")):
         all_notes = NoteList()
         diff_hashes = dict()
         
-		try:
-        	for diff in tja.metadata.course_data:
-            	diff_notes, _, _, _ = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
-            	diff_hashes[diff] = tja.hash_note_data(diff_notes)
-            	all_notes.play_notes.extend(diff_notes.play_notes)
-            	all_notes.bars.extend(diff_notes.bars)
-        except Exception as e:
-            print(f"Failed to parse TJA {tja_path}: {e}")
-            continue
+	try:
+		for diff in tja.metadata.course_data:
+			diff_notes, _, _, _ = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
+			diff_hashes[diff] = tja.hash_note_data(diff_notes)
+			all_notes.play_notes.extend(diff_notes.play_notes)
+			all_notes.bars.extend(diff_notes.bars)
+	except Exception as e:
+		print(f"Failed to parse TJA {tja_path}: {e}")
+		continue
 
         if all_notes == []:
             continue
