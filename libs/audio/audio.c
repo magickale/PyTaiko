@@ -6,6 +6,9 @@
 // stream to portaudio
 
 #include "portaudio.h"
+#ifdef _WIN32
+#include "pa_asio.h"
+#endif
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -324,6 +327,44 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
     AUDIO.System.outputParameters.hostApiSpecificStreamInfo = NULL;
     AUDIO.System.sampleRate = sample_rate;
 
+    const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(AUDIO.System.outputParameters.device);
+    const PaHostApiInfo *hostApiInfo = Pa_GetHostApiInfo(deviceInfo->hostApi);
+
+#ifdef _WIN32
+    if (hostApiInfo->type == paASIO) {
+        long minSize, maxSize, preferredSize, granularity;
+        PaError asioErr = PaAsio_GetAvailableBufferSizes(AUDIO.System.outputParameters.device,
+                                                          &minSize, &maxSize, &preferredSize, &granularity);
+
+        if (asioErr == paNoError) {
+            TRACELOG(LOG_INFO, "AUDIO: ASIO buffer size constraints:");
+            TRACELOG(LOG_INFO, "    > Minimum:       %ld samples", minSize);
+            TRACELOG(LOG_INFO, "    > Maximum:       %ld samples", maxSize);
+            TRACELOG(LOG_INFO, "    > Preferred:     %ld samples", preferredSize);
+            if (granularity == -1) {
+                TRACELOG(LOG_INFO, "    > Granularity:   Powers of 2 only");
+            } else if (granularity == 0) {
+                TRACELOG(LOG_INFO, "    > Granularity:   Fixed size (min=max=preferred)");
+            } else {
+                TRACELOG(LOG_INFO, "    > Granularity:   %ld samples", granularity);
+            }
+
+            // Warn if requested buffer size is out of range
+            if (buffer_size > 0 && buffer_size < minSize) {
+                TRACELOG(LOG_WARNING, "AUDIO: Requested buffer size (%lu) is below ASIO minimum (%ld)", buffer_size, minSize);
+                TRACELOG(LOG_WARNING, "AUDIO: Driver will use %ld samples instead", minSize);
+            } else if (buffer_size > maxSize) {
+                TRACELOG(LOG_WARNING, "AUDIO: Requested buffer size (%lu) exceeds ASIO maximum (%ld)", buffer_size, maxSize);
+                TRACELOG(LOG_WARNING, "AUDIO: Driver will use %ld samples instead", maxSize);
+            } else if (buffer_size == 0) {
+                TRACELOG(LOG_INFO, "AUDIO: Buffer size not specified, driver will choose (likely %ld samples)", preferredSize);
+            }
+        } else {
+            TRACELOG(LOG_WARNING, "AUDIO: Failed to query ASIO buffer sizes: %s", Pa_GetErrorText(asioErr));
+        }
+    }
+#endif
+
     err = Pa_OpenStream(&AUDIO.System.stream,
                         NULL,                               // No input
                         &AUDIO.System.outputParameters,     // Output parameters
@@ -351,17 +392,24 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
 
     AUDIO.System.isReady = true;
 
-    const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(AUDIO.System.outputParameters.device);
-    const PaHostApiInfo *hostApiInfo = Pa_GetHostApiInfo(deviceInfo->hostApi);
-
     TRACELOG(LOG_INFO, "AUDIO: Device initialized successfully");
     TRACELOG(LOG_INFO, "    > Backend:       PortAudio | %s", hostApiInfo->name);
     TRACELOG(LOG_INFO, "    > Device:        %s", deviceInfo->name);
     TRACELOG(LOG_INFO, "    > Format:        %s", "Float32");
+    const PaStreamInfo *streamInfo = Pa_GetStreamInfo(AUDIO.System.stream);
     TRACELOG(LOG_INFO, "    > Channels:      %d", AUDIO_DEVICE_CHANNELS);
     TRACELOG(LOG_INFO, "    > Sample rate:   %f", AUDIO.System.sampleRate);
-    TRACELOG(LOG_INFO, "    > Buffer size:   %lu", buffer_size);
-    TRACELOG(LOG_INFO, "    > Latency:       %f ms", Pa_GetStreamInfo(AUDIO.System.stream)->outputLatency * 1000.0);
+    TRACELOG(LOG_INFO, "    > Buffer size:   %lu (requested)", buffer_size);
+    TRACELOG(LOG_INFO, "    > Latency:       %f ms", streamInfo->outputLatency * 1000.0);
+#ifdef _WIN32
+    if (hostApiInfo->type == paASIO) {
+        unsigned long estimatedBufferSize = (unsigned long)(streamInfo->outputLatency * AUDIO.System.sampleRate);
+        TRACELOG(LOG_INFO, "    > Estimated actual buffer: ~%lu samples (based on latency)", estimatedBufferSize);
+        if (buffer_size > 0 && estimatedBufferSize != buffer_size) {
+            TRACELOG(LOG_INFO, "    > Note:          ASIO driver adjusted buffer size to meet its constraints");
+        }
+    }
+#endif
 }
 
 void close_audio_device(void)

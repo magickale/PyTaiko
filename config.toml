@@ -32,9 +32,18 @@ right_don = [17]
 right_kat = [12]
 
 [audio]
+# device_type: 0 = default, check console output from list_host_apis() for other options
 device_type = 0
+# sample_rate: -1 = use device default (usually 44100 or 48000)
 sample_rate = -1
-buffer_size = 0
+# buffer_size: Size in samples per audio buffer
+# - 0 = let driver choose (may result in very small buffers with ASIO, typically 64)
+# - ASIO users: Use 128, 256, 512, 1024, or 2048 (must be power of 2)
+# - ASIO drivers have strict minimum buffer sizes (often 64-256 samples)
+# - If you request a buffer size below the driver's minimum, it will use the minimum instead
+# - Lower = less latency but higher CPU usage; Higher = more latency but more stable
+# - Recommended: 512 for most users, 256 for low latency, 1024+ for stability
+buffer_size = 512
 exclusive = false
 
 [volume]

@@ -16,7 +16,7 @@ class DevScreen:
         if not self.screen_init:
             self.screen_init = True
             tex.load_screen_textures('game')
-            self.obj = JudgeCounter(10)
+            self.obj = JudgeCounter()
 
     def on_screen_end(self, next_screen: str):
         self.screen_init = False
@@ -24,11 +24,11 @@ class DevScreen:
 
     def update(self):
         self.on_screen_start()
-        self.obj.update()
+        self.obj.update(0, 0, 0, 0)
         if ray.is_key_pressed(ray.KeyboardKey.KEY_ENTER):
             return self.on_screen_end('GAME')
         if ray.is_key_pressed(ray.KeyboardKey.KEY_SPACE):
-            self.obj = JudgeCounter(500)
+            self.obj = JudgeCounter()
 
     def draw(self):
         ray.draw_rectangle(0, 0, 1280, 720, ray.GREEN)

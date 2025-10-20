@@ -44,7 +44,6 @@ jobs:
             mingw-w64-x86_64-speex
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-pkg-config
-          # Note: Removed mingw-w64-x86_64-portaudio since we're using our own
 
       - name: Verify local PortAudio library (Windows)
         if: runner.os == 'Windows'
@@ -199,6 +198,12 @@ jobs:
           sudo make install
         shell: bash
 
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PyTaiko-${{ runner.os }}-${{ runner.arch }}
+          path: release/
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
@@ -263,12 +268,6 @@ jobs:
             zip -r ../PyTaiko-${{ runner.os }}-${{ runner.arch }}.zip *
           fi
         shell: bash
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: PyTaiko-${{ runner.os }}-${{ runner.arch }}
-          path: release/
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
