@@ -154,6 +154,7 @@ jobs:
 
           echo "=== Root directory contents ==="
           ls -la *.dll 2>/dev/null || echo "No DLLs in root directory"
+          cp libs/audio/*.dll release/ 2>/dev/null
         shell: bash
 
       # For Unix systems, also try static builds
@@ -186,6 +187,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           # Create the directory if it doesn't exist
+          cp libs/audio/*.dylib release/ 2>/dev/null
           sudo mkdir -p /usr/local/lib
           cd libs/audio
           sudo make install
@@ -194,6 +196,7 @@ jobs:
       - name: Install static audio library (Linux)
         if: runner.os == 'Linux'
         run: |
+          cp libs/audio/*.so release/ 2>/dev/null
           cd libs/audio
           sudo make install
         shell: bash
