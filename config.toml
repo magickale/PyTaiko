@@ -15,7 +15,7 @@ gold = false
 
 [paths]
 tja_path = ['Songs']
-video_path = 'Videos'
+video_path = ['Videos']
 
 [keys]
 exit_key = 'A'
