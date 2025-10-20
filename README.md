@@ -85,6 +85,14 @@ Go to the project directory
   cd PyTaiko
 ````
 
+Either reuse the dlls/libraries from the compiled version or compile them yourself
+(Optional)
+```
+cd libs/audio
+make
+```
+Then move the compiled dlls to the main directory
+
 Start the game
 
 ```bash
