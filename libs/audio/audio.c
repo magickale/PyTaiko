@@ -329,7 +329,7 @@ void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned lon
                         &AUDIO.System.outputParameters,     // Output parameters
                         sample_rate,          // Sample rate
                         buffer_size,      // Frames per buffer
-                        paClipOff,                         // No clipping
+                        paNoFlag,                         // No clipping
                         port_audio_callback,                 // Callback function
                         NULL);                             // User data
 
