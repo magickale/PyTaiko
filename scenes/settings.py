@@ -71,6 +71,12 @@ class SettingsScreen:
             new_idx = max(0, min(len(valid_rates) - 1, current_idx + increment))
             new_value = valid_rates[new_idx]
 
+        if key == 'buffer_size':
+            valid_sizes = [-1, 32, 64, 128, 256, 512, 1024]
+            current_idx = valid_sizes.index(current_value) if current_value in valid_sizes else 2
+            new_idx = max(0, min(len(valid_sizes) - 1, current_idx + increment))
+            new_value = valid_sizes[new_idx]
+
         self.config[section][key] = new_value
 
     def handle_string_cycle(self, section, key):
