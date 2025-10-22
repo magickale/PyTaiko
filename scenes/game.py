@@ -189,6 +189,7 @@ class GameScreen:
             if self.end_ms != 0:
                 if current_time >= self.end_ms + 1000:
                     if self.player_1.ending_anim is None:
+                        self.write_score()
                         if session_data.result_bad == 0:
                             self.player_1.ending_anim = FCAnimation()
                         elif self.player_1.gauge.is_clear:
@@ -200,7 +201,6 @@ class GameScreen:
                         self.result_transition.start()
                         audio.play_sound('result_transition', 'voice')
             else:
-                self.write_score()
                 self.end_ms = current_time
 
         if ray.is_key_pressed(ray.KeyboardKey.KEY_F1):
