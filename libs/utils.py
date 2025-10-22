@@ -3,6 +3,7 @@ import hashlib
 import math
 import sys
 import time
+import json
 from dataclasses import dataclass
 from libs.global_data import global_data
 from functools import lru_cache
@@ -70,13 +71,12 @@ def get_pixels_per_frame(bpm: float, time_signature: float, distance: float) -> 
     return (distance / total_frames)
 
 def get_config() -> dict[str, Any]:
-    if Path('dev-config.toml').exists():
-        with open(Path('dev-config.toml'), "r", encoding="utf-8") as f:
-            config_file = tomlkit.load(f)
-        return config_file
-    with open(Path('config.toml'), "r", encoding="utf-8") as f:
+    config_path = Path('dev-config.toml') if Path('dev-config.toml').exists() else Path('config.toml')
+
+    with open(config_path, "r", encoding="utf-8") as f:
         config_file = tomlkit.load(f)
-    return config_file
+
+    return json.loads(json.dumps(config_file))
 
 def save_config(config: dict[str, Any]) -> None:
     if Path('dev-config.toml').exists():

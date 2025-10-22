@@ -318,11 +318,7 @@ class Player:
             self.judge_counter = None
 
         self.input_log: dict[float, tuple] = dict()
-
-        if tja is not None:
-            stars = tja.metadata.course_data[self.difficulty].level
-        else:
-            stars = 0
+        stars = tja.metadata.course_data[self.difficulty].level
         self.gauge = Gauge(self.player_number, self.difficulty, stars, self.total_notes)
         self.gauge_hit_effect: list[GaugeHitEffect] = []
 
@@ -2078,7 +2074,7 @@ class Gauge:
             self.gauge_length = 0
 
     def update(self, current_ms: float):
-        self.is_clear = self.gauge_length > self.clear_start[min(self.difficulty, 2)]
+        self.is_clear = self.gauge_length > self.clear_start[min(self.difficulty, 2)]-1
         self.is_rainbow = self.gauge_length == self.gauge_max
         if self.gauge_length == self.gauge_max and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
@@ -2102,27 +2098,12 @@ class Gauge:
         tex.draw_texture('gauge', f'{self.player_num}p_unfilled' + self.string_diff)
         gauge_length = int(self.gauge_length)
         clear_point = self.clear_start[self.difficulty]
-
-        # Batch draw gauge bars by type instead of individual draws
-        if gauge_length > 0:
-            # Draw pre-clear bars as a batch
-            pre_clear_length = min(gauge_length, clear_point - 1)
-            if pre_clear_length > 0:
-                for i in range(pre_clear_length):
-                    tex.draw_texture('gauge', f'{self.player_num}p_bar', x=i*8)
-
-            # Draw clear transition bar if applicable
-            if gauge_length >= clear_point - 1:
-                tex.draw_texture('gauge', 'bar_clear_transition', x=(clear_point - 1)*8)
-
-            # Draw post-clear bars as a batch
-            if gauge_length > clear_point:
-                post_clear_start = clear_point
-                post_clear_length = gauge_length - post_clear_start
-                for i in range(post_clear_length):
-                    x_pos = (post_clear_start + i) * 8
-                    tex.draw_texture('gauge', 'bar_clear_top', x=x_pos)
-                    tex.draw_texture('gauge', 'bar_clear_bottom', x=x_pos)
+        tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=min(gauge_length*8, (clear_point - 1)*8)-8)
+        if gauge_length >= clear_point - 1:
+            tex.draw_texture('gauge', 'bar_clear_transition', x=(clear_point - 1)*8)
+        if gauge_length > clear_point:
+            tex.draw_texture('gauge', 'bar_clear_top', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8)
+            tex.draw_texture('gauge', 'bar_clear_bottom', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8)
 
         # Rainbow effect for full gauge
         if gauge_length == self.gauge_max and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
@@ -2139,7 +2120,7 @@ class Gauge:
         tex.draw_texture('gauge', 'overlay' + self.string_diff, fade=0.15)
 
         # Draw clear status indicators
-        if gauge_length >= clear_point:
+        if gauge_length >= clear_point-1:
             tex.draw_texture('gauge', 'clear', index=min(2, self.difficulty))
             if self.is_rainbow:
                 tex.draw_texture('gauge', 'tamashii_fire', scale=0.75, center=True, frame=self.tamashii_fire_change.attribute)
