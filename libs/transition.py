@@ -4,7 +4,12 @@ from libs.utils import OutlinedText, global_tex
 
 
 class Transition:
+    """Transition class for the game."""
     def __init__(self, title: str, subtitle: str, is_second: bool = False) -> None:
+        """Initialize the transition object.
+        title: str - The title of the chart.
+        subtitle: str - The subtitle of the chart.
+        is_second: bool - Whether this is the second half of the transition."""
         self.is_finished = False
         self.rainbow_up = global_tex.get_animation(0)
         self.mini_up = global_tex.get_animation(1)
@@ -16,6 +21,7 @@ class Transition:
         self.is_second = is_second
 
     def start(self):
+        """Start the transition effect."""
         self.rainbow_up.start()
         self.mini_up.start()
         self.chara_down.start()
@@ -23,6 +29,7 @@ class Transition:
         self.song_info_fade_out.start()
 
     def update(self, current_time_ms: float):
+        """Update the transition effect."""
         self.rainbow_up.update(current_time_ms)
         self.chara_down.update(current_time_ms)
         self.mini_up.update(current_time_ms)
@@ -30,7 +37,7 @@ class Transition:
         self.song_info_fade_out.update(current_time_ms)
         self.is_finished = self.song_info_fade.is_finished
 
-    def draw_song_info(self):
+    def _draw_song_info(self):
         color_1 = ray.fade(ray.WHITE, self.song_info_fade.attribute)
         color_2 = ray.fade(ray.WHITE, min(0.70, self.song_info_fade.attribute))
         offset = 0
@@ -50,6 +57,7 @@ class Transition:
         self.subtitle.draw(self.subtitle.default_src, dest, ray.Vector2(0, 0), 0, color_1)
 
     def draw(self):
+        """Draw the transition effect."""
         total_offset = 0
         if self.is_second:
             total_offset = 816
@@ -65,4 +73,4 @@ class Transition:
         global_tex.draw_texture('rainbow_transition', 'chara_right', x=self.mini_up.attribute//2 + chara_offset, y=-self.mini_up.attribute + offset - total_offset)
         global_tex.draw_texture('rainbow_transition', 'chara_center', y=-self.rainbow_up.attribute + offset - total_offset)
 
-        self.draw_song_info()
+        self._draw_song_info()

@@ -11,18 +11,36 @@ from libs.utils import get_pixels_per_frame, global_data, strip_comments
 
 
 @lru_cache(maxsize=64)
-def get_ms_per_measure(bpm_val, time_sig):
+def get_ms_per_measure(bpm_val: float, time_sig: float):
+    """Calculate the number of milliseconds per measure."""
     #https://gist.github.com/KatieFrogs/e000f406bbc70a12f3c34a07303eec8b#measure
     if bpm_val == 0:
         return 0
     return 60000 * (time_sig * 4) / bpm_val
 
 @lru_cache(maxsize=64)
-def get_pixels_per_ms(pixels_per_frame):
+def get_pixels_per_ms(pixels_per_frame: float):
+    """Calculate the number of pixels per millisecond."""
     return pixels_per_frame / (1000 / 60)
 
 @dataclass()
 class Note:
+    """A note in a TJA file.
+
+    Attributes:
+        type (int): The type (color) of the note.
+        hit_ms (float): The time at which the note should be hit.
+        load_ms (float): The time at which the note should be loaded.
+        pixels_per_frame_x (float): The number of pixels per frame in the x direction.
+        pixels_per_frame_y (float): The number of pixels per frame in the y direction.
+        display (bool): Whether the note should be displayed.
+        index (int): The index of the note.
+        bpm (float): The beats per minute of the song.
+        gogo_time (bool): Whether the note is a gogo time note.
+        moji (int): The text drawn below the note.
+        is_branch_start (bool): Whether the note is the start of a branch.
+        branch_params (str): The parameters (requirements) of the branch.
+    """
     type: int = field(init=False)
     hit_ms: float = field(init=False)
     load_ms: float = field(init=False)
@@ -78,6 +96,12 @@ class Note:
 
 @dataclass
 class Drumroll(Note):
+    """A drumroll note in a TJA file.
+
+    Attributes:
+        _source_note (Note): The source note.
+        color (int): The color of the drumroll. (0-255 where 255 is red)
+    """
     _source_note: Note
     color: int = field(init=False)
 
@@ -94,6 +118,14 @@ class Drumroll(Note):
 
 @dataclass
 class Balloon(Note):
+    """A balloon note in a TJA file.
+
+    Attributes:
+        _source_note (Note): The source note.
+        count (int): The number of hits it takes to pop.
+        popped (bool): Whether the balloon has been popped.
+        is_kusudama (bool): Whether the balloon is a kusudama.
+    """
     _source_note: Note
     count: int = field(init=False)
     popped: bool = False
@@ -125,6 +157,10 @@ class Balloon(Note):
 
 @dataclass
 class NoteList:
+    """A collection of notes
+    play_notes: A list of notes, drumrolls, and balloons that are played by the player
+    draw_notes: A list of notes, drumrolls, and balloons that are drawn by the player
+    bars: A list of bars"""
     play_notes: list[Note | Drumroll | Balloon] = field(default_factory=lambda: [])
     draw_notes: list[Note | Drumroll | Balloon] = field(default_factory=lambda: [])
     bars: list[Note] = field(default_factory=lambda: [])
@@ -144,6 +180,13 @@ class NoteList:
 
 @dataclass
 class CourseData:
+    """A collection of course metadata
+    level: number of stars
+    balloon: list of balloon counts
+    scoreinit: Unused
+    scorediff: Unused
+    is_branching: whether the course has branches
+    """
     level: int = 0
     balloon: list[int] = field(default_factory=lambda: [])
     scoreinit: list[int] = field(default_factory=lambda: [])
@@ -152,6 +195,19 @@ class CourseData:
 
 @dataclass
 class TJAMetadata:
+    """Metadata for a TJA file
+    title: dictionary for song titles, accessed by language code
+    subtitle: dictionary for song subtitles, accessed by language code
+    genre: genre of the song
+    wave: path to the song's audio file
+    demostart: start time of the preview
+    offset: offset of the song's audio file
+    bpm: beats per minute of the song
+    bgmovie: path to the song's background movie file
+    movieoffset: offset of the song's background movie file
+    scene_preset: background for the song
+    course_data: dictionary of course metadata, accessed by diff number
+    """
     title: dict[str, str] = field(default_factory= lambda: {'en': ''})
     subtitle: dict[str, str] = field(default_factory= lambda: {'en': ''})
     genre: str = ''
@@ -166,6 +222,11 @@ class TJAMetadata:
 
 @dataclass
 class TJAEXData:
+    """Extra data for TJA files
+    new_audio: Contains the word "-New Audio-" in any song title
+    old_audio: Contains the word "-Old Audio-" in any song title
+    limited_time: Contains the word "限定" in any song title or subtitle
+    new: If the TJA file has been created or modified in the last week"""
     new_audio: bool = False
     old_audio: bool = False
     limited_time: bool = False
@@ -173,6 +234,14 @@ class TJAEXData:
 
 
 def calculate_base_score(notes: NoteList) -> int:
+    """Calculate the base score for a song based on the number of notes, balloons, and drumrolls.
+
+    Args:
+        notes (NoteList): The list of notes in the song.
+
+    Returns:
+        int: The base score for the song.
+    """
     total_notes = 0
     balloon_count = 0
     drumroll_msec = 0
@@ -195,6 +264,14 @@ def calculate_base_score(notes: NoteList) -> int:
     return math.ceil((1000000 - (balloon_count * 100) - (16.920079999994086 * drumroll_msec / 1000 * 100)) / total_notes / 10) * 10
 
 def test_encodings(file_path):
+    """Test the encoding of a file by trying different encodings.
+
+    Args:
+        file_path (Path): The path to the file to test.
+
+    Returns:
+        str: The encoding that successfully decoded the file.
+    """
     encodings = ['utf-8-sig', 'shift-jis', 'utf-8']
     final_encoding = None
 
@@ -209,8 +286,28 @@ def test_encodings(file_path):
 
 
 class TJAParser:
+    """Parse a TJA file and extract metadata and data.
+
+    Args:
+        path (Path): The path to the TJA file.
+        start_delay (int): The delay in milliseconds before the first note.
+        distance (int): The distance between notes.
+
+    Attributes:
+        metadata (TJAMetadata): The metadata extracted from the TJA file.
+        ex_data (TJAEXData): The extended data extracted from the TJA file.
+        data (list): The data extracted from the TJA file.
+    """
     DIFFS = {0: "easy", 1: "normal", 2: "hard", 3: "oni", 4: "edit", 5: "tower", 6: "dan"}
     def __init__(self, path: Path, start_delay: int = 0, distance: int = 866):
+        """
+        Initialize a TJA object.
+
+        Args:
+            path (Path): The path to the TJA file.
+            start_delay (int): The delay in milliseconds before the first note.
+            distance (int): The distance between notes.
+        """
         self.file_path: Path = path
 
         encoding = test_encodings(self.file_path)
@@ -226,6 +323,9 @@ class TJAParser:
         self.current_ms: float = start_delay
 
     def get_metadata(self):
+        """
+        Extract metadata from the TJA file.
+        """
         current_diff = None  # Track which difficulty we're currently processing
 
         for item in self.data:
@@ -332,6 +432,15 @@ class TJAParser:
                 self.ex_data.limited_time = True
 
     def data_to_notes(self, diff) -> list[list[str]]:
+        """
+        Convert the data to notes.
+
+        Args:
+            diff (int): The difficulty level.
+
+        Returns:
+            list[list[str]]: The notes.
+        """
         diff_name = self.DIFFS.get(diff, "").lower()
 
         # Use enumerate for single iteration
@@ -380,6 +489,16 @@ class TJAParser:
         return notes
 
     def get_moji(self, play_note_list: list[Note], ms_per_measure: float) -> None:
+        """
+        Assign 口唱歌 (note phoneticization) to notes.
+
+        Args:
+            play_note_list (list[Note]): The list of notes to process.
+            ms_per_measure (float): The duration of a measure in milliseconds.
+
+        Returns:
+            None
+        """
         se_notes = {
             1: [0, 1, 2],  # Note '1' has three possible sound effects
             2: [3, 4],     # Note '2' has two possible sound effects
@@ -440,6 +559,7 @@ class TJAParser:
                         play_note_list[-3].moji = se_notes[1][2]
 
     def notes_to_position(self, diff: int):
+        """Parse a TJA's notes into a NoteList."""
         master_notes = NoteList()
         branch_m: list[NoteList] = []
         branch_e: list[NoteList] = []
@@ -705,6 +825,7 @@ class TJAParser:
         return master_notes, branch_m, branch_e, branch_n
 
     def hash_note_data(self, notes: NoteList):
+        """Hashes the note data for the given NoteList."""
         n = hashlib.sha256()
         list1 = notes.play_notes
         list2 = notes.bars
@@ -726,6 +847,7 @@ class TJAParser:
         return n.hexdigest()
 
 def modifier_speed(notes: NoteList, value: float):
+    """Modifies the speed of the notes in the given NoteList."""
     modded_notes = notes.draw_notes.copy()
     modded_bars = notes.bars.copy()
     for note in modded_notes:
@@ -737,12 +859,14 @@ def modifier_speed(notes: NoteList, value: float):
     return modded_notes, modded_bars
 
 def modifier_display(notes: NoteList):
+    """Modifies the display of the notes in the given NoteList."""
     modded_notes = notes.draw_notes.copy()
     for note in modded_notes:
         note.display = False
     return modded_notes
 
 def modifier_inverse(notes: NoteList):
+    """Inverts the type of the notes in the given NoteList."""
     modded_notes = notes.play_notes.copy()
     type_mapping = {1: 2, 2: 1, 3: 4, 4: 3}
     for note in modded_notes:
@@ -751,6 +875,8 @@ def modifier_inverse(notes: NoteList):
     return modded_notes
 
 def modifier_random(notes: NoteList, value: int):
+    """Randomly modifies the type of the notes in the given NoteList.
+    value: 1 == kimagure, 2 == detarame"""
     #value: 1 == kimagure, 2 == detarame
     modded_notes = notes.play_notes.copy()
     percentage = int(len(modded_notes) / 5) * value
@@ -762,6 +888,7 @@ def modifier_random(notes: NoteList, value: int):
     return modded_notes
 
 def apply_modifiers(notes: NoteList):
+    """Applies all selected modifiers from global_data to the given NoteList."""
     if global_data.modifiers.display:
         draw_notes = modifier_display(notes)
     if global_data.modifiers.inverse:

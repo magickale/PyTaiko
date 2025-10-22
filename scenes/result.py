@@ -16,6 +16,9 @@ from libs.utils import (
 
 
 class State:
+    """
+    Enum representing the state of the result screen.
+    """
     FAIL = 0
     CLEAR = 1
     RAINBOW = 2
@@ -81,6 +84,9 @@ class ResultScreen:
         return "SONG_SELECT"
 
     def update_score_animation(self):
+        """
+        Update the score animation if a high score is achieved.
+        """
         if self.is_skipped:
             if self.update_index == len(self.update_list) - 1:
                 return
@@ -161,6 +167,9 @@ class ResultScreen:
         self.chara.update(current_time, 100, False, False)
 
     def draw_score_info(self):
+        """
+        Draw the score information.
+        """
         if self.good != '':
             for i in range(len(str(self.good))):
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.good)[::-1][i]), x=943-(i*24), y=186)
@@ -178,6 +187,9 @@ class ResultScreen:
                 tex.draw_texture('score', 'judge_num', frame=int(str(self.total_drumroll)[::-1][i]), x=1217-(i*24), y=227)
 
     def draw_total_score(self):
+        """
+        Draw the total score.
+        """
         if not self.fade_in.is_finished:
             return
         tex.draw_texture('score', 'score_shinuchi')
@@ -186,6 +198,7 @@ class ResultScreen:
                 tex.draw_texture('score', 'score_num', x=-(i*21), frame=int(str(self.score)[::-1][i]))
 
     def draw_bottom_textures(self):
+        """Draw the bottom textures."""
         if self.state == State.FAIL:
             tex.draw_texture('background', 'gradient_fail', fade=min(0.4, self.fade_in_bottom.attribute))
         else:
@@ -193,6 +206,7 @@ class ResultScreen:
         self.bottom_characters.draw()
 
     def draw_modifiers(self):
+        """Draw the modifiers if enabled."""
         if global_data.modifiers.display:
             tex.draw_texture('score', 'mod_doron')
         if global_data.modifiers.inverse:
@@ -260,6 +274,7 @@ class ResultScreen:
         pass
 
 class Crown:
+    """Represents a crown animation"""
     def __init__(self):
         self.resize = tex.get_animation(2)
         self.resize_fix = tex.get_animation(3)
@@ -293,6 +308,7 @@ class Crown:
             tex.draw_texture('crown', 'gleam', frame=self.gleam.attribute)
 
 class BottomCharacters:
+    """Represents the bottom characters animation"""
     def __init__(self):
         self.move_up = tex.get_animation(7)
         self.move_down = tex.get_animation(8)
@@ -370,6 +386,7 @@ class BottomCharacters:
         tex.draw_texture('bottom', 'chara_1', frame=self.chara_1_index, y=y)
 
 class FadeIn:
+    """A fade out disguised as a fade in"""
     def __init__(self):
         self.fadein = tex.get_animation(15)
         self.fadein.start()
@@ -389,6 +406,7 @@ class FadeIn:
             x += 256
 
 class ScoreAnimator:
+    """Animates a number from left to right"""
     def __init__(self, target_score):
         self.target_score = str(target_score)
         self.current_score_list = [[0,0] for _ in range(len(self.target_score))]
@@ -396,6 +414,7 @@ class ScoreAnimator:
         self.is_finished = False
 
     def next_score(self) -> str:
+        """Returns the next number in the animation"""
         if self.digit_index == -1:
             self.is_finished = True
             return str(int(''.join([str(item[0]) for item in self.current_score_list])))
@@ -414,6 +433,7 @@ class ScoreAnimator:
         return str(int(ret_val))
 
 class HighScoreIndicator:
+    """Indicates the difference between the old and new high score"""
     def __init__(self, old_score: int, new_score: int):
         self.score_diff = new_score - old_score
         self.move = tex.get_animation(18)
@@ -432,6 +452,7 @@ class HighScoreIndicator:
 
 
 class Gauge:
+    """The gauge from the game screen, at 0.9x scale"""
     def __init__(self, player_num: str, gauge_length: int):
         self.player_num = player_num
         self.difficulty = min(2, session_data.selected_difficulty)

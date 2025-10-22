@@ -41,6 +41,7 @@ class SongSelectScreen:
         self.indicator = Indicator(Indicator.State.SELECT)
 
     def load_navigator(self):
+        """To be called on boot."""
         self.navigator = FileNavigator(self.root_dir)
 
     def on_screen_start(self):
@@ -119,6 +120,7 @@ class SongSelectScreen:
         return next_screen
 
     def reset_demo_music(self):
+        """Reset the preview music to the song select bgm."""
         if self.demo_song is not None:
             audio.stop_music_stream(self.demo_song)
             audio.unload_music_stream(self.demo_song)
@@ -127,6 +129,7 @@ class SongSelectScreen:
         self.navigator.get_current_item().box.wait = get_current_ms()
 
     def handle_input_browsing(self):
+        """Handle input for browsing songs."""
         if ray.is_key_pressed(ray.KeyboardKey.KEY_LEFT_CONTROL) or (is_l_kat_pressed() and get_current_ms() <= self.last_moved + 50):
             self.reset_demo_music()
             for _ in range(10):
@@ -188,7 +191,7 @@ class SongSelectScreen:
                 audio.play_sound('add_favorite', 'sound')
 
     def handle_input_selected(self):
-        # Handle song selection confirmation or cancel
+        """Handle input for selecting difficulty."""
         if self.neiro_selector is not None:
             if is_l_kat_pressed():
                 self.neiro_selector.move_left()
@@ -222,6 +225,9 @@ class SongSelectScreen:
                 self._confirm_selection()
 
         def get_current_song():
+            """
+            Returns the currently selected song.
+            """
             selected_song = self.navigator.get_current_item()
             if isinstance(selected_song, Directory):
                 raise Exception("Directory was chosen instead of song")
@@ -247,6 +253,9 @@ class SongSelectScreen:
             self._toggle_ura_mode()
 
     def handle_input_diff_sort(self):
+        """
+        Handle input for sorting difficulty.
+        """
         if self.diff_sort_selector is None:
             raise Exception("Diff sort selector was not able to be created")
         if is_l_kat_pressed():
@@ -592,6 +601,7 @@ class SongSelectScreen:
         pass
 
 class SongBox:
+    """A box for the song select screen."""
     OUTLINE_MAP = {
         1: ray.Color(0, 77, 104, 255),
         2: ray.Color(156, 64, 2, 255),
@@ -851,6 +861,7 @@ class SongBox:
             self._draw_closed(x, y)
 
 class YellowBox:
+    """A song box when it is opened."""
     def __init__(self, name: OutlinedText, is_back: bool, tja: Optional[TJAParser] = None):
         self.is_diff_select = False
         self.name = name
@@ -1064,6 +1075,7 @@ class YellowBox:
         self._draw_text(song_box)
 
 class GenreBG:
+    """The background for a genre box."""
     def __init__(self, start_box: SongBox, end_box: SongBox, title: OutlinedText, diff_sort: Optional[int]):
         self.start_box = start_box
         self.end_box = end_box
@@ -1117,6 +1129,7 @@ class GenreBG:
             self.title.draw(self.title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.fade_in.attribute))
 
 class UraSwitchAnimation:
+    """The animation for the ura switch."""
     def __init__(self) -> None:
         self.texture_change = tex.get_animation(7)
         self.fade_out = tex.get_animation(8)
@@ -1134,6 +1147,7 @@ class UraSwitchAnimation:
         tex.draw_texture('diff_select', 'ura_switch', frame=self.texture_change.attribute, fade=self.fade_out.attribute)
 
 class DiffSortSelect:
+    """The menu for selecting the difficulty sort and level sort."""
     def __init__(self, statistics: dict[int, dict[int, list[int]]], prev_diff: int, prev_level: int):
         self.selected_box = -1
         self.selected_level = 1
@@ -1368,6 +1382,7 @@ class DiffSortSelect:
             self.draw_diff_select()
 
 class NeiroSelector:
+    """The menu for selecting the game hitsounds."""
     def __init__(self):
         self.selected_sound = global_data.hit_sound
         with open(Path("Sounds") / 'hit_sounds' / 'neiro_list.txt', encoding='utf-8-sig') as neiro_list:
@@ -1477,6 +1492,7 @@ class NeiroSelector:
         self.text_2.draw(self.text_2.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
 
 class ModifierSelector:
+    """The menu for selecting the game modifiers."""
     TEX_MAP = {
         "auto": "mod_auto",
         "speed": "mod_baisaku",
@@ -1671,7 +1687,15 @@ class ModifierSelector:
                 tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=x+110 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
 
 class ScoreHistory:
+    """The score information that appears while hovering over a song"""
     def __init__(self, scores: dict[int, tuple[int, int, int, int]], current_ms):
+        """
+        Initialize the score history with the given scores and current time.
+
+        Args:
+            scores (dict[int, tuple[int, int, int, int]]): A dictionary of scores for each difficulty level.
+            current_ms (int): The current time in milliseconds.
+        """
         self.scores = {k: v for k, v in scores.items() if v is not None}
         self.difficulty_keys = list(self.scores.keys())
         self.curr_difficulty_index = 0
@@ -2164,8 +2188,6 @@ class FileNavigator:
             self.load_current_directory()
             self.box_open = False
 
-    # ... (rest of the methods remain the same: navigate_left, navigate_right, etc.)
-
     def _count_tja_files(self, folder_path: Path):
         """Count TJA files in directory"""
         tja_count = 0
@@ -2389,10 +2411,12 @@ class FileNavigator:
         raise Exception("No current item available")
 
     def reset_items(self):
+        """Reset the items in the song select scene"""
         for item in self.items:
             item.box.reset()
 
     def add_recent(self):
+        """Add the current song to the recent list"""
         song = self.get_current_item()
         if isinstance(song, Directory):
             return
@@ -2414,6 +2438,7 @@ class FileNavigator:
         print("Added recent: ", song.hash, song.tja.metadata.title['en'], song.tja.metadata.subtitle['en'])
 
     def add_favorite(self) -> bool:
+        """Add the current song to the favorites list"""
         song = self.get_current_item()
         if isinstance(song, Directory):
             return False

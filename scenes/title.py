@@ -60,6 +60,7 @@ class TitleScreen:
         return "ENTRY"
 
     def scene_manager(self, current_time):
+        """Manage the scene transitions"""
         if self.state == State.OP_VIDEO:
             if self.op_video is None:
                 self.op_video = VideoPlayer(random.choice(self.op_video_list))
@@ -123,7 +124,9 @@ class TitleScreen:
         pass
 
 class WarningScreen:
+    """Warning screen for the game"""
     class X:
+        """Giant X behind the characters for the warning screen"""
         def __init__(self):
             self.resize = tex.get_animation(0)
             self.resize.start()
@@ -149,6 +152,7 @@ class WarningScreen:
             tex.draw_texture('warning', 'x_red', fade=self.fadein.attribute, scale=self.resize.attribute, center=True)
 
     class BachiHit:
+        """Bachi hitting the player animation for the warning screen"""
         def __init__(self):
             self.resize = tex.get_animation(3)
             self.fadein = tex.get_animation(4)
@@ -170,6 +174,7 @@ class WarningScreen:
                 tex.draw_texture('warning', 'bachi')
 
     class Characters:
+        """Characters for the warning screen"""
         def __init__(self):
             self.shadow_fade = tex.get_animation(5)
             self.chara_0_frame = tex.get_animation(7)
@@ -201,6 +206,7 @@ class WarningScreen:
             tex.draw_texture('warning', 'chara_1', frame=self.chara_1_frame.attribute, fade=fade, y=y_pos)
 
     class Board:
+        """Background Board for the warning screen"""
         def __init__(self):
             self.move_down = tex.get_animation(10)
             self.move_down.start()

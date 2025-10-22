@@ -3,6 +3,14 @@ from libs.utils import global_tex
 
 class Chara2D:
     def __init__(self, index: int, bpm: float, path: str = 'chara'):
+        """
+        Initialize a Chara2D object.
+
+        Args:
+            index (int): The index of the character.
+            bpm (float): The beats per minute.
+            path (str, optional): The path to the character's textures. Defaults to 'chara'.
+        """
         self.name = "chara_" + str(index)
         self.tex = global_tex
         self.anims = dict()
@@ -27,6 +35,12 @@ class Chara2D:
             self.anims[name].start()
 
     def set_animation(self, name: str):
+        """
+        Set the current animation for the character.
+
+        Args:
+            name (str): The name of the animation to set.
+        """
         if name == self.current_anim:
             return
         if self.current_anim in self.temp_anims:
@@ -49,6 +63,15 @@ class Chara2D:
         self.current_anim = name
         self.anims[name].start()
     def update(self, current_time_ms: float, bpm: float, is_clear: bool, is_rainbow: bool):
+        """
+        Update the character's animation state and appearance.
+
+        Args:
+            current_time_ms (float): The current time in milliseconds.
+            bpm (float): The beats per minute.
+            is_clear (bool): Whether the gauge is in clear mode.
+            is_rainbow (bool): Whether the gauge is in rainbow mode.
+        """
         if is_rainbow and not self.is_rainbow:
             self.is_rainbow = True
             self.set_animation('soul_in')
@@ -76,6 +99,14 @@ class Chara2D:
             self.anims[self.current_anim].restart()
 
     def draw(self, x: float = 0, y: float = 0, mirror=False):
+        """
+        Draw the character on the screen.
+
+        Args:
+            x (float): The x-coordinate of the character's position.
+            y (float): The y-coordinate of the character's position.
+            mirror (bool): Whether to mirror the character horizontally.
+        """
         if self.is_rainbow and self.current_anim not in {'soul_in', 'balloon_pop', 'balloon_popping'}:
             self.tex.draw_texture(self.name, self.current_anim + '_max', frame=self.anims[self.current_anim].attribute, x=x, y=y)
         else:

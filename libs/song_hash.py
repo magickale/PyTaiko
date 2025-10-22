@@ -23,6 +23,7 @@ class DiffHashesDecoder(json.JSONDecoder):
         super().__init__(object_hook=diff_hashes_object_hook, *args, **kwargs)
 
 def read_tjap3_score(input_file: Path):
+    """Read a TJAPlayer3 score.ini file and return the scores and clears."""
     score_ini = configparser.ConfigParser()
     score_ini.read(input_file)
     scores = [int(score_ini['HiScore.Drums']['HiScore1']),
@@ -50,6 +51,7 @@ def read_tjap3_score(input_file: Path):
         return scores, clears, None
 
 def build_song_hashes(output_dir=Path("cache")):
+    """Build a dictionary of song hashes and save it to a file."""
     if not output_dir.exists():
         output_dir.mkdir()
     song_hashes: dict[str, list[dict]] = dict()

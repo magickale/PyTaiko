@@ -7,18 +7,19 @@ import pyray as ray
 class Chibi:
 
     @staticmethod
-    def create(index: int, bpm: float, bad: bool, tex: TextureWrapper):
+    def create(index: int, bpm: float, bad: bool, tex: TextureWrapper, is_2p: bool):
         if bad:
-            return ChibiBad(index, bpm, tex)
+            return ChibiBad(index, bpm, tex, is_2p)
         map = [Chibi0, BaseChibi, Chibi2, BaseChibi, Chibi4, Chibi5, BaseChibi,
         BaseChibi, Chibi8, BaseChibi, BaseChibi, BaseChibi, BaseChibi, Chibi13]
         selected_obj = map[index]
-        return selected_obj(index, bpm, tex)
+        return selected_obj(index, bpm, tex, is_2p)
 
 class BaseChibi:
-    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper, is_2p: bool):
         self.name = 'chibi_' + str(index)
         self.bpm = bpm
+        self.is_2p = is_2p
         self.hori_move = Animation.create_move(60000 / self.bpm * 5, total_distance=1280)
         self.hori_move.start()
         self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50, reverse_delay=0)
@@ -42,10 +43,11 @@ class BaseChibi:
             self.texture_change.restart()
 
     def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute)
+        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=-self.vert_move.attribute+(self.is_2p*535))
 
 class ChibiBad(BaseChibi):
-    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper, is_2p: bool):
+        self.is_2p = is_2p
         self.bpm = bpm
         self.index = random.randint(0, 2)
         self.keyframes = [3, 4]
@@ -72,17 +74,17 @@ class ChibiBad(BaseChibi):
 
     def draw(self, tex: TextureWrapper):
         if not self.s_texture_change.is_finished:
-            tex.draw_texture('chibi_bad', '0', frame=self.s_texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute, fade=self.fade_in.attribute)
+            tex.draw_texture('chibi_bad', '0', frame=self.s_texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute+(self.is_2p*535), fade=self.fade_in.attribute)
         else:
-            tex.draw_texture('chibi_bad', '0', frame=self.texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute)
+            tex.draw_texture('chibi_bad', '0', frame=self.texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute+(self.is_2p*535))
 
 class Chibi0(BaseChibi):
     def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute)
+        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=self.vert_move.attribute+(self.is_2p*535))
 
 class Chibi2(BaseChibi):
-    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
-        super().__init__(index, bpm, tex)
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper, is_2p: bool):
+        super().__init__(index, bpm, tex, is_2p)
         self.rotate = Animation.create_move(60000 / self.bpm / 2, total_distance=360, reverse_delay=0)
         self.rotate.start()
 
@@ -94,23 +96,23 @@ class Chibi2(BaseChibi):
 
     def draw(self, tex: TextureWrapper):
         origin = ray.Vector2(64, 64)
-        tex.draw_texture(self.name, str(self.index), x=self.hori_move.attribute+origin.x, y=origin.y, origin=origin, rotation=self.rotate.attribute)
+        tex.draw_texture(self.name, str(self.index), x=self.hori_move.attribute+origin.x, y=origin.y+(self.is_2p*535), origin=origin, rotation=self.rotate.attribute)
 
 class Chibi4(BaseChibi):
     def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute)
+        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=(self.is_2p*535))
 
 class Chibi5(BaseChibi):
     def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute)
+        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=(self.is_2p*535))
 
 class Chibi8(BaseChibi):
     def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute)
+        tex.draw_texture(self.name, str(self.index), frame=self.texture_change.attribute, x=self.hori_move.attribute, y=(self.is_2p*535))
 
 class Chibi13(BaseChibi):
-    def __init__(self, index: int, bpm: float, tex: TextureWrapper):
-        super().__init__(index, bpm, tex)
+    def __init__(self, index: int, bpm: float, tex: TextureWrapper, is_2p: bool):
+        super().__init__(index, bpm, tex, is_2p)
         duration = (60000 / self.bpm)
         self.scale = Animation.create_fade(duration, initial_opacity=1.0, final_opacity=0.75, delay=duration, reverse_delay=duration)
         self.scale.start()
@@ -129,9 +131,9 @@ class Chibi13(BaseChibi):
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, 'tail', frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute)
         if self.scale.attribute == 0.75:
-            tex.draw_texture(self.name, str(self.index), frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute)
+            tex.draw_texture(self.name, str(self.index), frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute+(self.is_2p*535))
         else:
-            tex.draw_texture(self.name, str(self.index), scale=self.scale.attribute, center=True, frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute)
+            tex.draw_texture(self.name, str(self.index), scale=self.scale.attribute, center=True, frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute+(self.is_2p*535))
 
 
 class ChibiController:
@@ -144,8 +146,8 @@ class ChibiController:
         tex.load_zip(path, f'chibi/{self.name}')
         tex.load_zip('background', 'chibi/chibi_bad')
 
-    def add_chibi(self, bad=False):
-        self.chibis.append(Chibi.create(self.index, self.bpm, bad, self.tex))
+    def add_chibi(self, player_num: int, bad=False):
+        self.chibis.append(Chibi.create(self.index, self.bpm, bad, self.tex, player_num == 2))
 
     def update(self, current_time_ms: float, bpm: float):
         self.bpm = bpm

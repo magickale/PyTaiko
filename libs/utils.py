@@ -39,6 +39,7 @@ def force_dedicated_gpu():
             print(e)
 
 def rounded(num: float) -> int:
+    """Round a number to the nearest integer"""
     sign = 1 if (num >= 0) else -1
     num = abs(num)
     result = int(num)
@@ -47,9 +48,11 @@ def rounded(num: float) -> int:
     return sign * result
 
 def get_current_ms() -> int:
+    """Get the current time in milliseconds"""
     return rounded(time.time() * 1000)
 
 def strip_comments(code: str) -> str:
+    """Strip comments from a string of code"""
     result = ''
     index = 0
     for line in code.splitlines():
@@ -63,6 +66,7 @@ def strip_comments(code: str) -> str:
 
 @lru_cache
 def get_pixels_per_frame(bpm: float, time_signature: float, distance: float) -> float:
+    """Calculate the number of pixels per frame"""
     if bpm == 0:
         return 0
     beat_duration = 60 / bpm
@@ -71,6 +75,7 @@ def get_pixels_per_frame(bpm: float, time_signature: float, distance: float) -> 
     return (distance / total_frames)
 
 def get_config() -> dict[str, Any]:
+    """Get the configuration from the TOML file"""
     config_path = Path('dev-config.toml') if Path('dev-config.toml').exists() else Path('config.toml')
 
     with open(config_path, "r", encoding="utf-8") as f:
@@ -79,6 +84,7 @@ def get_config() -> dict[str, Any]:
     return json.loads(json.dumps(config_file))
 
 def save_config(config: dict[str, Any]) -> None:
+    """Save the configuration to the TOML file"""
     if Path('dev-config.toml').exists():
         with open(Path('dev-config.toml'), "w", encoding="utf-8") as f:
             tomlkit.dump(config, f)
@@ -87,6 +93,7 @@ def save_config(config: dict[str, Any]) -> None:
         tomlkit.dump(config, f)
 
 def is_l_don_pressed() -> bool:
+    """Check if the left don button is pressed"""
     if global_data.input_locked:
         return False
     keys = global_data.config["keys"]["left_don"]
@@ -111,6 +118,7 @@ def is_l_don_pressed() -> bool:
     return False
 
 def is_r_don_pressed() -> bool:
+    """Check if the right don button is pressed"""
     if global_data.input_locked:
         return False
     keys = global_data.config["keys"]["right_don"]
@@ -137,6 +145,7 @@ def is_r_don_pressed() -> bool:
     return False
 
 def is_l_kat_pressed() -> bool:
+    """Check if the left kat button is pressed"""
     if global_data.input_locked:
         return False
     keys = global_data.config["keys"]["left_kat"]
@@ -163,6 +172,7 @@ def is_l_kat_pressed() -> bool:
     return False
 
 def is_r_kat_pressed() -> bool:
+    """Check if the right kat button is pressed"""
     if global_data.input_locked:
         return False
     keys = global_data.config["keys"]["right_kat"]
@@ -190,6 +200,18 @@ def is_r_kat_pressed() -> bool:
 
 @dataclass
 class SessionData:
+    """Data class for storing session data. Wiped after the result screen.
+    selected_difficulty: The difficulty level selected by the user.
+    song_title: The title of the song being played.
+    genre_index: The index of the genre being played.
+    result_score: The score achieved in the game.
+    result_good: The number of good notes achieved in the game.
+    result_ok: The number of ok notes achieved in the game.
+    result_bad: The number of bad notes achieved in the game.
+    result_max_combo: The maximum combo achieved in the game.
+    result_total_drumroll: The total drumroll achieved in the game.
+    result_gauge_length: The length of the gauge achieved in the game.
+    prev_score: The previous score pulled from the database."""
     selected_difficulty: int = 0
     song_title: str = ''
     genre_index: int = 0
@@ -206,6 +228,7 @@ session_data = SessionData()
 global_tex = TextureWrapper()
 
 def reset_session():
+    """Reset the session data."""
     return SessionData()
 
 text_cache = set()
@@ -218,7 +241,19 @@ for file in Path('cache/image').iterdir():
     text_cache.add(file.stem)
 
 class OutlinedText:
+    """Create an outlined text object."""
     def __init__(self, text: str, font_size: int, color: ray.Color, outline_color: ray.Color, outline_thickness=5.0, vertical=False):
+        """
+        Create an outlined text object.
+
+        Args:
+            text (str): The text to be displayed.
+            font_size (int): The size of the font.
+            color (ray.Color): The color of the text.
+            outline_color (ray.Color): The color of the outline.
+            outline_thickness (float): The thickness of the outline.
+            vertical (bool): Whether the text is vertical or not.
+        """
         self.text = text
         self.hash = self._hash_text(text, font_size, color, vertical)
         self.outline_thickness = outline_thickness
@@ -463,6 +498,16 @@ class OutlinedText:
         return texture
 
     def draw(self, src: ray.Rectangle, dest: ray.Rectangle, origin: ray.Vector2, rotation: float, color: ray.Color):
+        """
+        Draw the outlined text object.
+
+        Args:
+            src (ray.Rectangle): The source rectangle of the texture.
+            dest (ray.Rectangle): The destination rectangle of the texture.
+            origin (ray.Vector2): The origin of the texture.
+            rotation (float): The rotation of the texture.
+            color (ray.Color): The color of the text.
+        """
         if isinstance(color, tuple):
             alpha_value = ray.ffi.new('float*', color[3] / 255.0)
         else:
@@ -475,5 +520,11 @@ class OutlinedText:
             ray.end_shader_mode()
 
     def unload(self):
+        """
+        Unload the outlined text object.
+
+        Args:
+            None
+        """
         ray.unload_shader(self.shader)
         ray.unload_texture(self.texture)

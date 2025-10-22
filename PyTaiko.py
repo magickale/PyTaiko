@@ -37,6 +37,8 @@ class Screens:
     LOADING = "LOADING"
 
 def create_song_db():
+    """Create the scores database if it doesn't exist
+    The migration will eventually be removed"""
     with sqlite3.connect('scores.db') as con:
         cursor = con.cursor()
         create_table_query = '''

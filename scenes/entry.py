@@ -16,6 +16,7 @@ from libs.utils import (
 
 
 class State:
+    """State enum for the entry screen"""
     SELECT_SIDE = 0
     SELECT_MODE = 1
 
@@ -234,6 +235,7 @@ class EntryScreen:
         pass
 
 class Box:
+    """Box class for the entry screen"""
     def __init__(self, text: tuple[OutlinedText, OutlinedText], location: str):
         self.text, self.text_highlight = text
         self.location = location
@@ -250,6 +252,7 @@ class Box:
         self.moving_right = False
 
     def set_positions(self, x: int):
+        """Set the positions of the box"""
         self.x = x
         self.static_x = self.x
         self.left_x = self.x
@@ -277,11 +280,13 @@ class Box:
         self.open.update(current_time_ms)
 
     def move_left(self):
+        """Move the box left"""
         if not self.move.is_started:
             self.move.start()
         self.moving_left = True
 
     def move_right(self):
+        """Move the box right"""
         if not self.move.is_started:
             self.move.start()
         self.moving_right = True
@@ -313,6 +318,7 @@ class Box:
         self._draw_text(color)
 
 class BoxManager:
+    """BoxManager class for the entry screen"""
     def __init__(self):
         self.box_titles: list[tuple[OutlinedText, OutlinedText]] = [
         (OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
@@ -335,18 +341,23 @@ class BoxManager:
                 box.move_right()
 
     def select_box(self):
+        """Select the currently selected box"""
         self.fade_out.start()
 
     def is_box_selected(self):
+        """Check if the box is selected"""
         return self.fade_out.is_started
 
     def is_finished(self):
+        """Check if the animation is finished"""
         return self.fade_out.is_finished
 
     def selected_box(self):
+        """Get the location of the currently selected box"""
         return self.boxes[self.selected_box_index].location
 
     def move_left(self):
+        """Move the cursor to the left"""
         prev_selection = self.selected_box_index
         if self.boxes[prev_selection].move.is_started and not self.boxes[prev_selection].move.is_finished:
             return
@@ -358,6 +369,7 @@ class BoxManager:
         self.boxes[self.selected_box_index].move_right()
 
     def move_right(self):
+        """Move the cursor to the right"""
         prev_selection = self.selected_box_index
         if self.boxes[prev_selection].move.is_started and not self.boxes[prev_selection].move.is_finished:
             return

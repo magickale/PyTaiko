@@ -14,6 +14,7 @@ SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
 class Texture:
+    """Texture class for managing textures and animations."""
     def __init__(self, name: str, texture: Union[ray.Texture, list[ray.Texture]], init_vals: dict[str, int]):
         self.name = name
         self.texture = texture
@@ -33,12 +34,14 @@ class Texture:
         self.controllable: list[bool] = [False]
 
 class TextureWrapper:
+    """Texture wrapper class for managing textures and animations."""
     def __init__(self):
         self.textures: dict[str, dict[str, Texture]] = dict()
         self.animations: dict[int, BaseAnimation] = dict()
         self.graphics_path = Path("Graphics")
 
     def unload_textures(self):
+        """Unload all textures and animations."""
         for zip in self.textures:
             for file in self.textures[zip]:
                 tex_object = self.textures[zip][file]
@@ -49,6 +52,8 @@ class TextureWrapper:
                     ray.unload_texture(tex_object.texture)
 
     def get_animation(self, index: int, is_copy: bool = False):
+        """Get an animation by ID and returns a reference.
+        Returns a copy of the animation if is_copy is True."""
         if index not in self.animations:
             raise Exception(f"Unable to find id {index} in loaded animations")
         if is_copy:
@@ -83,12 +88,14 @@ class TextureWrapper:
             tex_object.controllable = [tex_mapping.get("controllable", False)]
 
     def load_animations(self, screen_name: str):
+        """Load animations for a screen."""
         screen_path = self.graphics_path / screen_name
         if (screen_path / 'animation.json').exists():
             with open(screen_path / 'animation.json') as json_file:
                 self.animations = parse_animations(json.loads(json_file.read()))
 
     def load_zip(self, screen_name: str, subset: str):
+        """Load textures from a zip file."""
         zip = (self.graphics_path / screen_name / subset).with_suffix('.zip')
         if screen_name in self.textures and subset in self.textures[screen_name]:
             return
@@ -134,6 +141,7 @@ class TextureWrapper:
                     raise Exception(f"Texture {tex_name} was not found in {zip}")
 
     def load_screen_textures(self, screen_name: str) -> None:
+        """Load textures for a screen."""
         screen_path = self.graphics_path / screen_name
         if (screen_path / 'animation.json').exists():
             with open(screen_path / 'animation.json') as json_file:
@@ -165,6 +173,26 @@ class TextureWrapper:
                             mirror: str = '', x: float = 0, y: float = 0, x2: float = 0, y2: float = 0,
                             origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0, fade: float = 1.1,
                             index: int = 0, src: Optional[ray.Rectangle] = None) -> None:
+        """
+        Wrapper function for raylib's draw_texture_pro().
+        Parameters:
+            subset (str): The subset of textures to use.
+            texture (str): The name of the texture to draw.
+            color (ray.Color): The color to tint the texture.
+            frame (int): The frame of the texture to draw. Only used if the texture is animated.
+            scale (float): The scale factor to apply to the texture.
+            center (bool): Whether to center the texture.
+            mirror (str): The direction to mirror the texture, either 'horizontal' or 'vertical'.
+            x (float): An x-value added to the top-left corner of the texture.
+            y (float): The y-value added to the top-left corner of the texture.
+            x2 (float): The x-value added to the bottom-right corner of the texture.
+            y2 (float): The y-value added to the bottom-right corner of the texture.
+            origin (ray.Vector2): The origin point of the texture.
+            rotation (float): The rotation angle of the texture.
+            fade (float): The fade factor to apply to the texture.
+            index (int): The index of the position data for the texture. Only used if the texture has multiple positions.
+            src (Optional[ray.Rectangle]): The source rectangle of the texture.
+        """
         mirror_x = -1 if mirror == 'horizontal' else 1
         mirror_y = -1 if mirror == 'vertical' else 1
         if fade != 1.1:
