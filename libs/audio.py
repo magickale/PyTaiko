@@ -114,9 +114,10 @@ class AudioEngine:
     """Initialize an audio engine for playing sounds and music."""
     def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: dict[str, float]):
         self.device_type = device_type
-        if sample_rate == -1:
-            sample_rate = 44100
-        self.target_sample_rate = sample_rate
+        if sample_rate < 0:
+            self.target_sample_rate = 44100
+        else:
+            self.target_sample_rate = sample_rate
         self.buffer_size = buffer_size
         self.sounds = {}
         self.music_streams = {}
