@@ -54,14 +54,20 @@ class GameScreen:
         """Load the hit sounds"""
         sounds_dir = Path("Sounds")
         if global_data.hit_sound == -1:
-            self.sound_don = audio.load_sound(Path('none.wav'), 'hitsound_don')
-            self.sound_kat = audio.load_sound(Path('none.wav'), 'hitsound_kat')
+            audio.load_sound(Path('none.wav'), 'hitsound_don_1p')
+            audio.load_sound(Path('none.wav'), 'hitsound_kat_1p')
+            audio.load_sound(Path('none.wav'), 'hitsound_don_2p')
+            audio.load_sound(Path('none.wav'), 'hitsound_kat_2p')
         if global_data.hit_sound == 0:
-            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.wav", 'hitsound_don')
-            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.wav", 'hitsound_kat')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.wav", 'hitsound_don_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.wav", 'hitsound_kat_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.wav", 'hitsound_don_2p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.wav", 'hitsound_kat_2p')
         else:
-            self.sound_don = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.ogg", 'hitsound_don')
-            self.sound_kat = audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.ogg", 'hitsound_kat')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.ogg", 'hitsound_don_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.ogg", 'hitsound_kat_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "don.ogg", 'hitsound_don_2p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound) / "ka.ogg", 'hitsound_kat_2p')
 
     def init_tja(self, song: Path, difficulty: int):
         """Initialize the TJA file"""
@@ -75,9 +81,7 @@ class GameScreen:
         if self.tja.metadata.wave.exists() and self.tja.metadata.wave.is_file() and self.song_music is None:
             self.song_music = audio.load_music_stream(self.tja.metadata.wave, 'song')
 
-        #tja_copy = copy.deepcopy(self.tja)
         self.player_1 = Player(self.tja, global_data.player_num, difficulty, False)
-        #self.player_2 = Player(tja_copy, 2, difficulty-1, True)
         self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
 
     def on_screen_start(self):
@@ -87,10 +91,10 @@ class GameScreen:
             self.song_music = None
             tex.load_screen_textures('game')
             audio.load_screen_sounds('game')
-            self.load_hitsounds()
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
             self.init_tja(global_data.selected_song, session_data.selected_difficulty)
+            self.load_hitsounds()
             self.song_info = SongInfo(session_data.song_title, session_data.genre_index)
             self.result_transition = ResultTransition(global_data.player_num)
             subtitle = self.tja.metadata.subtitle.get(global_data.config['general']['language'].lower(), '')
@@ -162,11 +166,7 @@ class GameScreen:
                     cursor.execute("UPDATE Scores SET clear = ? WHERE hash = ?", (run_clear, hash))
                     con.commit()
 
-    def update(self):
-        self.on_screen_start()
-        current_time = get_current_ms()
-        self.transition.update(current_time)
-        self.current_ms = current_time - self.start_ms
+    def start_song(self, current_time):
         if (self.current_ms >= self.tja.metadata.offset*1000 + self.start_delay - global_data.config["general"]["judge_offset"]) and not self.song_started:
             if self.song_music is not None:
                 audio.play_music_stream(self.song_music)
@@ -175,43 +175,7 @@ class GameScreen:
                 self.movie.start(current_time)
             self.song_started = True
 
-        if self.movie is not None:
-            self.movie.update()
-        else:
-            if len(self.player_1.current_bars) > 0:
-                self.bpm = self.player_1.bpm
-            if self.background is not None:
-                self.background.update(current_time, self.bpm, self.player_1.gauge)
-
-        if self.song_music is not None:
-            audio.update_music_stream(self.song_music)
-
-        self.player_1.update(self.current_ms, current_time, self.background)
-        #self.player_2.update(self.current_ms, current_time, self.background)
-        self.song_info.update(current_time)
-        self.result_transition.update(current_time)
-        if self.result_transition.is_finished and not audio.is_sound_playing('result_transition'):
-            return self.on_screen_end('RESULT')
-        elif self.current_ms >= self.player_1.end_time:
-            session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
-            session_data.result_gauge_length = self.player_1.gauge.gauge_length
-            if self.end_ms != 0:
-                if current_time >= self.end_ms + 1000:
-                    if self.player_1.ending_anim is None:
-                        self.write_score()
-                        if session_data.result_bad == 0:
-                            self.player_1.ending_anim = FCAnimation()
-                        elif self.player_1.gauge.is_clear:
-                            self.player_1.ending_anim = ClearAnimation()
-                        elif not self.player_1.gauge.is_clear:
-                            self.player_1.ending_anim = FailAnimation()
-                if current_time >= self.end_ms + 8533.34:
-                    if not self.result_transition.is_started:
-                        self.result_transition.start()
-                        audio.play_sound('result_transition', 'voice')
-            else:
-                self.end_ms = current_time
-
+    def global_keys(self):
         if ray.is_key_pressed(ray.KeyboardKey.KEY_F1):
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
@@ -223,6 +187,57 @@ class GameScreen:
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
             return self.on_screen_end('SONG_SELECT')
+
+    def spawn_ending_anims(self):
+        if session_data.result_bad == 0:
+            self.player_1.ending_anim = FCAnimation(self.player_1.is_2p)
+        elif self.player_1.gauge.is_clear:
+            self.player_1.ending_anim = ClearAnimation(self.player_1.is_2p)
+        elif not self.player_1.gauge.is_clear:
+            self.player_1.ending_anim = FailAnimation(self.player_1.is_2p)
+
+    def update_background(self, current_time):
+        if self.movie is not None:
+            self.movie.update()
+        else:
+            if len(self.player_1.current_bars) > 0:
+                self.bpm = self.player_1.bpm
+            if self.background is not None:
+                self.background.update(current_time, self.bpm, self.player_1.gauge, None)
+
+    def update(self):
+        self.on_screen_start()
+        current_time = get_current_ms()
+        self.transition.update(current_time)
+        self.current_ms = current_time - self.start_ms
+        self.start_song(current_time)
+        self.update_background(current_time)
+
+        if self.song_music is not None:
+            audio.update_music_stream(self.song_music)
+
+        self.player_1.update(self.current_ms, current_time, self.background)
+        self.player_2.update(self.current_ms, current_time, self.background)
+        self.song_info.update(current_time)
+        self.result_transition.update(current_time)
+        if self.result_transition.is_finished and not audio.is_sound_playing('result_transition'):
+            return self.on_screen_end('RESULT')
+        elif self.current_ms >= self.player_1.end_time:
+            session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
+            session_data.result_gauge_length = self.player_1.gauge.gauge_length
+            if self.end_ms != 0:
+                if current_time >= self.end_ms + 1000:
+                    if self.player_1.ending_anim is None:
+                        self.write_score()
+                        self.spawn_ending_anims()
+                if current_time >= self.end_ms + 8533.34:
+                    if not self.result_transition.is_started:
+                        self.result_transition.start()
+                        audio.play_sound('result_transition', 'voice')
+            else:
+                self.end_ms = current_time
+
+        return self.global_keys()
 
     def draw_overlay(self):
         self.song_info.draw()
@@ -236,7 +251,6 @@ class GameScreen:
         elif self.background is not None:
             self.background.draw()
         self.player_1.draw(self.current_ms, self.start_ms, self.mask_shader)
-        #self.player_2.draw(self.current_ms, self.start_ms, self.mask_shader)
         self.draw_overlay()
 
 class Player:
@@ -319,8 +333,8 @@ class Player:
         self.combo_display = Combo(self.combo, 0, self.is_2p)
         self.score_counter = ScoreCounter(self.score, self.is_2p)
         self.gogo_time: Optional[GogoTime] = None
-        self.combo_announce = ComboAnnounce(self.combo, 0)
-        self.branch_indicator = BranchIndicator() if tja and tja.metadata.course_data[self.difficulty].is_branching else None
+        self.combo_announce = ComboAnnounce(self.combo, 0, player_number, self.is_2p)
+        self.branch_indicator = BranchIndicator(self.is_2p) if tja and tja.metadata.course_data[self.difficulty].is_branching else None
         self.ending_anim: Optional[FailAnimation | ClearAnimation | FCAnimation] = None
         self.is_gogo_time = False
         plate_info = global_data.config['nameplate']
@@ -552,7 +566,7 @@ class Player:
             if self.combo % 10 == 0:
                 self.chara.set_animation('10_combo')
             if self.combo % 100 == 0:
-                self.combo_announce = ComboAnnounce(self.combo, current_time)
+                self.combo_announce = ComboAnnounce(self.combo, current_time, int(self.player_number), self.is_2p)
             if self.combo > self.max_combo:
                 self.max_combo = self.combo
 
@@ -586,7 +600,7 @@ class Player:
             self.check_kusudama(note)
             return
         if self.balloon_anim is None:
-            self.balloon_anim = BalloonAnimation(current_time, note.count)
+            self.balloon_anim = BalloonAnimation(current_time, note.count, int(self.player_number), self.is_2p)
         self.curr_balloon_count += 1
         self.total_drumroll += 1
         self.score += 100
@@ -703,7 +717,7 @@ class Player:
     def drumroll_counter_manager(self, current_time: float):
         """Manages drumroll counter behavior"""
         if self.is_drumroll and self.curr_drumroll_count > 0 and self.drumroll_counter is None:
-            self.drumroll_counter = DrumrollCounter(current_time)
+            self.drumroll_counter = DrumrollCounter(current_time, self.is_2p)
 
         if self.drumroll_counter is not None:
             if self.drumroll_counter.is_finished and not self.is_drumroll:
@@ -727,10 +741,10 @@ class Player:
 
     def handle_input(self, ms_from_start: float, current_time: float, background: Optional[Background]):
         input_checks = [
-            (is_l_don_pressed, 'DON', 'L', 'hitsound_don'),
-            (is_r_don_pressed, 'DON', 'R', 'hitsound_don'),
-            (is_l_kat_pressed, 'KAT', 'L', 'hitsound_kat'),
-            (is_r_kat_pressed, 'KAT', 'R', 'hitsound_kat')
+            (is_l_don_pressed, 'DON', 'L', f'hitsound_don_{self.player_number}p'),
+            (is_r_don_pressed, 'DON', 'R', f'hitsound_don_{self.player_number}p'),
+            (is_l_kat_pressed, 'KAT', 'L', f'hitsound_kat_{self.player_number}p'),
+            (is_r_kat_pressed, 'KAT', 'R', f'hitsound_kat_{self.player_number}p')
         ]
         for check_func, note_type, side, sound in input_checks:
             if check_func():
@@ -764,7 +778,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(hit_type, self.is_2p)
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.draw_drum_hit_list.append(DrumHitEffect(hit_type, self.autoplay_hit_side, self.is_2p))
-                audio.play_sound('hitsound_don', 'hitsound')
+                audio.play_sound(f'hitsound_don_{self.player_number}p', 'hitsound')
                 note_type = 3 if note.type == 6 else 1
                 self.check_note(ms_from_start, note_type, current_time, background)
         else:
@@ -775,7 +789,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(hit_type, self.is_2p)
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.draw_drum_hit_list.append(DrumHitEffect(hit_type, self.autoplay_hit_side, self.is_2p))
-                audio.play_sound('hitsound_don', 'hitsound')
+                audio.play_sound(f'hitsound_don_{self.player_number}p', 'hitsound')
                 self.check_note(ms_from_start, 1, current_time, background)
 
             # Handle KAT notes
@@ -785,7 +799,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect(hit_type, self.is_2p)
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.draw_drum_hit_list.append(DrumHitEffect(hit_type, self.autoplay_hit_side, self.is_2p))
-                audio.play_sound('hitsound_kat', 'hitsound')
+                audio.play_sound(f'hitsound_kat_{self.player_number}p', 'hitsound')
                 self.check_note(ms_from_start, 2, current_time, background)
 
     def evaluate_branch(self, current_ms):
@@ -1039,7 +1053,10 @@ class Player:
         # Group 6: UI overlays
         self.combo_display.draw()
         self.combo_announce.draw()
-        tex.draw_texture('lane', 'lane_score_cover', index=self.is_2p)
+        if self.is_2p:
+            tex.draw_texture('lane', 'lane_score_cover', index=self.is_2p, mirror='vertical')
+        else:
+            tex.draw_texture('lane', 'lane_score_cover', index=self.is_2p)
         tex.draw_texture('lane', f'{self.player_number}p_icon', index=self.is_2p)
         tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty, index=self.is_2p)
         if self.judge_counter is not None:
@@ -1048,7 +1065,7 @@ class Player:
         # Group 7: Player-specific elements
         if not global_data.modifiers.auto:
             if self.is_2p:
-                self.nameplate.draw(-62, 285+461)
+                self.nameplate.draw(-62, 371)
             else:
                 self.nameplate.draw(-62, 285)
         self.draw_modifiers()
@@ -1258,7 +1275,7 @@ class GaugeHitEffect:
         tex.draw_texture('gauge', 'hit_effect',
                         frame=self.texture_change.attribute,
                         x2=self.x2_pos,
-                        y=(self.is_2p*435),
+                        index=self.is_2p,
                         y2=self.y2_pos,
                         color=ray.fade(self.texture_color, fade_value),
                         origin=self.origin,
@@ -1267,11 +1284,11 @@ class GaugeHitEffect:
 
         # Note type texture
         tex.draw_texture('notes', str(self.note_type),
-                        x=1158, y=101+(self.is_2p*435),
+            x=1158, y=101+(self.is_2p*(435-32)),
                         fade=fade_value)
 
         # Circle effect texture (use cached texture name)
-        tex.draw_texture('gauge', self.circle_texture, color=self.color, y=(self.is_2p*435))
+        tex.draw_texture('gauge', self.circle_texture, color=self.color, index=self.is_2p)
 
 class NoteArc:
     """Note arcing from the player to the gauge"""
@@ -1293,7 +1310,7 @@ class NoteArc:
         self.end_x, self.end_y = 1158, 101
         if self.player_number == 2:
             self.start_y += 176
-            self.end_y += 435
+            self.end_y += 372
         self.explosion_x = self.start_x
         self.explosion_y = self.start_y
 
@@ -1349,6 +1366,10 @@ class NoteArc:
     def draw(self, mask_shader: ray.Shader):
         if self.is_balloon:
             rainbow = tex.textures['balloon']['rainbow']
+            if self.player_number == 2:
+                rainbow_height = -rainbow.height
+            else:
+                rainbow_height = rainbow.height
             trail_length_ratio = 0.5
             trail_start_progress = max(0, self.current_progress - trail_length_ratio)
             trail_end_progress = self.current_progress
@@ -1359,9 +1380,11 @@ class NoteArc:
                 crop_width = crop_end_x - crop_start_x
 
                 if crop_width > 0:
-                    src = ray.Rectangle(crop_start_x, 0, crop_width, rainbow.height)
+                    src = ray.Rectangle(crop_start_x, 0, crop_width, rainbow_height)
+                    mirror = 'vertical' if self.player_number == 2 else ''
+                    y = 435 if self.player_number == 2 else 0
                     ray.begin_shader_mode(mask_shader)
-                    tex.draw_texture('balloon', 'rainbow_mask', src=src, x=crop_start_x, x2=-rainbow.width + crop_width)
+                    tex.draw_texture('balloon', 'rainbow_mask', src=src, x=crop_start_x, x2=-rainbow.width + crop_width, mirror=mirror, y=y)
                     ray.end_shader_mode()
 
                     tex.draw_texture('balloon', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
@@ -1373,7 +1396,8 @@ class NoteArc:
 
 class DrumrollCounter:
     """Displays a drumroll counter, stays alive until is_drumroll is false"""
-    def __init__(self, current_ms: float):
+    def __init__(self, current_ms: float, is_2p: bool):
+        self.is_2p = is_2p
         self.create_ms = current_ms
         self.is_finished = False
         self.total_duration = 1349
@@ -1401,15 +1425,17 @@ class DrumrollCounter:
 
     def draw(self):
         color = ray.fade(ray.WHITE, self.fade_animation.attribute)
-        tex.draw_texture('drumroll_counter', 'bubble', color=color)
+        tex.draw_texture('drumroll_counter', 'bubble', color=color, index=self.is_2p)
         counter = str(self.drumroll_count)
         total_width = len(counter) * 52
         for i, digit in enumerate(counter):
-            tex.draw_texture('drumroll_counter', 'counter', color=color, frame=int(digit), x=-(total_width//2)+(i*52), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
+            tex.draw_texture('drumroll_counter', 'counter', color=color, index=self.is_2p, frame=int(digit), x=-(total_width//2)+(i*52), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
 
 class BalloonAnimation:
     """Draws a Balloon"""
-    def __init__(self, current_ms: float, balloon_total: int):
+    def __init__(self, current_ms: float, balloon_total: int, player_num: int, is_2p: bool):
+        self.player_num = player_num
+        self.is_2p = is_2p
         self.create_ms = current_ms
         self.is_finished = False
         self.total_duration = 83.33
@@ -1443,16 +1469,16 @@ class BalloonAnimation:
 
     def draw(self):
         if self.is_popped:
-            tex.draw_texture('balloon', 'pop', frame=7, color=self.color)
+            tex.draw_texture('balloon', 'pop', frame=7, color=self.color, y=self.is_2p*176)
         elif self.balloon_count >= 1:
             balloon_index = min(6, (self.balloon_count - 1) * 6 // self.balloon_total)
-            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color, index=global_data.player_num-1)
+            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color, index=self.player_num-1, y=self.is_2p*176)
         if self.balloon_count > 0:
-            tex.draw_texture('balloon', 'bubble')
+            tex.draw_texture('balloon', 'bubble', y=self.is_2p*410, mirror='vertical' if self.is_2p else '')
             counter = str(max(0, self.balloon_total - self.balloon_count + 1))
             total_width = len(counter) * 52
             for i, digit in enumerate(counter):
-                tex.draw_texture('balloon', 'counter', frame=int(digit), color=self.color, x=-(total_width // 2) + (i * 52), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
+                tex.draw_texture('balloon', 'counter', frame=int(digit), color=self.color, x=-(total_width // 2) + (i * 52), y=-self.stretch_animation.attribute+(self.is_2p*435), y2=self.stretch_animation.attribute)
 
 class KusudamaAnimation:
     """Draws a Kusudama"""
@@ -1614,7 +1640,7 @@ class ScoreCounter:
             self._cached_score_str = str(self.score)
         counter = self._cached_score_str
 
-        x, y = 150, 185 + (self.is_2p*176)
+        x, y = 150, 185 + (self.is_2p*310)
         margin = 20
         total_width = len(counter) * margin
         start_x = x - total_width
@@ -1626,6 +1652,7 @@ class ScoreCounterAnimation:
     def __init__(self, player_num: str, counter: int, is_2p: bool):
         self.is_2p = is_2p
         self.counter = counter
+        self.direction = -1 if self.is_2p else 1
         self.fade_animation_1 = Animation.create_fade(50, initial_opacity=0.0, final_opacity=1.0)
         self.fade_animation_1.start()
         self.move_animation_1 = Animation.create_move(80, total_distance=-20, start_position=175)
@@ -1683,10 +1710,13 @@ class ScoreCounterAnimation:
                 y = self.move_animation_3.attribute
             else:
                 y = 148
+
+            y_offset = y * self.direction
+
             tex.draw_texture('lane', 'score_number',
                            frame=int(digit),
                            x=start_x + (i * self.margin),
-                           y=y + (self.is_2p * 535),
+                           y=y_offset + (self.is_2p * 680),
                            color=self.color)
 
 class SongInfo:
@@ -1732,10 +1762,16 @@ class ResultTransition:
         x = 0
         screen_width = 1280
         while x < screen_width:
-            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
-            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
-            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
-            global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
+            if self.player_num == 3:
+                global_tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
+                global_tex.draw_texture('result_transition', '2p_shutter', frame=0, x=x, y=720 - self.move.attribute)
+                global_tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-432 + self.move.attribute)
+                global_tex.draw_texture('result_transition', '2p_shutter_footer', x=x, y=1008 - self.move.attribute)
+            else:
+                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
             x += 256
 
 class GogoTime:
@@ -1756,13 +1792,15 @@ class GogoTime:
 
     def draw(self):
         tex.draw_texture('gogo_time', 'fire', scale=self.fire_resize.attribute, frame=self.fire_change.attribute, fade=0.5, center=True, index=self.is_2p)
-        if not self.explosion_anim.is_finished:
+        if not self.explosion_anim.is_finished and not self.is_2p:
             for i in range(5):
                 tex.draw_texture('gogo_time', 'explosion', frame=self.explosion_anim.attribute, index=i)
 
 class ComboAnnounce:
     """Displays the combo every 100 combos"""
-    def __init__(self, combo: int, current_time_ms: float):
+    def __init__(self, combo: int, current_time_ms: float, player_num: int, is_2p: bool):
+        self.player_num = player_num
+        self.is_2p = is_2p
         self.combo = combo
         self.wait = current_time_ms
         self.fade = Animation.create_fade(100)
@@ -1777,7 +1815,7 @@ class ComboAnnounce:
 
         self.fade.update(current_time_ms)
         if not self.audio_played and self.combo >= 100:
-            audio.play_sound(f'combo_{self.combo}_{global_data.player_num}p', 'voice')
+            audio.play_sound(f'combo_{self.combo}_{self.player_num}p', 'voice')
             self.audio_played = True
 
     def draw(self):
@@ -1787,7 +1825,7 @@ class ComboAnnounce:
             fade = 1 - self.fade.attribute
         else:
             fade = self.fade.attribute
-        tex.draw_texture('combo', f'announce_bg_{global_data.player_num}p', fade=fade)
+        tex.draw_texture('combo', f'announce_bg_{self.player_num}p', fade=fade, index=self.is_2p)
 
         if self.combo >= 1000:
             thousands = self.combo // 1000
@@ -1795,22 +1833,23 @@ class ComboAnnounce:
             thousands_offset = -110
             hundreds_offset = 20
             if self.combo % 1000 == 0:
-                tex.draw_texture('combo', 'announce_number', frame=thousands-1, x=-23, fade=fade)
-                tex.draw_texture('combo', 'announce_add', frame=0, x=435, fade=fade)
+                tex.draw_texture('combo', 'announce_number', frame=thousands-1, x=-23, fade=fade, index=self.is_2p)
+                tex.draw_texture('combo', 'announce_add', frame=0, x=435, fade=fade, index=self.is_2p)
             else:
                 if thousands <= 5:
-                    tex.draw_texture('combo', 'announce_add', frame=thousands, x=429 + thousands_offset, fade=fade)
+                    tex.draw_texture('combo', 'announce_add', frame=thousands, x=429 + thousands_offset, fade=fade, index=self.is_2p)
                 if remaining_hundreds > 0:
-                    tex.draw_texture('combo', 'announce_number', frame=remaining_hundreds-1, x=hundreds_offset, fade=fade)
+                    tex.draw_texture('combo', 'announce_number', frame=remaining_hundreds-1, x=hundreds_offset, fade=fade, index=self.is_2p)
             text_offset = -30
         else:
             text_offset = 0
-            tex.draw_texture('combo', 'announce_number', frame=self.combo // 100 - 1, x=0, fade=fade)
-        tex.draw_texture('combo', 'announce_text', x=-text_offset/2, fade=fade)
+            tex.draw_texture('combo', 'announce_number', frame=self.combo // 100 - 1, x=0, fade=fade, index=self.is_2p)
+        tex.draw_texture('combo', 'announce_text', x=-text_offset/2, fade=fade, index=self.is_2p)
 
 class BranchIndicator:
     """Displays the branch difficulty and changes"""
-    def __init__(self):
+    def __init__(self, is_2p: bool):
+        self.is_2p = is_2p
         self.difficulty = 'normal'
         self.diff_2 = self.difficulty
         self.diff_down = Animation.create_move(100, total_distance=20, ease_out='quadratic')
@@ -1845,19 +1884,20 @@ class BranchIndicator:
         self.direction = -1
     def draw(self):
         if self.difficulty == 'expert':
-            tex.draw_texture('branch', 'expert_bg', fade=min(0.5, 1 - self.diff_fade.attribute))
+            tex.draw_texture('branch', 'expert_bg', fade=min(0.5, 1 - self.diff_fade.attribute), index=self.is_2p)
         if self.difficulty == 'master':
-            tex.draw_texture('branch', 'master_bg', fade=min(0.5, 1 - self.diff_fade.attribute))
+            tex.draw_texture('branch', 'master_bg', fade=min(0.5, 1 - self.diff_fade.attribute), index=self.is_2p)
         if self.direction == -1:
-            tex.draw_texture('branch', 'level_down', scale=self.level_scale.attribute, fade=self.level_fade.attribute, center=True)
+            tex.draw_texture('branch', 'level_down', scale=self.level_scale.attribute, fade=self.level_fade.attribute, center=True, index=self.is_2p)
         else:
-            tex.draw_texture('branch', 'level_up', scale=self.level_scale.attribute, fade=self.level_fade.attribute, center=True)
-        tex.draw_texture('branch', self.diff_2, y=(self.diff_down.attribute - self.diff_up.attribute) * self.direction, fade=self.diff_fade.attribute)
-        tex.draw_texture('branch', self.difficulty, y=(self.diff_up.attribute * (self.direction*-1)) - (70*self.direction*-1), fade=1 - self.diff_fade.attribute)
+            tex.draw_texture('branch', 'level_up', scale=self.level_scale.attribute, fade=self.level_fade.attribute, center=True, index=self.is_2p)
+        tex.draw_texture('branch', self.diff_2, y=(self.diff_down.attribute - self.diff_up.attribute) * self.direction, fade=self.diff_fade.attribute, index=self.is_2p)
+        tex.draw_texture('branch', self.difficulty, y=(self.diff_up.attribute * (self.direction*-1)) - (70*self.direction*-1), fade=1 - self.diff_fade.attribute, index=self.is_2p)
 
 class FailAnimation:
     """Animates the fail effect"""
-    def __init__(self):
+    def __init__(self, is_2p: bool):
+        self.is_2p = is_2p
         self.bachio_fade_in = Animation.create_fade(150, initial_opacity=0.0, final_opacity=1.0)
         self.bachio_fade_in.start()
         self.bachio_texture_change = Animation.create_texture_change(266.67, textures=[(0, 150, 0), (150, 266.67, 1)], delay=self.bachio_fade_in.duration)
@@ -1895,15 +1935,16 @@ class FailAnimation:
         else:
             self.frame = self.bachio_texture_change.attribute
     def draw(self):
-        tex.draw_texture('ending_anim', 'fail', fade=self.text_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=-self.bachio_move_out.attribute - (self.bachio_up.attribute/2), y=self.bachio_down.attribute - self.bachio_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=self.bachio_move_out.attribute + (self.bachio_up.attribute/2), y=self.bachio_down.attribute - self.bachio_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_boom', index=0, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute)
-        tex.draw_texture('ending_anim', 'bachio_boom', index=1, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute)
+        tex.draw_texture('ending_anim', 'fail', fade=self.text_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=-self.bachio_move_out.attribute - (self.bachio_up.attribute/2), y=self.bachio_down.attribute - self.bachio_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=self.bachio_move_out.attribute + (self.bachio_up.attribute/2), y=self.bachio_down.attribute - self.bachio_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_boom', index=0, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute, y=(self.is_2p*176))
+        tex.draw_texture('ending_anim', 'bachio_boom', index=1, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute, y=(self.is_2p*176))
 
 class ClearAnimation:
     """Animates the clear effect"""
-    def __init__(self):
+    def __init__(self, is_2p: bool):
+        self.is_2p = is_2p
         self.bachio_fade_in = Animation.create_fade(150, initial_opacity=0.0, final_opacity=1.0)
         self.bachio_fade_in.start()
         self.bachio_texture_change = Animation.create_texture_change(266.67, textures=[(0, 150, 0), (150, 266.67, 1)], delay=self.bachio_fade_in.duration)
@@ -1944,17 +1985,18 @@ class ClearAnimation:
             self.frame = self.bachio_texture_change.attribute
     def draw(self):
         if self.draw_clear_full:
-            tex.draw_texture('ending_anim', 'clear')
+            tex.draw_texture('ending_anim', 'clear', index=self.is_2p)
         else:
             for i in range(4, -1, -1):
-                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute)
-        tex.draw_texture('ending_anim', 'clear_highlight', fade=self.clear_highlight_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=-self.bachio_move_out.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=self.bachio_move_out.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute)
+                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'clear_highlight', fade=self.clear_highlight_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=-self.bachio_move_out.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=self.bachio_move_out.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
 
 class FCAnimation:
     """Animates the full combo effect"""
-    def __init__(self):
+    def __init__(self, is_2p: bool):
+        self.is_2p = is_2p
         self.bachio_fade_in = Animation.create_fade(150, initial_opacity=0.0, final_opacity=1.0)
         self.bachio_fade_in.start()
         self.bachio_texture_change = Animation.create_texture_change(266.67, textures=[(0, 150, 0), (150, 266.67, 1)], delay=self.bachio_fade_in.duration)
@@ -2015,17 +2057,17 @@ class FCAnimation:
             self.frame = self.bachio_texture_change.attribute
     def draw(self):
         if self.draw_clear_full:
-            tex.draw_texture('ending_anim', 'full_combo_overlay', y=-self.fc_highlight_up.attribute, fade=0.5)
-            tex.draw_texture('ending_anim', 'full_combo', y=-self.fc_highlight_up.attribute)
-            tex.draw_texture('ending_anim', 'full_combo_highlight', y=-self.fc_highlight_up.attribute, fade=self.fc_highlight_fade_out.attribute)
-            tex.draw_texture('ending_anim', 'fan_l', frame=self.fan_texture_change.attribute, fade=self.fan_fade_in.attribute)
-            tex.draw_texture('ending_anim', 'fan_r', frame=self.fan_texture_change.attribute, fade=self.fan_fade_in.attribute)
+            tex.draw_texture('ending_anim', 'full_combo_overlay', y=-self.fc_highlight_up.attribute, fade=0.5, index=self.is_2p)
+            tex.draw_texture('ending_anim', 'full_combo', y=-self.fc_highlight_up.attribute, index=self.is_2p)
+            tex.draw_texture('ending_anim', 'full_combo_highlight', y=-self.fc_highlight_up.attribute, fade=self.fc_highlight_fade_out.attribute, index=self.is_2p)
+            tex.draw_texture('ending_anim', 'fan_l', frame=self.fan_texture_change.attribute, fade=self.fan_fade_in.attribute, index=self.is_2p)
+            tex.draw_texture('ending_anim', 'fan_r', frame=self.fan_texture_change.attribute, fade=self.fan_fade_in.attribute, index=self.is_2p)
         else:
             for i in range(4, -1, -1):
-                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute)
-        tex.draw_texture('ending_anim', 'clear_highlight', fade=self.clear_highlight_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=(-self.bachio_move_out.attribute - self.bachio_move_out_2.attribute)*1.15, y=-self.bachio_move_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute)
-        tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=(self.bachio_move_out.attribute + self.bachio_move_out_2.attribute)*1.15, y=-self.bachio_move_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute)
+                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'clear_highlight', fade=self.clear_highlight_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=(-self.bachio_move_out.attribute - self.bachio_move_out_2.attribute)*1.15, y=-self.bachio_move_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
+        tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=(self.bachio_move_out.attribute + self.bachio_move_out_2.attribute)*1.15, y=-self.bachio_move_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
 
 class JudgeCounter:
     """Counts the number of good, ok, bad, and drumroll notes in real time"""
@@ -2186,39 +2228,40 @@ class Gauge:
                 self.rainbow_animation = None
 
     def draw(self):
-        tex.draw_texture('gauge', 'border' + self.string_diff)
-        tex.draw_texture('gauge', f'{self.player_num}p_unfilled' + self.string_diff)
+        mirror = 'vertical' if self.is_2p else ''
+        tex.draw_texture('gauge', 'border' + self.string_diff, index=self.is_2p, mirror=mirror)
+        tex.draw_texture('gauge', f'{self.player_num}p_unfilled' + self.string_diff, index=self.is_2p, mirror=mirror)
         gauge_length = int(self.gauge_length)
         clear_point = self.clear_start[self.difficulty]
-        tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=min(gauge_length*8, (clear_point - 1)*8)-8)
+        tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=min(gauge_length*8, (clear_point - 1)*8)-8, index=self.is_2p)
         if gauge_length >= clear_point - 1:
-            tex.draw_texture('gauge', 'bar_clear_transition', x=(clear_point - 1)*8)
+            tex.draw_texture('gauge', 'bar_clear_transition', x=(clear_point - 1)*8, index=self.is_2p, mirror=mirror)
         if gauge_length > clear_point:
-            tex.draw_texture('gauge', 'bar_clear_top', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8)
-            tex.draw_texture('gauge', 'bar_clear_bottom', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8)
+            tex.draw_texture('gauge', 'bar_clear_top', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8, index=self.is_2p, mirror=mirror)
+            tex.draw_texture('gauge', 'bar_clear_bottom', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8, index=self.is_2p)
 
         # Rainbow effect for full gauge
         if gauge_length == self.gauge_max and self.rainbow_fade_in is not None and self.rainbow_animation is not None:
             if 0 < self.rainbow_animation.attribute < 8:
-                tex.draw_texture('gauge', 'rainbow' + self.string_diff, frame=self.rainbow_animation.attribute-1, fade=self.rainbow_fade_in.attribute)
-            tex.draw_texture('gauge', 'rainbow' + self.string_diff, frame=self.rainbow_animation.attribute, fade=self.rainbow_fade_in.attribute)
+                tex.draw_texture('gauge', 'rainbow' + self.string_diff, frame=self.rainbow_animation.attribute-1, fade=self.rainbow_fade_in.attribute, index=self.is_2p, mirror=mirror)
+            tex.draw_texture('gauge', 'rainbow' + self.string_diff, frame=self.rainbow_animation.attribute, fade=self.rainbow_fade_in.attribute, index=self.is_2p, mirror=mirror)
         if self.gauge_update_anim is not None and gauge_length <= self.gauge_max and gauge_length > self.previous_length:
             if gauge_length == self.clear_start[self.difficulty]:
-                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
+                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute, index=self.is_2p, mirror=mirror)
             elif gauge_length > self.clear_start[self.difficulty]:
-                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
+                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute, index=self.is_2p)
             else:
-                tex.draw_texture('gauge', f'{self.player_num}p_bar_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute)
-        tex.draw_texture('gauge', 'overlay' + self.string_diff, fade=0.15)
+                tex.draw_texture('gauge', f'{self.player_num}p_bar_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute, index=self.is_2p)
+        tex.draw_texture('gauge', 'overlay' + self.string_diff, fade=0.15, index=self.is_2p, mirror=mirror)
 
         # Draw clear status indicators
         if gauge_length >= clear_point-1:
-            tex.draw_texture('gauge', 'clear', index=min(2, self.difficulty))
+            tex.draw_texture('gauge', 'clear', index=min(2, self.difficulty)+(self.is_2p*3))
             if self.is_rainbow:
-                tex.draw_texture('gauge', 'tamashii_fire', scale=0.75, center=True, frame=self.tamashii_fire_change.attribute)
-            tex.draw_texture('gauge', 'tamashii')
+                tex.draw_texture('gauge', 'tamashii_fire', scale=0.75, center=True, frame=self.tamashii_fire_change.attribute, index=self.is_2p)
+            tex.draw_texture('gauge', 'tamashii', index=self.is_2p)
             if self.is_rainbow and self.tamashii_fire_change.attribute in (0, 1, 4, 5):
-                tex.draw_texture('gauge', 'tamashii_overlay', fade=0.5)
+                tex.draw_texture('gauge', 'tamashii_overlay', fade=0.5, index=self.is_2p)
         else:
-            tex.draw_texture('gauge', 'clear_dark', index=min(2, self.difficulty))
-            tex.draw_texture('gauge', 'tamashii_dark')
+            tex.draw_texture('gauge', 'clear_dark', index=min(2, self.difficulty)+(self.is_2p*3))
+            tex.draw_texture('gauge', 'tamashii_dark', index=self.is_2p)

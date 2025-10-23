@@ -277,6 +277,18 @@ class AudioEngine:
         else:
             print(f"Sound {name} not found")
 
+    def set_sound_pan(self, name: str, pan: float) -> None:
+        """Set the pan of a specific sound"""
+        if name == 'don':
+            lib.set_sound_pan(self.don, pan) # type: ignore
+        elif name == 'kat':
+            lib.set_sound_pan(self.kat, pan) # type: ignore
+        elif name in self.sounds:
+            sound = self.sounds[name]
+            lib.set_sound_pan(sound, pan) # type: ignore
+        else:
+            print(f"Sound {name} not found")
+
     # Music management
     def load_music_stream(self, file_path: Path, name: str) -> str:
         """Load a music stream and return music ID"""

@@ -19,6 +19,7 @@ from libs.utils import (
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
+from scenes.game_2p import TwoPlayerGameScreen
 from scenes.loading import LoadScreen
 from scenes.result import ResultScreen
 from scenes.settings import SettingsScreen
@@ -31,6 +32,7 @@ class Screens:
     ENTRY = "ENTRY"
     SONG_SELECT = "SONG_SELECT"
     GAME = "GAME"
+    GAME_2P = "GAME_2P"
     RESULT = "RESULT"
     SETTINGS = "SETTINGS"
     DEV_MENU = "DEV_MENU"
@@ -107,6 +109,7 @@ def main():
     song_select_screen = SongSelectScreen()
     load_screen = LoadScreen(song_select_screen)
     game_screen = GameScreen()
+    game_screen_2p = TwoPlayerGameScreen()
     result_screen = ResultScreen()
     settings_screen = SettingsScreen()
     dev_screen = DevScreen()
@@ -116,6 +119,7 @@ def main():
         Screens.TITLE: title_screen,
         Screens.SONG_SELECT: song_select_screen,
         Screens.GAME: game_screen,
+        Screens.GAME_2P: game_screen_2p,
         Screens.RESULT: result_screen,
         Screens.SETTINGS: settings_screen,
         Screens.DEV_MENU: dev_screen,

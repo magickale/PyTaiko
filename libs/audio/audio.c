@@ -18,6 +18,7 @@
 #include <samplerate.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 #define LOG_INFO 0
 #define LOG_WARNING 1
@@ -220,13 +221,18 @@ static int port_audio_callback(const void *inputBuffer, void *outputBuffer,
                 if (audio_buffer->isSubBufferProcessed[currentSubBufferIndex]) {
                     // This part of the buffer is not ready, output silence
                 } else {
+                    // Calculate pan gains (0.0 = full left, 0.5 = center, 1.0 = full right)
+                    float left_gain = sqrtf(1.0f - audio_buffer->pan);
+                    float right_gain = sqrtf(audio_buffer->pan);
+
                     for (unsigned long i = 0; i < framesThisPass; i++) {
                         unsigned long buffer_pos = ((audio_buffer->frameCursorPos + i) % audio_buffer->sizeInFrames) * AUDIO_DEVICE_CHANNELS;
                         unsigned long output_pos = (framesPerBuffer - framesToMix + i) * AUDIO_DEVICE_CHANNELS;
 
                         for (int ch = 0; ch < AUDIO_DEVICE_CHANNELS; ch++) {
                             float sample = buffer_data[buffer_pos + ch] * audio_buffer->volume;
-                            out[output_pos + ch] += sample;
+                            float gain = (ch == 0) ? left_gain : right_gain;
+                            out[output_pos + ch] += sample * gain;
                         }
                     }
                 }

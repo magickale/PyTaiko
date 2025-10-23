@@ -129,7 +129,7 @@ class Chibi13(BaseChibi):
             self.frame = 0
 
     def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, 'tail', frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute)
+        tex.draw_texture(self.name, 'tail', frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute+(self.is_2p*535))
         if self.scale.attribute == 0.75:
             tex.draw_texture(self.name, str(self.index), frame=self.frame, x=self.hori_move.attribute, y=-self.vert_move.attribute+(self.is_2p*535))
         else:
