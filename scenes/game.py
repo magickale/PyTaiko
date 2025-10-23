@@ -267,9 +267,10 @@ class Player:
         self.player_number = str(player_number)
         self.difficulty = difficulty
         self.visual_offset = global_data.config["general"]["visual_offset"]
+        self.modifiers = modifiers
 
         notes, self.branch_m, self.branch_e, self.branch_n = tja.notes_to_position(self.difficulty)
-        self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes, modifiers)
+        self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes, self.modifiers)
         self.end_time = 0
         if self.play_notes:
             self.end_time = self.play_notes[-1].hit_ms
@@ -759,7 +760,7 @@ class Player:
 
     def autoplay_manager(self, ms_from_start: float, current_time: float, background: Optional[Background]):
         """Manages autoplay behavior"""
-        if not global_data.modifiers.auto:
+        if not self.modifiers.auto:
             return
 
         # Handle drumroll and balloon hits
@@ -1551,7 +1552,7 @@ class Combo:
     def __init__(self, combo: int, current_ms: float, is_2p: bool):
         self.combo = combo
         self.is_2p = is_2p
-        self.stretch_animation = tex.get_animation(5)
+        self.stretch_animation = tex.get_animation(5, is_copy=True)
         self.color = [ray.fade(ray.WHITE, 1), ray.fade(ray.WHITE, 1), ray.fade(ray.WHITE, 1)]
         self.glimmer_dict = {0: 0, 1: 0, 2: 0}
         self.total_time = 250
@@ -1621,7 +1622,7 @@ class ScoreCounter:
     def __init__(self, score: int, is_2p: bool):
         self.is_2p = is_2p
         self.score = score
-        self.stretch = tex.get_animation(4)
+        self.stretch = tex.get_animation(4, is_copy=True)
 
     def update_count(self, score: int):
         if self.score != score:

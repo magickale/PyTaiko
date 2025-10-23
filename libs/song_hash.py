@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-from libs.tja import NoteList, TJAParser
+from libs.tja import NoteList, TJAParser, test_encodings
 from libs.utils import get_config, global_data
 
 
@@ -25,7 +25,8 @@ class DiffHashesDecoder(json.JSONDecoder):
 def read_tjap3_score(input_file: Path):
     """Read a TJAPlayer3 score.ini file and return the scores and clears."""
     score_ini = configparser.ConfigParser()
-    score_ini.read(input_file, encoding='utf-8')
+    encoding = test_encodings(input_file)
+    score_ini.read(input_file, encoding=encoding)
     scores = [int(score_ini['HiScore.Drums']['HiScore1']),
               int(score_ini['HiScore.Drums']['HiScore2']),
               int(score_ini['HiScore.Drums']['HiScore3']),

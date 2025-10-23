@@ -64,6 +64,40 @@ class TwoPlayerGameScreen(GameScreen):
             self.player_1.ending_anim = FailAnimation(self.player_1.is_2p)
             self.player_2.ending_anim = FailAnimation(self.player_2.is_2p)
 
+    def update(self):
+        self.on_screen_start()
+        current_time = get_current_ms()
+        self.transition.update(current_time)
+        self.current_ms = current_time - self.start_ms
+        self.start_song(current_time)
+        self.update_background(current_time)
+
+        if self.song_music is not None:
+            audio.update_music_stream(self.song_music)
+
+        self.player_1.update(self.current_ms, current_time, self.background)
+        self.player_2.update(self.current_ms, current_time, self.background)
+        self.song_info.update(current_time)
+        self.result_transition.update(current_time)
+        if self.result_transition.is_finished and not audio.is_sound_playing('result_transition'):
+            return self.on_screen_end('RESULT')
+        elif self.current_ms >= self.player_1.end_time:
+            session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
+            session_data.result_gauge_length = self.player_1.gauge.gauge_length
+            if self.end_ms != 0:
+                if current_time >= self.end_ms + 1000:
+                    if self.player_1.ending_anim is None:
+                        self.write_score()
+                        self.spawn_ending_anims()
+                if current_time >= self.end_ms + 8533.34:
+                    if not self.result_transition.is_started:
+                        self.result_transition.start()
+                        audio.play_sound('result_transition', 'voice')
+            else:
+                self.end_ms = current_time
+
+        return self.global_keys()
+
     def update_background(self, current_time):
         if self.movie is not None:
             self.movie.update()
