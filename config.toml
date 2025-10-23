@@ -25,6 +25,12 @@ left_don = ['F']
 right_don = ['J']
 right_kat = ['K']
 
+[keys_2p]
+left_kat = ["Z"]
+left_don = ["X"]
+right_don = ["C"]
+right_kat = ["V"]
+
 [gamepad]
 left_kat = [10]
 left_don = [16]

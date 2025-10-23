@@ -96,7 +96,7 @@ def is_l_don_pressed() -> bool:
     """Check if the left don button is pressed"""
     if global_data.input_locked:
         return False
-    keys = global_data.config["keys"]["left_don"]
+    keys = global_data.config["keys_1p"]["left_don"]
     gamepad_buttons = global_data.config["gamepad"]["left_don"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
@@ -121,7 +121,7 @@ def is_r_don_pressed() -> bool:
     """Check if the right don button is pressed"""
     if global_data.input_locked:
         return False
-    keys = global_data.config["keys"]["right_don"]
+    keys = global_data.config["keys_1p"]["right_don"]
     gamepad_buttons = global_data.config["gamepad"]["right_don"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
@@ -148,7 +148,7 @@ def is_l_kat_pressed() -> bool:
     """Check if the left kat button is pressed"""
     if global_data.input_locked:
         return False
-    keys = global_data.config["keys"]["left_kat"]
+    keys = global_data.config["keys_1p"]["left_kat"]
     gamepad_buttons = global_data.config["gamepad"]["left_kat"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):
@@ -175,7 +175,7 @@ def is_r_kat_pressed() -> bool:
     """Check if the right kat button is pressed"""
     if global_data.input_locked:
         return False
-    keys = global_data.config["keys"]["right_kat"]
+    keys = global_data.config["keys_1p"]["right_kat"]
     gamepad_buttons = global_data.config["gamepad"]["right_kat"]
     for key in keys:
         if ray.is_key_pressed(ord(key)):

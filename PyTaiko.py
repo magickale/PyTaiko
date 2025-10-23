@@ -19,7 +19,7 @@ from libs.utils import (
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
-from scenes.game_2p import TwoPlayerGameScreen
+from scenes.two_player.game import TwoPlayerGameScreen
 from scenes.loading import LoadScreen
 from scenes.result import ResultScreen
 from scenes.settings import SettingsScreen
@@ -129,7 +129,7 @@ def main():
     ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     ray.gen_texture_mipmaps(target.texture)
     ray.rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
-    ray.set_exit_key(ord(global_data.config["keys"]["exit_key"]))
+    ray.set_exit_key(ord(global_data.config["keys_1p"]["exit_key"]))
 
     while not ray.window_should_close():
         if ray.is_key_pressed(ray.KeyboardKey.KEY_F11):

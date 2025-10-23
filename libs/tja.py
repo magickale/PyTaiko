@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, fields
 from functools import lru_cache
 from pathlib import Path
 
+from libs.global_data import Modifiers
 from libs.utils import get_pixels_per_frame, global_data, strip_comments
 
 
@@ -818,7 +819,6 @@ class TJAParser:
                     bisect.insort(curr_draw_list, note, key=lambda x: x.load_ms)
                     self.get_moji(curr_note_list, ms_per_measure)
                     index += 1
-        # https://stackoverflow.com/questions/72899/how-to-sort-a-list-of-dictionaries-by-a-value-of-the-dictionary-in-python
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle
         # Bars can be sorted like this because they don't need hit detection
@@ -887,12 +887,12 @@ def modifier_random(notes: NoteList, value: int):
             modded_notes[i].type = type_mapping[modded_notes[i].type]
     return modded_notes
 
-def apply_modifiers(notes: NoteList):
+def apply_modifiers(notes: NoteList, modifiers: Modifiers):
     """Applies all selected modifiers from global_data to the given NoteList."""
-    if global_data.modifiers.display:
+    if modifiers.display:
         draw_notes = modifier_display(notes)
-    if global_data.modifiers.inverse:
+    if modifiers.inverse:
         play_notes = modifier_inverse(notes)
-    play_notes = modifier_random(notes, global_data.modifiers.random)
-    draw_notes, bars = modifier_speed(notes, global_data.modifiers.speed)
+    play_notes = modifier_random(notes, modifiers.random)
+    draw_notes, bars = modifier_speed(notes, modifiers.speed)
     return deque(play_notes), deque(draw_notes), deque(bars)

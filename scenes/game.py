@@ -11,6 +11,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.chara_2d import Chara2D
+from libs.global_data import Modifiers
 from libs.global_objects import AllNetIcon, Nameplate
 from libs.texture import tex
 from libs.tja import (
@@ -81,7 +82,7 @@ class GameScreen:
         if self.tja.metadata.wave.exists() and self.tja.metadata.wave.is_file() and self.song_music is None:
             self.song_music = audio.load_music_stream(self.tja.metadata.wave, 'song')
 
-        self.player_1 = Player(self.tja, global_data.player_num, difficulty, False)
+        self.player_1 = Player(self.tja, global_data.player_num, difficulty, False, global_data.modifiers)
         self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
 
     def on_screen_start(self):
@@ -217,7 +218,6 @@ class GameScreen:
             audio.update_music_stream(self.song_music)
 
         self.player_1.update(self.current_ms, current_time, self.background)
-        self.player_2.update(self.current_ms, current_time, self.background)
         self.song_info.update(current_time)
         self.result_transition.update(current_time)
         if self.result_transition.is_finished and not audio.is_sound_playing('result_transition'):
@@ -262,14 +262,14 @@ class Player:
     TIMING_OK_EASY = 108.441665649414
     TIMING_BAD_EASY = 125.125
 
-    def __init__(self, tja: TJAParser, player_number: int, difficulty: int, is_2p: bool):
+    def __init__(self, tja: TJAParser, player_number: int, difficulty: int, is_2p: bool, modifiers: Modifiers):
         self.is_2p = is_2p
         self.player_number = str(player_number)
         self.difficulty = difficulty
         self.visual_offset = global_data.config["general"]["visual_offset"]
 
         notes, self.branch_m, self.branch_e, self.branch_n = tja.notes_to_position(self.difficulty)
-        self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes)
+        self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes, modifiers)
         self.end_time = 0
         if self.play_notes:
             self.end_time = self.play_notes[-1].hit_ms
