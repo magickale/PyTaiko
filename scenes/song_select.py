@@ -185,7 +185,7 @@ class SongSelectScreen:
 
     def _cancel_selection(self):
         """Reset to browsing state"""
-        self.player_1.selected_song = None
+        self.player_1.selected_song = False
         self.move_away.reset()
         self.diff_fade_out.reset()
         self.text_fade_out.reset()
@@ -362,7 +362,7 @@ class SongSelectPlayer:
         self.player_num = player_num
         self.selected_difficulty = -3
         self.prev_diff = -3
-        self.selected_song = None
+        self.selected_song = False
         self.is_ura = False
         self.ura_toggle = 0
         self.diff_select_move_right = False
