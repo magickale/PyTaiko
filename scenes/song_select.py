@@ -285,7 +285,7 @@ class SongSelectScreen:
                     song.box.get_scores()
                     if song.tja.metadata.wave.exists() and song.tja.metadata.wave.is_file():
                         self.demo_song = audio.load_music_stream(song.tja.metadata.wave, 'demo_song')
-                        audio.play_music_stream(self.demo_song)
+                        audio.play_music_stream(self.demo_song, 'music')
                         audio.seek_music_stream(self.demo_song, song.tja.metadata.demostart)
                         audio.stop_sound('bgm')
             if song.box.is_open:
