@@ -327,7 +327,7 @@ class AudioEngine:
             print(f"Failed to load music: {file_path}")
             return ""
 
-    def play_music_stream(self, name: str, volume_preset: str = '') -> None:
+    def play_music_stream(self, name: str, volume_preset: str) -> None:
         """Play a music stream"""
         if name in self.music_streams:
             music = self.music_streams[name]
