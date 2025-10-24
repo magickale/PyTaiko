@@ -163,7 +163,7 @@ class GameScreen:
                     con.commit()
 
     def start_song(self, current_time):
-        if (self.current_ms >= self.tja.metadata.offset*1000 + self.start_delay - global_data.config["general"]["judge_offset"]) and not self.song_started:
+        if (self.current_ms >= self.tja.metadata.offset*1000 + self.start_delay - global_data.config["general"]["audio_offset"]) and not self.song_started:
             if self.song_music is not None:
                 audio.play_music_stream(self.song_music, 'music')
                 print(f"Song started at {self.current_ms}")
