@@ -162,5 +162,9 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
         self.player_2.draw_background_diffs(self.state)
 
     def draw_players(self):
-        self.player_1.draw(self.state)
-        self.player_2.draw(self.state)
+        if self.player_1.selected_difficulty == self.player_2.selected_difficulty:
+            self.player_1.draw(self.state, True)
+            self.player_2.draw(self.state, True)
+        else:
+            self.player_1.draw(self.state, False)
+            self.player_2.draw(self.state, False)

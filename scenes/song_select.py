@@ -613,39 +613,51 @@ class SongSelectPlayer:
         self.selected_difficulty = 7 - self.selected_difficulty
         return "ura_toggle"
 
-    def draw_selector(self, state):
+    def draw_selector(self, state: State, is_half: bool):
         fade = 0.5 if (self.neiro_selector is not None or self.modifier_selector is not None) else self.text_fade_in.attribute
         direction = 1 if self.diff_select_move_right else -1
         if self.selected_difficulty <= -1 or self.prev_diff == -1:
             if self.prev_diff == -1 and self.selected_difficulty >= 0:
                 if not self.diff_selector_move_2.is_finished:
-                    tex.draw_texture('diff_select', f'{self.player_num}p_balloon', x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
-                    tex.draw_texture('diff_select', f'{self.player_num}p_outline_back', x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
+                    name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
+                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
+                    name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
+                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
                 else:
                     difficulty = min(3, self.selected_difficulty)
-                    tex.draw_texture('diff_select', f'{self.player_num}p_balloon', x=(difficulty * 115), fade=fade)
-                    tex.draw_texture('diff_select', f'{self.player_num}p_outline', x=(difficulty * 115))
+                    name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
+                    tex.draw_texture('diff_select', name, x=(difficulty * 115), fade=fade)
+                    name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
+                    tex.draw_texture('diff_select', name, x=(difficulty * 115))
             elif not self.diff_selector_move_2.is_finished:
-                tex.draw_texture('diff_select', f'{self.player_num}p_outline_back', x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
+                name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
+                tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
                 if self.selected_difficulty != -3:
-                    tex.draw_texture('diff_select', f'{self.player_num}p_balloon', x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
+                    name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
+                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
             else:
-                tex.draw_texture('diff_select', f'{self.player_num}p_outline_back', x=((self.selected_difficulty+3) * 70))
+                name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
+                tex.draw_texture('diff_select', name, x=((self.selected_difficulty+3) * 70))
                 if self.selected_difficulty != -3:
-                    tex.draw_texture('diff_select', f'{self.player_num}p_balloon', x=((self.selected_difficulty+3) * 70) - 220, fade=fade)
+                    name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
+                    tex.draw_texture('diff_select', name, x=((self.selected_difficulty+3) * 70) - 220, fade=fade)
         else:
             if self.prev_diff == -1:
                 return
             if not self.diff_selector_move_1.is_finished:
                 difficulty = min(3, self.prev_diff)
-                tex.draw_texture('diff_select', f'{self.player_num}p_balloon', x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction), fade=fade)
-                tex.draw_texture('diff_select', f'{self.player_num}p_outline', x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction))
+                name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
+                tex.draw_texture('diff_select', name, x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction), fade=fade)
+                name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
+                tex.draw_texture('diff_select', name, x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction))
             else:
                 difficulty = min(3, self.selected_difficulty)
-                tex.draw_texture('diff_select', f'{self.player_num}p_balloon', x=(difficulty * 115), fade=fade)
-                tex.draw_texture('diff_select', f'{self.player_num}p_outline', x=(difficulty * 115))
+                name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
+                tex.draw_texture('diff_select', name, x=(difficulty * 115), fade=fade)
+                name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
+                tex.draw_texture('diff_select', name, x=(difficulty * 115))
 
-    def draw_background_diffs(self, state):
+    def draw_background_diffs(self, state: State):
         if (self.selected_song and state == State.SONG_SELECTED and self.selected_difficulty >= 0):
             if self.player_num == '2':
                 tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
@@ -662,9 +674,9 @@ class SongSelectPlayer:
                 tex.draw_texture('global', 'bg_diff_text_bg', fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
                 tex.draw_texture('global', 'bg_diff_text', frame=min(3, self.selected_difficulty), fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
 
-    def draw(self, state):
+    def draw(self, state: State, is_half: bool = False):
         if (self.selected_song and state == State.SONG_SELECTED):
-            self.draw_selector(state)
+            self.draw_selector(state, is_half)
 
         offset = 0
         if self.neiro_selector is not None:
@@ -957,14 +969,14 @@ class NeiroSelector:
         audio.play_sound(f'voice_hitsound_select_{self.player_num}p', 'voice')
         self.is_finished = False
         self.is_confirmed = False
-        self.move = tex.get_animation(28)
+        self.move = tex.get_animation(28, is_copy=True)
         self.move.start()
-        self.blue_arrow_fade = tex.get_animation(29)
-        self.blue_arrow_move = tex.get_animation(30)
+        self.blue_arrow_fade = tex.get_animation(29, is_copy=True)
+        self.blue_arrow_move = tex.get_animation(30, is_copy=True)
         self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
         self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
-        self.move_sideways = tex.get_animation(31)
-        self.fade_sideways = tex.get_animation(32)
+        self.move_sideways = tex.get_animation(31, is_copy=True)
+        self.fade_sideways = tex.get_animation(32, is_copy=True)
         self.direction = -1
 
     def load_sound(self):
@@ -1078,12 +1090,12 @@ class ModifierSelector:
         self.current_mod_index = 0
         self.is_confirmed = False
         self.is_finished = False
-        self.blue_arrow_fade = tex.get_animation(29)
-        self.blue_arrow_move = tex.get_animation(30)
-        self.move = tex.get_animation(28)
+        self.blue_arrow_fade = tex.get_animation(29, is_copy=True)
+        self.blue_arrow_move = tex.get_animation(30, is_copy=True)
+        self.move = tex.get_animation(28, is_copy=True)
         self.move.start()
-        self.move_sideways = tex.get_animation(31)
-        self.fade_sideways = tex.get_animation(32)
+        self.move_sideways = tex.get_animation(31, is_copy=True)
+        self.fade_sideways = tex.get_animation(32, is_copy=True)
         self.direction = -1
         audio.play_sound(f'voice_options_{self.player_num}p', 'sound')
         self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, ray.BLACK, outline_thickness=3.5) for mod in self.mods]
