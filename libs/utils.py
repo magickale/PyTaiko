@@ -111,6 +111,8 @@ def is_l_don_pressed(player_num: str = '0') -> bool:
             if ray.is_gamepad_button_pressed(0, button):
                 return True
 
+    if not global_data.config["general"]["touch_enabled"]:
+        return False
     mid_x, mid_y = (1280//2, 720)
     allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
     if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
