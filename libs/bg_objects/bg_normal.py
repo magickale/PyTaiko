@@ -16,6 +16,8 @@ class BGNormalBase:
     def __init__(self, tex: TextureWrapper, index: int, path: str):
         self.name = "bg_" + str(index)
         tex.load_zip(path, f'bg_normal/{self.name}')
+    def update(self, current_time_ms: float):
+        pass
 
 class BGNormal1(BGNormalBase):
     def __init__(self, tex: TextureWrapper, index: int, path: str):

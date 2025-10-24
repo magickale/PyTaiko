@@ -17,6 +17,11 @@ class DonBGBase:
         self.is_clear = False
         self.clear_fade = tex.get_animation(1)
 
+    def draw(self, tex: TextureWrapper, y: float=0):
+        self._draw_textures(tex, 1.0, y)
+        if self.is_clear:
+            self._draw_textures(tex, self.clear_fade.attribute, y)
+
     def update(self, current_time_ms: float, is_clear: bool):
         if not self.is_clear and is_clear:
             self.clear_fade.start()
@@ -31,10 +36,6 @@ class DonBG1(DonBGBase):
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
-    def draw(self, tex: TextureWrapper, y: float=0):
-        self._draw_textures(tex, 1.0, y)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute, y)
     def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(5):
             tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*328)+self.move.attribute, y=y)
@@ -50,10 +51,6 @@ class DonBG2(DonBGBase):
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
-    def draw(self, tex: TextureWrapper, y: float = 0):
-        self._draw_textures(tex, 1.0, y)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute, y)
     def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(5):
             tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*328)+self.move.attribute, y=y)
@@ -79,11 +76,6 @@ class DonBG3(DonBGBase):
         self.overlay_move.update(current_time_ms)
         self.overlay_move_2.update(current_time_ms)
 
-    def draw(self, tex: TextureWrapper, y: float = 0):
-        self._draw_textures(tex, 1.0, y)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute, y)
-
     def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(10):
             tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*164)+self.move.attribute, y=y)
@@ -98,10 +90,6 @@ class DonBG4(DonBGBase):
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
-    def draw(self, tex: TextureWrapper, y: float = 0):
-        self._draw_textures(tex, 1.0, y)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute, y)
 
     def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(5):
@@ -126,11 +114,6 @@ class DonBG5(DonBGBase):
             self.bounce_down.restart()
         self.adjust.update(current_time_ms)
 
-    def draw(self, tex: TextureWrapper, y: float = 0):
-        self._draw_textures(tex, 1.0, y)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute, y)
-
     def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(5):
             tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*328)+self.move.attribute, y=y)
@@ -144,10 +127,6 @@ class DonBG6(DonBGBase):
     def update(self, current_time_ms: float, is_clear: bool):
         super().update(current_time_ms, is_clear)
         self.overlay_move.update(current_time_ms)
-    def draw(self, tex: TextureWrapper, y: float = 0):
-        self._draw_textures(tex, 1.0, y)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute, y)
 
     def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(5):
