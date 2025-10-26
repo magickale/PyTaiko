@@ -225,7 +225,7 @@ jobs:
 
       - name: Build Executable
         run: |
-          uv run nuitka --lto=yes --mode=app --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow --assume-yes-for-downloads PyTaiko.py
+          uv run nuitka --lto=yes --mode=app --noinclude-setuptools-mode=nofollow --noinclude-IPython-mode=nofollow --assume-yes-for-downloads --windows-icon-from-ico=libs/icon.png --macos-app-icon=libs/icon.png --linux-icon=libs/icon.png PyTaiko.py
 
       - name: Create Release Directory
         run: |
