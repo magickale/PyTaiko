@@ -134,7 +134,8 @@ class BaseDancerGroup():
         self.active_count = 0
         tex.load_zip(path, f'dancer/{self.name}')
         # center (2), left (1), right (3), far left (0), far right (4)
-        self.spawn_positions = [2, 1, 3, 0, 4]
+        all_positions = [2, 1, 3, 0, 4]
+        self.spawn_positions = [pos for pos in all_positions if pos < max_dancers]
         self.active_dancers = [None] * max_dancers
         dancer_classes = [BaseDancer]
         tex_set = set()

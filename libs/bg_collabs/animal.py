@@ -11,10 +11,9 @@ from libs.bg_objects.don_bg import DonBG4
 
 
 class Background:
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float):
+    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex
-        path = 'background/collab/animal'
-        self.max_dancers = 5
+        self.max_dancers = max_dancers
         self.don_bg = DonBG4(self.tex_wrapper, 4, player_num, 'background')
         self.bg_normal = BGNormalBase(self.tex_wrapper, 0, path)
         self.bg_fever = BGFever(self.tex_wrapper, 0, path)

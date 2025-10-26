@@ -10,10 +10,9 @@ from libs.bg_objects.renda import RendaController
 from libs.texture import TextureWrapper
 
 class Background:
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float):
+    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex
-        path = 'background/collab/oshiri'
-        self.max_dancers = 5
+        self.max_dancers = max_dancers
         self.don_bg = DonBG(self.tex_wrapper, 0, 1, path)
         self.bg_normal = BGNormalBase(self.tex_wrapper, 0, path)
         self.bg_fever = BGFever(self.tex_wrapper, 0, path)
