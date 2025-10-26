@@ -18,6 +18,7 @@ class Background:
         "ANIMAL": libs.bg_collabs.animal.Background,
         "BUTTOBURST": libs.bg_collabs.buttoburst.Background,
         "OSHIRI": libs.bg_collabs.oshiri.Background,
+        "IMAS": libs.bg_collabs.imas.Background
     }
     def __init__(self, player_num: int, bpm: float, scene_preset: str = ''):
         """

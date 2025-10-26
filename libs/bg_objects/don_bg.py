@@ -22,6 +22,10 @@ class DonBGBase:
         if self.is_clear:
             self._draw_textures(tex, self.clear_fade.attribute, y)
 
+    def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
+        for i in range(5):
+            tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*328)+self.move.attribute, y=y)
+
     def update(self, current_time_ms: float, is_clear: bool):
         if not self.is_clear and is_clear:
             self.clear_fade.start()

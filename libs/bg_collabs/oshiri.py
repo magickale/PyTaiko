@@ -15,7 +15,7 @@ class Background:
         path = 'background/collab/oshiri'
         self.max_dancers = 5
         self.don_bg = DonBG(self.tex_wrapper, 0, 1, path)
-        self.bg_normal = BGNormal(self.tex_wrapper, 0, path)
+        self.bg_normal = BGNormalBase(self.tex_wrapper, 0, path)
         self.bg_fever = BGFever(self.tex_wrapper, 0, path)
         self.footer = Footer(self.tex_wrapper, 0, path)
         self.fever = Fever3(self.tex_wrapper, 0, bpm, path)
@@ -48,13 +48,6 @@ class DonBG(DonBGBase):
             tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*168)+self.move.attribute, y=y)
             for j in range(3):
                 tex.draw_texture(self.name, 'overlay', frame=self.is_clear, fade=fade, x=(i*168)+self.move.attribute, y=y+(j*70))
-
-class BGNormal(BGNormalBase):
-    def __init__(self, tex: TextureWrapper, index: int, path: str):
-        super().__init__(tex, index, path)
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, 'background')
 
 class BGFever(BGFeverBase):
     def __init__(self, tex: TextureWrapper, index: int, path: str):

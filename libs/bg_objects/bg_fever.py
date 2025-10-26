@@ -19,6 +19,12 @@ class BGFeverBase:
         self.name = 'bg_fever_' + str(index)
         tex.load_zip(path, f'bg_fever/{self.name}')
         self.transitioned = False
+    def start(self):
+        pass
+    def update(self, current_time_ms: float):
+        pass
+    def draw(self, tex: TextureWrapper):
+        pass
 
 class BGFever1(BGFeverBase):
     class Tile:

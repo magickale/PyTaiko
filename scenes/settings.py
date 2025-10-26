@@ -34,7 +34,10 @@ class SettingsScreen:
         global_data.config = self.config
         audio.close_audio_device()
         audio.device_type = global_data.config["audio"]["device_type"]
-        audio.target_sample_rate = global_data.config["audio"]["sample_rate"]
+        sample_rate = global_data.config["audio"]["sample_rate"]
+        if sample_rate < 0:
+            sample_rate = 44100
+        audio.target_sample_rate = sample_rate
         audio.buffer_size = global_data.config["audio"]["buffer_size"]
         audio.volume_presets = global_data.config["volume"]
         audio.init_audio_device()

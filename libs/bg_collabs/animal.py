@@ -16,7 +16,7 @@ class Background:
         path = 'background/collab/animal'
         self.max_dancers = 5
         self.don_bg = DonBG4(self.tex_wrapper, 4, player_num, 'background')
-        self.bg_normal = BGNormal(self.tex_wrapper, 0, path)
+        self.bg_normal = BGNormalBase(self.tex_wrapper, 0, path)
         self.bg_fever = BGFever(self.tex_wrapper, 0, path)
         self.footer = Footer(self.tex_wrapper, 0, path)
         self.fever = Fever3(self.tex_wrapper, 0, bpm, path)
@@ -34,13 +34,6 @@ class DancerGroup(BaseDancerGroup):
         self.dancers = [BaseDancer(self.name, i, bpm, tex) for i in range(max_dancers)]
         random.shuffle(self.dancers)
         self.add_dancer()
-
-class BGNormal(BGNormalBase):
-    def update(self, current_time_ms: float):
-        pass
-
-    def draw(self, tex: TextureWrapper):
-        tex.draw_texture(self.name, 'background')
 
 class BGFever(BGFeverBase):
     def start(self):

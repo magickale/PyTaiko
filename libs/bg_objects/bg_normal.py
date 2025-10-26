@@ -18,6 +18,8 @@ class BGNormalBase:
         tex.load_zip(path, f'bg_normal/{self.name}')
     def update(self, current_time_ms: float):
         pass
+    def draw(self, tex: TextureWrapper):
+        tex.draw_texture(self.name, 'background')
 
 class BGNormal1(BGNormalBase):
     def __init__(self, tex: TextureWrapper, index: int, path: str):
