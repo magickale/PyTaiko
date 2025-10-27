@@ -129,7 +129,22 @@ class GameScreen:
         with sqlite3.connect('scores.db') as con:
             session_data = global_data.session_data[global_data.player_num-1]
             cursor = con.cursor()
-            notes, _, _, _ = TJAParser.notes_to_position(TJAParser(self.tja.file_path), self.player_1.difficulty)
+            notes, branch_m, branch_e, branch_n = TJAParser.notes_to_position(TJAParser(self.tja.file_path), self.player_1.difficulty)
+            if branch_m:
+                for branch in branch_m:
+                    notes.play_notes.extend(branch.play_notes)
+                    notes.draw_notes.extend(branch.draw_notes)
+                    notes.bars.extend(branch.bars)
+            if branch_e:
+                for branch in branch_e:
+                    notes.play_notes.extend(branch.play_notes)
+                    notes.draw_notes.extend(branch.draw_notes)
+                    notes.bars.extend(branch.bars)
+            if branch_n:
+                for branch in branch_n:
+                    notes.play_notes.extend(branch.play_notes)
+                    notes.draw_notes.extend(branch.draw_notes)
+                    notes.bars.extend(branch.bars)
             hash = self.tja.hash_note_data(notes)
             check_query = "SELECT score, clear FROM Scores WHERE hash = ? LIMIT 1"
             cursor.execute(check_query, (hash,))
@@ -507,7 +522,7 @@ class Player:
                         self.is_drumroll = False
                         self.is_balloon = False
             else:
-                if len(self.other_notes) == 1:
+                if len(self.other_notes) >= 1:
                     self.other_notes.popleft()
         elif (note.hit_ms <= current_ms):
             if note.type == 5 or note.type == 6:

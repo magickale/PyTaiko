@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from libs.global_data import Modifiers
-from libs.utils import get_pixels_per_frame, global_data, strip_comments
+from libs.utils import get_pixels_per_frame, strip_comments
 
 
 @lru_cache(maxsize=64)

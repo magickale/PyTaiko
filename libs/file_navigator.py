@@ -551,7 +551,6 @@ class ScoreHistory:
             current_ms (int): The current time in milliseconds.
         """
         self.scores = {k: v for k, v in scores.items() if v is not None}
-        print(self.scores)
         self.difficulty_keys = list(self.scores.keys())
         self.curr_difficulty_index = 0
         self.curr_difficulty_index = (self.curr_difficulty_index + 1) % len(self.difficulty_keys)

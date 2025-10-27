@@ -120,9 +120,21 @@ def build_song_hashes(output_dir=Path("cache")):
 
         try:
             for diff in tja.metadata.course_data:
-                diff_notes, _, _, _ = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
+                diff_notes, branch_m, branch_e, branch_n = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
                 diff_hashes[diff] = tja.hash_note_data(diff_notes)
                 all_notes.play_notes.extend(diff_notes.play_notes)
+                if branch_m:
+                    for branch in branch_m:
+                        all_notes.play_notes.extend(branch.play_notes)
+                        all_notes.bars.extend(branch.bars)
+                if branch_e:
+                    for branch in branch_e:
+                        all_notes.play_notes.extend(branch.play_notes)
+                        all_notes.bars.extend(branch.bars)
+                if branch_n:
+                    for branch in branch_n:
+                        all_notes.play_notes.extend(branch.play_notes)
+                        all_notes.bars.extend(branch.bars)
                 all_notes.bars.extend(diff_notes.bars)
         except Exception as e:
             print(f"Failed to parse TJA {tja_path}: {e}")
@@ -230,9 +242,27 @@ def process_tja_file(tja_file):
     tja = TJAParser(tja_file)
     all_notes = NoteList()
     for diff in tja.metadata.course_data:
-        notes, _, _, _ = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
+        notes, branch_m, branch_e, branch_n = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
         all_notes.play_notes.extend(notes.play_notes)
+        if branch_m:
+            for branch in branch_m:
+                all_notes.play_notes.extend(branch.play_notes)
+        if branch_e:
+            for branch in branch_e:
+                all_notes.play_notes.extend(branch.play_notes)
+        if branch_n:
+            for branch in branch_n:
+                all_notes.play_notes.extend(branch.play_notes)
         all_notes.bars.extend(notes.bars)
+        if branch_m:
+            for branch in branch_m:
+                all_notes.bars.extend(branch.bars)
+        if branch_e:
+            for branch in branch_e:
+                all_notes.bars.extend(branch.bars)
+        if branch_n:
+            for branch in branch_n:
+                all_notes.bars.extend(branch.bars)
     if all_notes == []:
         return ''
     hash = tja.hash_note_data(all_notes)

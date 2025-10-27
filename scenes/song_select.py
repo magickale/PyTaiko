@@ -536,13 +536,16 @@ class SongSelectPlayer:
             prev_diff = self.selected_difficulty
 
             if is_l_kat_pressed(self.player_num):
-                self._navigate_difficulty_left(diffs)
-            else:  # is_r_kat_pressed()
-                self._navigate_difficulty_right(diffs)
+                ret_val = self._navigate_difficulty_left(diffs)
+            elif is_r_kat_pressed(self.player_num):
+                ret_val = self._navigate_difficulty_right(diffs)
 
             if 0 <= self.selected_difficulty <= 4 and self.selected_difficulty != prev_diff:
                 self.selected_diff_bounce.start()
                 self.selected_diff_fadein.start()
+
+
+            return ret_val
 
         if (ray.is_key_pressed(ray.KeyboardKey.KEY_TAB) and
             self.selected_difficulty in [3, 4]):
@@ -590,7 +593,7 @@ class SongSelectPlayer:
         if (self.selected_difficulty in [3, 4] and 4 in diffs and 3 in diffs):
             self.ura_toggle = (self.ura_toggle + 1) % 10
             if self.ura_toggle == 0:
-                self._toggle_ura_mode()
+                return self._toggle_ura_mode()
         elif self.selected_difficulty == -1:
             self.prev_diff = self.selected_difficulty
             self.selected_difficulty = min(diffs)
