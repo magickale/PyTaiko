@@ -224,6 +224,12 @@ jobs:
       - name: Setup Python
         run: uv python install
 
+      - name: Force newer Pillow version (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Install the latest pre-release Pillow which should have Python 3.14 support
+          uv pip install --upgrade --pre pillow
+
       - name: Install Dependencies
         run: |
           uv sync
