@@ -232,9 +232,21 @@ jobs:
 
           REM Add MSYS2 to PATH so Pillow can find the libraries
           set PATH=C:\msys64\mingw64\bin;C:\msys64\usr\bin;%PATH%
+
+          REM Set up build environment for Pillow
+          set CFLAGS=-IC:\msys64\mingw64\include
+          set LDFLAGS=-LC:\msys64\mingw64\lib
           set PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
           set INCLUDE=C:\msys64\mingw64\include;%INCLUDE%
           set LIB=C:\msys64\mingw64\lib;%LIB%
+
+          REM Explicitly set library paths for Pillow's setup.py
+          set ZLIB_ROOT=C:\msys64\mingw64
+          set JPEG_ROOT=C:\msys64\mingw64
+          set TIFF_ROOT=C:\msys64\mingw64
+          set FREETYPE_ROOT=C:\msys64\mingw64
+          set LCMS_ROOT=C:\msys64\mingw64
+          set WEBP_ROOT=C:\msys64\mingw64
 
           REM Install Pillow from source into system Python
           uv pip install --system --no-binary pillow pillow
