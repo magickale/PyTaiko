@@ -226,33 +226,26 @@ jobs:
 
       - name: Build Pillow from source (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: msys2 {0}
         run: |
-          echo === Building Pillow from source ===
+          echo "=== Building Pillow from source ==="
 
-          REM Add MSYS2 to PATH so Pillow can find the libraries
-          set PATH=C:\msys64\mingw64\bin;C:\msys64\usr\bin;%PATH%
+          # Get the Windows Python path from uv
+          PYTHON_PATH=$(cygpath -u "$(/c/hostedtoolcache/windows/uv/*/x64/uv.exe python dir)")
+          PYTHON_EXE="$PYTHON_PATH/python.exe"
 
-          REM Set up build environment for Pillow
-          set CFLAGS=-IC:\msys64\mingw64\include
-          set LDFLAGS=-LC:\msys64\mingw64\lib
-          set PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
-          set INCLUDE=C:\msys64\mingw64\include;%INCLUDE%
-          set LIB=C:\msys64\mingw64\lib;%LIB%
+          echo "Python executable: $PYTHON_EXE"
 
-          REM Explicitly set library paths for Pillow's setup.py
-          set ZLIB_ROOT=C:\msys64\mingw64
-          set JPEG_ROOT=C:\msys64\mingw64
-          set TIFF_ROOT=C:\msys64\mingw64
-          set FREETYPE_ROOT=C:\msys64\mingw64
-          set LCMS_ROOT=C:\msys64\mingw64
-          set WEBP_ROOT=C:\msys64\mingw64
+          # Set up build environment with MSYS2 paths
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          export CFLAGS="-I/mingw64/include"
+          export LDFLAGS="-L/mingw64/lib"
 
-          REM Install Pillow from source into system Python
-          uv pip install --system --no-binary pillow pillow
+          # Build Pillow using MSYS2's Python pip with the Windows Python
+          "$PYTHON_EXE" -m pip install --no-binary pillow pillow
 
-          echo === Pillow build completed ===
-          uv pip show --system pillow
+          echo "=== Pillow build completed ==="
+          "$PYTHON_EXE" -m pip show pillow
 
       - name: Install Dependencies
         run: |
