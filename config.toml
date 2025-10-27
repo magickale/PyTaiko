@@ -7,6 +7,7 @@ hard_judge = 108
 touch_enabled = false
 timer_frozen = true
 judge_counter = false
+nijiiro_notes = false
 
 [nameplate_1p]
 name = 'どんちゃん'

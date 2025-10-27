@@ -88,6 +88,14 @@ class GameScreen:
             self.movie = None
             self.song_music = None
             tex.load_screen_textures('game')
+            if global_data.config["general"]["nijiiro_notes"]:
+                # drop original
+                if "notes" in tex.textures:
+                    del tex.textures["notes"]
+                # load nijiiro, rename "notes"
+                # to leave hardcoded 'notes' in calls below
+                tex.load_zip("game", "notes_nijiiro")
+                tex.textures["notes"] = tex.textures.pop("notes_nijiiro") 
             audio.load_screen_sounds('game')
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
