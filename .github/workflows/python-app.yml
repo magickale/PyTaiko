@@ -236,14 +236,11 @@ jobs:
           set INCLUDE=C:\msys64\mingw64\include;%INCLUDE%
           set LIB=C:\msys64\mingw64\lib;%LIB%
 
-          REM Remove any existing Pillow installation
-          uv pip uninstall -y pillow pillow-simd
-
-          REM Install Pillow from source
-          uv pip install --no-binary pillow --no-build-isolation pillow
+          REM Install Pillow from source into system Python
+          uv pip install --system --no-binary pillow pillow
 
           echo === Pillow build completed ===
-          uv pip show pillow
+          uv pip show --system pillow
 
       - name: Install Dependencies
         run: |
