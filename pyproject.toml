@@ -14,8 +14,8 @@ dependencies = [
 exclude = ["*.git", ".github/", ".venv/", "cache/"]
 paths = ["."]
 
-[tool.uv.sources]
-raylib-sdl = { path = "raylib_sdl-5.5.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl" }
+[tool.uv]
+find-links = ["raylib-sdl"]
 
 [dependency-groups]
 dev = [
