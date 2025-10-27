@@ -39,6 +39,8 @@ ffi.cdef("""
         void *ctxData;
     } music;
 
+    void set_log_level(int level);
+
     // Device management
     void list_host_apis(void);
     void init_audio_device(PaHostApiIndex host_api, double sample_rate, unsigned long buffer_size);
@@ -110,17 +112,17 @@ try:
 except OSError as e:
     print(f"Failed to load shared library: {e}")
     raise
-   
+
 def get_short_path_name(long_path: str) -> str:
     """Convert long path to Windows short path (8.3 format)"""
     if platform.system() != 'Windows':
         return long_path
-    
+
     # Get short path name
     buffer = ctypes.create_unicode_buffer(512)
     get_short_path = ctypes.windll.kernel32.GetShortPathNameW
     ret = get_short_path(long_path, buffer, 512)
-    
+
     if ret:
         return buffer.value
     return long_path
@@ -140,6 +142,9 @@ class AudioEngine:
         self.volume_presets = volume_presets
 
         self.sounds_path = Path("Sounds")
+
+    def set_log_level(self, level: int):
+        lib.set_log_level(level) # type: ignore
 
     def list_host_apis(self):
         """Prints a list of available host APIs to the console"""

@@ -67,6 +67,8 @@ typedef struct music {
     void *ctxData;              // Internal context data (file handle, decoder state, etc.)
 } music;
 
+void set_log_level(int level);
+
 // =============================================================================
 // DEVICE MANAGEMENT
 // =============================================================================

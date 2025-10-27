@@ -13,7 +13,7 @@ class VideoPlayer:
         self.is_finished_list = [False, False]
         self.video = VideoFileClip(path)
         if self.video.audio is not None:
-            self.video.audio.write_audiofile("cache/temp_audio.wav")
+            self.video.audio.write_audiofile("cache/temp_audio.wav", logger=None)
             self.audio = audio.load_music_stream(Path("cache/temp_audio.wav"), 'video')
 
         self.buffer_size = 10  # Number of frames to keep in memory

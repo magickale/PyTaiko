@@ -104,6 +104,7 @@ def main():
 
     current_screen = Screens.LOADING
 
+    audio.set_log_level(1)
     audio.init_audio_device()
 
     create_song_db()
@@ -134,8 +135,8 @@ def main():
         Screens.LOADING: load_screen
     }
     target = ray.load_render_texture(screen_width, screen_height)
-    ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     ray.gen_texture_mipmaps(target.texture)
+    ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     ray.rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
     ray.set_exit_key(ord(global_data.config["keys_1p"]["exit_key"]))
 

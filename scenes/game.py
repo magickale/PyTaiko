@@ -48,7 +48,7 @@ class GameScreen:
         self.end_ms = 0
         self.start_delay = 1000
         self.song_started = False
-        self.mask_shader = ray.load_shader("", "shader/mask.fs")
+        self.mask_shader = ray.load_shader("shader/outline.vs", "shader/mask.fs")
 
     def load_hitsounds(self):
         """Load the hit sounds"""

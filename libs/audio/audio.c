@@ -24,13 +24,21 @@
 #define LOG_WARNING 1
 #define LOG_ERROR 2
 
+static int CURRENT_LOG_LEVEL = LOG_INFO;
+
+void set_log_level(int level) {
+    CURRENT_LOG_LEVEL = level;
+}
+
 #define TRACELOG(level, ...) do { \
-    const char* level_str = (level == LOG_INFO) ? "INFO" : \
-                           (level == LOG_WARNING) ? "WARNING" : "ERROR"; \
-    printf("[%s] AUDIO: ", level_str); \
-    printf(__VA_ARGS__); \
-    printf("\n"); \
-    fflush(stdout); \
+    if (level >= CURRENT_LOG_LEVEL) { \
+        const char* level_str = (level == LOG_INFO) ? "INFO" : \
+                               (level == LOG_WARNING) ? "WARNING" : "ERROR"; \
+        printf("[%s] AUDIO: ", level_str); \
+        printf(__VA_ARGS__); \
+        printf("\n"); \
+        fflush(stdout); \
+    } \
 } while(0)
 
 #define FREE(ptr) do { if (ptr) { free(ptr); (ptr) = NULL; } } while(0)
