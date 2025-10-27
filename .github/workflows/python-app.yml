@@ -224,14 +224,15 @@ jobs:
       - name: Setup Python
         run: uv python install
 
-      - name: Force newer Pillow version (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          # Install the latest pre-release Pillow which should have Python 3.14 support
-          uv pip install --upgrade --pre pillow
-
       - name: Install Dependencies
         run: |
+          uv sync --no-install-project
+          # Install moviepy without its pinned dependencies
+          uv pip install moviepy --no-deps
+          # Then install dependencies manually with newer Pillow
+          uv pip install decorator imageio imageio-ffmpeg numpy proglog python-dotenv
+          uv pip install --pre pillow
+          # Now install the rest of your project
           uv sync
 
       - name: Install Nuitka
