@@ -95,7 +95,7 @@ class GameScreen:
                 # load nijiiro, rename "notes"
                 # to leave hardcoded 'notes' in calls below
                 tex.load_zip("game", "notes_nijiiro")
-                tex.textures["notes"] = tex.textures.pop("notes_nijiiro") 
+                tex.textures["notes"] = tex.textures.pop("notes_nijiiro")
             audio.load_screen_sounds('game')
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
             ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
@@ -2117,22 +2117,17 @@ class JudgeCounter:
         for i in range(4):
             tex.draw_texture('judge_counter', 'percent', index=i, color=self.orange)
 
-        total_notes = self.good + self.ok + self.bad or 1
-        inv_total = rounded(100.0 / total_notes)
-        good_percent = self.good * inv_total
-        ok_percent = self.ok * inv_total
-        bad_percent = self.bad * inv_total
-        combo_percent = (self.good + self.ok) * inv_total
-        self.draw_counter(good_percent, 260, 440, 23, self.orange)
-        self.draw_counter(ok_percent, 260, 477, 23, self.orange)
-        self.draw_counter(bad_percent, 260, 515, 23, self.orange)
-        self.draw_counter(combo_percent, 270, 388, 23, self.orange)
-
-        self.draw_counter(self.good, 180, 440, 23, self.white)
-        self.draw_counter(self.ok, 180, 477, 23, self.white)
-        self.draw_counter(self.bad, 180, 515, 23, self.white)
-        self.draw_counter(self.drumrolls, 180, 577, 23, self.white)
-
+        total_notes = self.good + self.ok + self.bad
+        if total_notes == 0:
+            total_notes = 1
+        self.draw_counter(self.good / total_notes * 100, 260, 440, 23, ray.Color(253, 161, 0, 255))
+        self.draw_counter(self.ok / total_notes * 100, 260, 477, 23, ray.Color(253, 161, 0, 255))
+        self.draw_counter(self.bad / total_notes * 100, 260, 515, 23, ray.Color(253, 161, 0, 255))
+        self.draw_counter((self.good + self.ok) / total_notes * 100, 270, 388, 23, ray.Color(253, 161, 0, 255))
+        self.draw_counter(self.good, 180, 440, 23, ray.WHITE)
+        self.draw_counter(self.ok, 180, 477, 23, ray.WHITE)
+        self.draw_counter(self.bad, 180, 515, 23, ray.WHITE)
+        self.draw_counter(self.drumrolls, 180, 577, 23, ray.WHITE)
 
 class Gauge:
     """The player's gauge"""
