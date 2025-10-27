@@ -224,45 +224,6 @@ jobs:
       - name: Setup Python
         run: uv python install
 
-      - name: Build Pillow from source (Windows)
-        if: runner.os == 'Windows'
-        shell: msys2 {0}
-        run: |
-          echo "=== Building Pillow from source ==="
-
-          # Find uv in Windows PATH
-          UV_PATH=$(where.exe uv.exe | head -n1)
-          echo "UV found at: $UV_PATH"
-
-          # Get the Python directory from uv
-          PYTHON_DIR=$("$UV_PATH" python dir 2>/dev/null || echo "")
-
-          if [ -z "$PYTHON_DIR" ]; then
-            echo "Trying alternative method to find Python..."
-            # Alternative: check common uv Python locations
-            PYTHON_DIR=$(find /c/Users/*/AppData/Roaming/uv/python -name "cpython-*-windows-*" -type d 2>/dev/null | head -n1)
-          fi
-
-          PYTHON_EXE="$PYTHON_DIR/python.exe"
-          echo "Python directory: $PYTHON_DIR"
-          echo "Python executable: $PYTHON_EXE"
-
-          if [ ! -f "$PYTHON_EXE" ]; then
-            echo "Error: Python executable not found at $PYTHON_EXE"
-            exit 1
-          fi
-
-          # Set up build environment with MSYS2 paths
-          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
-          export CFLAGS="-I/mingw64/include"
-          export LDFLAGS="-L/mingw64/lib"
-
-          # Build Pillow using the Windows Python
-          "$PYTHON_EXE" -m pip install --no-binary pillow pillow
-
-          echo "=== Pillow build completed ==="
-          "$PYTHON_EXE" -m pip show pillow
-
       - name: Install Dependencies
         run: |
           uv sync

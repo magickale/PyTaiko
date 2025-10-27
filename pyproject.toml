@@ -16,6 +16,9 @@ paths = ["."]
 
 [tool.uv]
 find-links = ["raylib-sdl"]
+override-dependencies = [
+    "pillow",
+]
 
 [dependency-groups]
 dev = [
