@@ -105,7 +105,15 @@ def is_l_don_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_2p"]["left_don"]
     gamepad_buttons = global_data.config["gamepad"]["left_don"]
     for key in keys:
-        if ray.is_key_pressed(ord(key)):
+        if len(key) == 1 and key.isalnum():
+            key_code = ord(key.upper())
+            print(key_code)
+        else:
+            key_code = getattr(ray, f"KEY_{key.upper()}", None)
+            if key_code is None:
+                continue
+
+        if ray.is_key_pressed(key_code):
             return True
 
     if ray.is_gamepad_available(0):
@@ -137,7 +145,14 @@ def is_r_don_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_2p"]["right_don"]
     gamepad_buttons = global_data.config["gamepad"]["right_don"]
     for key in keys:
-        if ray.is_key_pressed(ord(key)):
+        if len(key) == 1 and key.isalnum():
+            key_code = ord(key.upper())
+        else:
+            key_code = getattr(ray, f"KEY_{key.upper()}", None)
+            if key_code is None:
+                continue
+
+        if ray.is_key_pressed(key_code):
             return True
 
     if ray.is_gamepad_available(0):
@@ -169,7 +184,14 @@ def is_l_kat_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_2p"]["left_kat"]
     gamepad_buttons = global_data.config["gamepad"]["left_kat"]
     for key in keys:
-        if ray.is_key_pressed(ord(key)):
+        if len(key) == 1 and key.isalnum():
+            key_code = ord(key.upper())
+        else:
+            key_code = getattr(ray, f"KEY_{key.upper()}", None)
+            if key_code is None:
+                continue
+
+        if ray.is_key_pressed(key_code):
             return True
 
     if ray.is_gamepad_available(0):
@@ -201,7 +223,14 @@ def is_r_kat_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_2p"]["right_kat"]
     gamepad_buttons = global_data.config["gamepad"]["right_kat"]
     for key in keys:
-        if ray.is_key_pressed(ord(key)):
+        if len(key) == 1 and key.isalnum():
+            key_code = ord(key.upper())
+        else:
+            key_code = getattr(ray, f"KEY_{key.upper()}", None)
+            if key_code is None:
+                continue
+
+        if ray.is_key_pressed(key_code):
             return True
 
     if ray.is_gamepad_available(0):

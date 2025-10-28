@@ -27,7 +27,7 @@ tja_path = ['Songs']
 video_path = ['Videos']
 
 [keys_1p]
-exit_key = 'A'
+exit_key = 'Q'
 left_kat = ['D']
 left_don = ['F']
 right_don = ['J']
