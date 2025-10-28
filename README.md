@@ -127,7 +127,8 @@ Generic drum keybinds can be found in config.toml or the settings screen ingame
 
 I like it
 
-
 ## Contributing
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Yonokid/PyTaiko)
 
 Contributions are now open. I don't have any particular contribution guidelines other than be mindful of what builtin functions already exist in this project (ie, for animations, videos, etc)
