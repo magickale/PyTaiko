@@ -4,8 +4,8 @@ from libs.screen import Screen
 
 
 class DevScreen(Screen):
-    def on_screen_start(self, screen_name: str):
-        super().on_screen_start(screen_name)
+    def on_screen_start(self):
+        super().on_screen_start()
 
     def on_screen_end(self, next_screen: str):
         return super().on_screen_end(next_screen)

@@ -20,7 +20,7 @@ class BaseFever:
         self.bounce_down.start()
         self.bounce_up.start()
 
-    def update(self, current_time_ms: int, bpm: float):
+    def update(self, current_time_ms: float, bpm: float):
         self.bounce_up.update(current_time_ms)
         self.bounce_down.update(current_time_ms)
         if self.bounce_down.is_finished:

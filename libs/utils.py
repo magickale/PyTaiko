@@ -262,7 +262,7 @@ for file in Path('cache/image').iterdir():
 
 class OutlinedText:
     """Create an outlined text object."""
-    def __init__(self, text: str, font_size: int, color: ray.Color, outline_color: ray.Color, outline_thickness=5.0, vertical=False):
+    def __init__(self, text: str, font_size: int, color: ray.Color, outline_thickness=5.0, vertical=False):
         """
         Create an outlined text object.
 
@@ -286,30 +286,15 @@ class OutlinedText:
             else:
                 self.texture = self._create_text_horizontal(text, font_size, color, ray.BLANK, self.font)
         outline_size = ray.ffi.new('float*', self.outline_thickness)
-        if isinstance(outline_color, tuple):
-            outline_color_alloc = ray.ffi.new("float[4]", [
-                outline_color[0] / 255.0,
-                outline_color[1] / 255.0,
-                outline_color[2] / 255.0,
-                outline_color[3] / 255.0
-            ])
-        else:
-            outline_color_alloc = ray.ffi.new("float[4]", [
-                outline_color.r / 255.0,
-                outline_color.g / 255.0,
-                outline_color.b / 255.0,
-                outline_color.a / 255.0
-            ])
         texture_size = ray.ffi.new("float[2]", [self.texture.width, self.texture.height])
 
         self.shader = ray.load_shader('shader/outline.vs', 'shader/outline.fs')
-        outline_size_loc = ray.get_shader_location(self.shader, "outlineSize")
-        outline_color_loc = ray.get_shader_location(self.shader, "outlineColor")
-        texture_size_loc = ray.get_shader_location(self.shader, "textureSize")
+        self.outline_size_loc = ray.get_shader_location(self.shader, "outlineSize")
+        self.outline_color_loc = ray.get_shader_location(self.shader, "outlineColor")
+        self.texture_size_loc = ray.get_shader_location(self.shader, "textureSize")
         self.alpha_loc = ray.get_shader_location(self.shader, "alpha")
-        ray.set_shader_value(self.shader, outline_size_loc, outline_size, SHADER_UNIFORM_FLOAT)
-        ray.set_shader_value(self.shader, outline_color_loc, outline_color_alloc, SHADER_UNIFORM_VEC4)
-        ray.set_shader_value(self.shader, texture_size_loc, texture_size, SHADER_UNIFORM_VEC2)
+        ray.set_shader_value(self.shader, self.outline_size_loc, outline_size, SHADER_UNIFORM_FLOAT)
+        ray.set_shader_value(self.shader, self.texture_size_loc, texture_size, SHADER_UNIFORM_VEC2)
 
         self.default_src = ray.Rectangle(0, 0, self.texture.width, self.texture.height)
 
@@ -517,25 +502,50 @@ class OutlinedText:
         ray.unload_image(image)
         return texture
 
-    def draw(self, src: ray.Rectangle, dest: ray.Rectangle, origin: ray.Vector2, rotation: float, color: ray.Color):
+    def draw(self, outline_color: ray.Color=ray.BLANK, color: ray.Color=ray.WHITE, scale: float = 1.0, center: bool = False,
+            x: float = 0, y: float = 0, x2: float = 0, y2: float = 0,
+            origin: ray.Vector2 = ray.Vector2(0,0), rotation: float = 0, fade: float = 1.1) -> None:
         """
-        Draw the outlined text object.
-
-        Args:
-            src (ray.Rectangle): The source rectangle of the texture.
-            dest (ray.Rectangle): The destination rectangle of the texture.
-            origin (ray.Vector2): The origin of the texture.
-            rotation (float): The rotation of the texture.
-            color (ray.Color): The color of the text.
+        Wrapper function for raylib's draw_texture_pro().
+        Parameters:
+            outline_color (ray.Color): The color to outline the text.
+            color (ray.Color): The color to tint the text.
+            x (float): An x-value added to the top-left corner of the text.
+            y (float): The y-value added to the top-left corner of the text.
+            x2 (float): The x-value added to the bottom-right corner of the text.
+            y2 (float): The y-value added to the bottom-right corner of the text.
+            origin (ray.Vector2): The origin point of the text.
+            rotation (float): The rotation angle of the text.
+            fade (float): The fade factor to apply to the text.
         """
+        if isinstance(outline_color, tuple):
+            outline_color_alloc = ray.ffi.new("float[4]", [
+                outline_color[0] / 255.0,
+                outline_color[1] / 255.0,
+                outline_color[2] / 255.0,
+                outline_color[3] / 255.0
+            ])
+        else:
+            outline_color_alloc = ray.ffi.new("float[4]", [
+                outline_color.r / 255.0,
+                outline_color.g / 255.0,
+                outline_color.b / 255.0,
+                outline_color.a / 255.0
+            ])
+        ray.set_shader_value(self.shader, self.outline_color_loc, outline_color_alloc, SHADER_UNIFORM_VEC4)
         if isinstance(color, tuple):
             alpha_value = ray.ffi.new('float*', color[3] / 255.0)
         else:
             alpha_value = ray.ffi.new('float*', color.a / 255.0)
         ray.set_shader_value(self.shader, self.alpha_loc, alpha_value, SHADER_UNIFORM_FLOAT)
+        if fade != 1.1:
+            final_color = ray.fade(color, fade)
+        else:
+            final_color = color
+        dest_rect = ray.Rectangle(x, y, self.texture.width+x2, self.texture.height+y2)
         if self.outline_thickness > 0:
             ray.begin_shader_mode(self.shader)
-        ray.draw_texture_pro(self.texture, src, dest, origin, rotation, color)
+        ray.draw_texture_pro(self.texture, self.default_src, dest_rect, origin, rotation, final_color)
         if self.outline_thickness > 0:
             ray.end_shader_mode()
 

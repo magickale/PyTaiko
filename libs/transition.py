@@ -16,8 +16,8 @@ class Transition:
         self.chara_down = global_tex.get_animation(2)
         self.song_info_fade = global_tex.get_animation(3)
         self.song_info_fade_out = global_tex.get_animation(4)
-        self.title = OutlinedText(title, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
-        self.subtitle = OutlinedText(subtitle, 30, ray.WHITE, ray.BLACK, outline_thickness=5)
+        self.title = OutlinedText(title, 40, ray.WHITE)
+        self.subtitle = OutlinedText(subtitle, 30, ray.WHITE)
         self.is_second = is_second
 
     def start(self):
@@ -48,13 +48,13 @@ class Transition:
         global_tex.draw_texture('rainbow_transition', 'text_bg', y=-self.rainbow_up.attribute - offset, color=color_2)
 
         texture = self.title.texture
-        y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset
-        dest = ray.Rectangle(1280//2 - texture.width//2, y - 20, texture.width, texture.height)
-        self.title.draw(self.title.default_src, dest, ray.Vector2(0, 0), 0, color_1)
+        x = 1280//2 - texture.width//2
+        y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset - 20
+        self.title.draw(outline_color=ray.BLACK, x=x, y=y, color=color_1)
 
         texture = self.subtitle.texture
-        dest = ray.Rectangle(1280//2 - texture.width//2, y + 30, texture.width, texture.height)
-        self.subtitle.draw(self.subtitle.default_src, dest, ray.Vector2(0, 0), 0, color_1)
+        x = 1280//2 - texture.width//2
+        self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y + 30, color=color_1)
 
     def draw(self):
         """Draw the transition effect."""

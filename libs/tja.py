@@ -519,8 +519,10 @@ class TJAParser:
             return
 
         current_note = play_note_list[-1]
-        if current_note.type in {1, 2}:
-            current_note.moji = se_notes[current_note.type][0]
+        if current_note.type == 1:
+            current_note.moji = 0
+        elif current_note.type == 2:
+            current_note.moji = 3
         else:
             current_note.moji = se_notes[current_note.type]
 

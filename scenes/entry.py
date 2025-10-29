@@ -351,8 +351,8 @@ class EntryPlayer:
 
 class Box:
     """Box class for the entry screen"""
-    def __init__(self, text: tuple[OutlinedText, OutlinedText], location: str):
-        self.text, self.text_highlight = text
+    def __init__(self, text: OutlinedText, location: str):
+        self.text = text
         self.location = location
         self.box_tex_obj = tex.textures['mode_select']['box']
         if isinstance(self.box_tex_obj.texture, list):
@@ -419,11 +419,10 @@ class Box:
         if self.is_selected:
             text_x += self.open.attribute
         text_y = self.y + 20
-        text_dest = ray.Rectangle(text_x, text_y, self.text.texture.width, self.text.texture.height)
         if self.is_selected:
-            self.text_highlight.draw(self.text.default_src, text_dest, ray.Vector2(0, 0), 0, color)
+            self.text.draw(outline_color=ray.BLACK, x=text_x, y=text_y, color=color)
         else:
-            self.text.draw(self.text.default_src, text_dest, ray.Vector2(0, 0), 0, color)
+            self.text.draw(outline_color=ray.Color(109, 68, 24, 255), x=text_x, y=text_y, color=color)
 
     def draw(self, fade: float):
         color = ray.fade(ray.WHITE, fade)
@@ -435,11 +434,9 @@ class Box:
 class BoxManager:
     """BoxManager class for the entry screen"""
     def __init__(self):
-        self.box_titles: list[tuple[OutlinedText, OutlinedText]] = [
-        (OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
-         OutlinedText('演奏ゲーム', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True)),
-        (OutlinedText('ゲーム設定', 50, ray.WHITE, ray.Color(109, 68, 24, 255), outline_thickness=5, vertical=True),
-         OutlinedText('ゲーム設定', 50, ray.WHITE, ray.BLACK, outline_thickness=5, vertical=True))]
+        self.box_titles: list[OutlinedText] = [
+        OutlinedText('演奏ゲーム', 50, ray.WHITE, outline_thickness=5, vertical=True),
+        OutlinedText('ゲーム設定', 50, ray.WHITE, outline_thickness=5, vertical=True)]
         self.box_locations = ["SONG_SELECT", "SETTINGS"]
         self.num_boxes = len(self.box_titles)
         self.boxes = [Box(self.box_titles[i], self.box_locations[i]) for i in range(len(self.box_titles))]

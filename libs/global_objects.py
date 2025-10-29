@@ -17,8 +17,8 @@ class Nameplate:
             dan (int): The player's dan level.
             is_gold (bool): Whether the player's dan is gold.
         """
-        self.name = OutlinedText(name, 22, ray.WHITE, ray.BLACK, outline_thickness=3.0)
-        self.title = OutlinedText(title, 20, ray.BLACK, ray.WHITE, outline_thickness=0)
+        self.name = OutlinedText(name, 22, ray.WHITE, outline_thickness=3.0)
+        self.title = OutlinedText(title, 20, ray.BLACK, outline_thickness=0)
         self.dan_index = dan
         self.player_num = player_num
         self.is_gold = is_gold
@@ -64,10 +64,8 @@ class Nameplate:
         if self.player_num != -1:
             tex.draw_texture('nameplate', f'{self.player_num}p', x=x, y=y, fade=fade)
 
-        dest = ray.Rectangle(x+136 - (min(255 - offset*4, self.name.texture.width)//2) + offset, y+24, min(255 - offset*4, self.name.texture.width), self.name.texture.height)
-        self.name.draw(self.name.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, fade))
-        dest = ray.Rectangle(x+136 - (min(255 - offset*2, self.title.texture.width)//2) + title_offset, y-3, min(255 - offset*2, self.title.texture.width), self.title.texture.height)
-        self.title.draw(self.title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, fade))
+        self.name.draw(outline_color=ray.BLACK, x=x+136 - (min(255 - offset*4, self.name.texture.width)//2) + offset, y=y+24, x2=min(255 - offset*4, self.name.texture.width)-self.name.texture.width, color=ray.fade(ray.WHITE, fade))
+        self.title.draw(x=x+136 - (min(255 - offset*2, self.title.texture.width)//2) + title_offset, y=y-3, x2=min(255 - offset*2, self.title.texture.width)-self.title.texture.width, color=ray.fade(ray.WHITE, fade))
 
 class Indicator:
     """Indicator class for displaying drum navigation."""

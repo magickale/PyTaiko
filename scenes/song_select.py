@@ -975,8 +975,8 @@ class NeiroSelector:
         self.move.start()
         self.blue_arrow_fade = tex.get_animation(29, is_copy=True)
         self.blue_arrow_move = tex.get_animation(30, is_copy=True)
-        self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
-        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE)
+        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE)
         self.move_sideways = tex.get_animation(31, is_copy=True)
         self.fade_sideways = tex.get_animation(32, is_copy=True)
         self.direction = -1
@@ -1064,11 +1064,8 @@ class NeiroSelector:
         for i in range(len(counter)):
             tex.draw_texture('neiro', 'counter', frame=int(counter[i]), x=x-(total_width // 2) + (i * 20) + 60, y=y)
 
-        dest = ray.Rectangle(x+235 - (self.text.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text.texture.width, self.text.texture.height)
-        self.text.draw(self.text.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, self.fade_sideways.attribute))
-
-        dest = ray.Rectangle(x+(self.direction*-100) + 235 - (self.text_2.texture.width//2) + (self.move_sideways.attribute*self.direction), y+1000, self.text_2.texture.width, self.text_2.texture.height)
-        self.text_2.draw(self.text_2.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
+        self.text.draw(outline_color=ray.BLACK, x=x+235 - (self.text.texture.width//2) + (self.move_sideways.attribute*self.direction), y=y+1000, color=ray.fade(ray.WHITE, self.fade_sideways.attribute))
+        self.text_2.draw(outline_color=ray.BLACK, x=x+(self.direction*-100) + 235 - (self.text_2.texture.width//2) + (self.move_sideways.attribute*self.direction), y=y+1000, color=ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
 
 class ModifierSelector:
     """The menu for selecting the game modifiers."""
@@ -1100,19 +1097,19 @@ class ModifierSelector:
         self.fade_sideways = tex.get_animation(32, is_copy=True)
         self.direction = -1
         audio.play_sound(f'voice_options_{self.player_num}p', 'sound')
-        self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, ray.BLACK, outline_thickness=3.5) for mod in self.mods]
-        self.text_true = OutlinedText('する', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_false = OutlinedText('しない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_speed = OutlinedText(str(global_data.modifiers[int(self.player_num)-1].speed), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_kimagure = OutlinedText('きまぐれ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_detarame = OutlinedText('でたらめ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, outline_thickness=3.5) for mod in self.mods]
+        self.text_true = OutlinedText('する', 30, ray.WHITE, outline_thickness=3.5)
+        self.text_false = OutlinedText('しない', 30, ray.WHITE, outline_thickness=3.5)
+        self.text_speed = OutlinedText(str(global_data.modifiers[int(self.player_num)-1].speed), 30, ray.WHITE, outline_thickness=3.5)
+        self.text_kimagure = OutlinedText('きまぐれ', 30, ray.WHITE, outline_thickness=3.5)
+        self.text_detarame = OutlinedText('でたらめ', 30, ray.WHITE, outline_thickness=3.5)
 
         # Secondary text objects for animation
-        self.text_true_2 = OutlinedText('する', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_false_2 = OutlinedText('しない', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_speed_2 = OutlinedText(str(global_data.modifiers[int(self.player_num)-1].speed), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_kimagure_2 = OutlinedText('きまぐれ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
-        self.text_detarame_2 = OutlinedText('でたらめ', 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+        self.text_true_2 = OutlinedText('する', 30, ray.WHITE, outline_thickness=3.5)
+        self.text_false_2 = OutlinedText('しない', 30, ray.WHITE, outline_thickness=3.5)
+        self.text_speed_2 = OutlinedText(str(global_data.modifiers[int(self.player_num)-1].speed), 30, ray.WHITE, outline_thickness=3.5)
+        self.text_kimagure_2 = OutlinedText('きまぐれ', 30, ray.WHITE, outline_thickness=3.5)
+        self.text_detarame_2 = OutlinedText('でたらめ', 30, ray.WHITE, outline_thickness=3.5)
 
     def update(self, current_ms):
         self.is_finished = self.is_confirmed and self.move.is_finished
@@ -1130,7 +1127,7 @@ class ModifierSelector:
 
             if current_mod.name == 'speed':
                 self.text_speed.unload()
-                self.text_speed = OutlinedText(str(current_value), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+                self.text_speed = OutlinedText(str(current_value), 30, ray.WHITE, outline_thickness=3.5)
 
     def confirm(self):
         if self.is_confirmed:
@@ -1151,7 +1148,7 @@ class ModifierSelector:
 
         if current_mod.name == 'speed':
             self.text_speed_2.unload()
-            self.text_speed_2 = OutlinedText(str(current_value), 30, ray.WHITE, ray.BLACK, outline_thickness=3.5)
+            self.text_speed_2 = OutlinedText(str(current_value), 30, ray.WHITE, outline_thickness=3.5)
 
     def left(self):
         if self.is_confirmed:
@@ -1183,23 +1180,16 @@ class ModifierSelector:
             setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, (current_value+1) % 3)
             self._start_text_animation(1)
 
-    def _draw_animated_text(self, text_primary, text_secondary, x, y, should_animate):
+    def _draw_animated_text(self, text_primary: OutlinedText, text_secondary: OutlinedText, x: float, y: float, should_animate: bool):
         if should_animate and not self.move_sideways.is_finished:
             # Draw primary text moving out
-            dest = ray.Rectangle(x + (self.move_sideways.attribute * self.direction), y,
-                               text_primary.texture.width, text_primary.texture.height)
-            text_primary.draw(text_primary.default_src, dest, ray.Vector2(0, 0), 0,
-                            ray.fade(ray.WHITE, self.fade_sideways.attribute))
+            text_primary.draw(outline_color=ray.BLACK, x=x + (self.move_sideways.attribute * self.direction), y=y, color=ray.fade(ray.WHITE, self.fade_sideways.attribute))
 
             # Draw secondary text moving in
-            dest = ray.Rectangle((self.direction * -100) + x + (self.move_sideways.attribute * self.direction), y,
-                               text_secondary.texture.width, text_secondary.texture.height)
-            text_secondary.draw(text_secondary.default_src, dest, ray.Vector2(0, 0), 0,
-                              ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
+            text_secondary.draw(outline_color=ray.BLACK, x=(self.direction * -100) + x + (self.move_sideways.attribute * self.direction), y=y, color=ray.fade(ray.WHITE, 1 - self.fade_sideways.attribute))
         else:
             # Draw static text
-            dest = ray.Rectangle(x, y, text_primary.texture.width, text_primary.texture.height)
-            text_primary.draw(text_primary.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+            text_primary.draw(outline_color=ray.BLACK, x=x, y=y)
 
     def draw(self):
         if self.is_confirmed:

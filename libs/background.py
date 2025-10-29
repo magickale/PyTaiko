@@ -141,7 +141,7 @@ class Background:
         self.is_clear = gauge_1p.is_clear
         self.is_rainbow = gauge_1p.is_rainbow
         self.don_bg.update(current_time_ms, self.is_clear)
-        if self.don_bg_2 is not None:
+        if self.don_bg_2 is not None and gauge_2p is not None:
             self.don_bg_2.update(current_time_ms, gauge_2p.is_clear)
         if self.bg_normal is not None:
             self.bg_normal.update(current_time_ms)

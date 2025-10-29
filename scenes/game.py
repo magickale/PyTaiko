@@ -1751,7 +1751,7 @@ class SongInfo:
     def __init__(self, song_name: str, genre: int):
         self.song_name = song_name
         self.genre = genre
-        self.song_title = OutlinedText(song_name, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
+        self.song_title = OutlinedText(song_name, 40, ray.WHITE, outline_thickness=5)
         self.fade = tex.get_animation(3)
 
     def update(self, current_ms: float):
@@ -1762,8 +1762,7 @@ class SongInfo:
 
         text_x = 1252 - self.song_title.texture.width
         text_y = 50 - self.song_title.texture.height//2
-        dest = ray.Rectangle(text_x, text_y, self.song_title.texture.width, self.song_title.texture.height)
-        self.song_title.draw(self.song_title.default_src, dest, ray.Vector2(0, 0), 0, ray.fade(ray.WHITE, 1 - self.fade.attribute))
+        self.song_title.draw(outline_color=ray.BLACK, x=text_x, y=text_y, color=ray.fade(ray.WHITE, 1 - self.fade.attribute))
 
         if self.genre < 9:
             tex.draw_texture('song_info', 'genre', fade=1 - self.fade.attribute, frame=self.genre)

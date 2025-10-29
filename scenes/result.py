@@ -26,7 +26,7 @@ class State:
 class ResultScreen(Screen):
     def on_screen_start(self):
         super().on_screen_start()
-        self.song_info = OutlinedText(global_data.session_data[0].song_title, 40, ray.WHITE, ray.BLACK, outline_thickness=5)
+        self.song_info = OutlinedText(global_data.session_data[0].song_title, 40, ray.WHITE, outline_thickness=5)
         audio.play_sound('bgm', 'music')
         self.fade_in = FadeIn(str(global_data.player_num))
         self.fade_out = tex.get_animation(0)
@@ -72,8 +72,7 @@ class ResultScreen(Screen):
 
     def draw_song_info(self):
         tex.draw_texture('song_info', 'song_num', frame=global_data.songs_played%4)
-        dest = ray.Rectangle(1252 - self.song_info.texture.width, 35 - self.song_info.texture.height / 2, self.song_info.texture.width, self.song_info.texture.height)
-        self.song_info.draw(self.song_info.default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+        self.song_info.draw(x=1252 - self.song_info.texture.width, y=35 - self.song_info.texture.height / 2)
 
     def draw(self):
         self.background.draw()
