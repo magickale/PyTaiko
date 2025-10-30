@@ -2159,7 +2159,6 @@ class Gauge:
         self.is_rainbow = False
         self.table = [
             [
-                None,
                 {"clear_rate": 36.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
                 {"clear_rate": 38.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
                 {"clear_rate": 38.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
@@ -2167,7 +2166,6 @@ class Gauge:
                 {"clear_rate": 44.0, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
             ],
             [
-                None,
                 {"clear_rate": 45.939, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
                 {"clear_rate": 45.939, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
                 {"clear_rate": 48.676, "ok_multiplier": 0.75, "bad_multiplier": -0.5},
@@ -2177,7 +2175,6 @@ class Gauge:
                 {"clear_rate": 52.5, "ok_multiplier": 0.75, "bad_multiplier": -1.0},
             ],
             [
-                None,
                 {"clear_rate": 54.325, "ok_multiplier": 0.75, "bad_multiplier": -0.75},
                 {"clear_rate": 54.325, "ok_multiplier": 0.75, "bad_multiplier": -0.75},
                 {"clear_rate": 50.774, "ok_multiplier": 0.75, "bad_multiplier": -1.0},
@@ -2188,7 +2185,6 @@ class Gauge:
                 {"clear_rate": 48.120, "ok_multiplier": 0.75, "bad_multiplier": -1.25},
             ],
             [
-                None,
                 {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
                 {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
                 {"clear_rate": 56.603, "ok_multiplier": 0.5, "bad_multiplier": -1.6},
@@ -2209,7 +2205,7 @@ class Gauge:
         """Adds a good note to the gauge"""
         self.gauge_update_anim.start()
         self.previous_length = int(self.gauge_length)
-        self.gauge_length += (1 / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
+        self.gauge_length += (1 / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level-1]["clear_rate"]))
         if self.gauge_length > self.gauge_max:
             self.gauge_length = self.gauge_max
 
@@ -2217,14 +2213,14 @@ class Gauge:
         """Adds an ok note to the gauge"""
         self.gauge_update_anim.start()
         self.previous_length = int(self.gauge_length)
-        self.gauge_length += ((1 * self.table[self.difficulty][self.level]["ok_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
+        self.gauge_length += ((1 * self.table[self.difficulty][self.level-1]["ok_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level-1]["clear_rate"]))
         if self.gauge_length > self.gauge_max:
             self.gauge_length = self.gauge_max
 
     def add_bad(self):
         """Adds a bad note to the gauge"""
         self.previous_length = int(self.gauge_length)
-        self.gauge_length += ((1 * self.table[self.difficulty][self.level]["bad_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level]["clear_rate"]))
+        self.gauge_length += ((1 * self.table[self.difficulty][self.level-1]["bad_multiplier"]) / self.total_notes) * (100 * (self.clear_start[self.difficulty] / self.table[self.difficulty][self.level-1]["clear_rate"]))
         if self.gauge_length < 0:
             self.gauge_length = 0
 

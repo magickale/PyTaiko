@@ -495,17 +495,15 @@ class TJAParser:
     def get_moji(self, play_note_list: list[Note], ms_per_measure: float) -> None:
         """
         Assign 口唱歌 (note phoneticization) to notes.
-
         Args:
             play_note_list (list[Note]): The list of notes to process.
             ms_per_measure (float): The duration of a measure in milliseconds.
-
         Returns:
             None
         """
         se_notes = {
-            1: [0, 1, 2],  # Note '1' has three possible sound effects
-            2: [3, 4],     # Note '2' has two possible sound effects
+            1: 0,
+            2: 3,
             3: 5,
             4: 6,
             5: 7,
@@ -514,10 +512,8 @@ class TJAParser:
             8: 10,
             9: 11
         }
-
         if len(play_note_list) <= 1:
             return
-
         current_note = play_note_list[-1]
         if current_note.type == 1:
             current_note.moji = 0
@@ -525,44 +521,43 @@ class TJAParser:
             current_note.moji = 3
         else:
             current_note.moji = se_notes[current_note.type]
-
         prev_note = play_note_list[-2]
-
-        if prev_note.type in {1, 2}:
+        if prev_note.type == 1:
             timing_threshold = ms_per_measure / 8 - 1
             if current_note.hit_ms - prev_note.hit_ms <= timing_threshold:
-                prev_note.moji = se_notes[prev_note.type][1]
+                prev_note.moji = 1
             else:
-                prev_note.moji = se_notes[prev_note.type][0]
+                prev_note.moji = 0
+        elif prev_note.type == 2:
+            timing_threshold = ms_per_measure / 8 - 1
+            if current_note.hit_ms - prev_note.hit_ms <= timing_threshold:
+                prev_note.moji = 4
+            else:
+                prev_note.moji = 3
         else:
             prev_note.moji = se_notes[prev_note.type]
-
         if len(play_note_list) > 3:
             notes_minus_4 = play_note_list[-4]
             notes_minus_3 = play_note_list[-3]
             notes_minus_2 = play_note_list[-2]
-
             consecutive_ones = (
                 notes_minus_4.type == 1 and
                 notes_minus_3.type == 1 and
                 notes_minus_2.type == 1
             )
-
             if consecutive_ones:
                 rapid_timing = (
                     notes_minus_3.hit_ms - notes_minus_4.hit_ms < (ms_per_measure / 8) and
                     notes_minus_2.hit_ms - notes_minus_3.hit_ms < (ms_per_measure / 8)
                 )
-
                 if rapid_timing:
                     if len(play_note_list) > 5:
                         spacing_before = play_note_list[-4].hit_ms - play_note_list[-5].hit_ms >= (ms_per_measure / 8)
                         spacing_after = play_note_list[-1].hit_ms - play_note_list[-2].hit_ms >= (ms_per_measure / 8)
-
                         if spacing_before and spacing_after:
-                            play_note_list[-3].moji = se_notes[1][2]
+                            play_note_list[-3].moji = 2
                     else:
-                        play_note_list[-3].moji = se_notes[1][2]
+                        play_note_list[-3].moji = 2
 
     def notes_to_position(self, diff: int):
         """Parse a TJA's notes into a NoteList."""

@@ -29,6 +29,7 @@ from scenes.settings import SettingsScreen
 from scenes.song_select import SongSelectScreen
 from scenes.title import TitleScreen
 from scenes.two_player.song_select import TwoPlayerSongSelectScreen
+from scenes.dan_select import DanSelectScreen
 
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class Screens:
     RESULT = "RESULT"
     RESULT_2P = "RESULT_2P"
     SONG_SELECT_2P = "SONG_SELECT_2P"
+    DAN_SELECT = "DAN_SELECT"
     SETTINGS = "SETTINGS"
     DEV_MENU = "DEV_MENU"
     LOADING = "LOADING"
@@ -156,6 +158,7 @@ def main():
     result_screen_2p = TwoPlayerResultScreen('result')
     settings_screen = SettingsScreen('settings')
     dev_screen = DevScreen('dev')
+    dan_select_screen = DanSelectScreen('dan_select')
 
     screen_mapping = {
         Screens.ENTRY: entry_screen,
@@ -168,6 +171,7 @@ def main():
         Screens.RESULT_2P: result_screen_2p,
         Screens.SETTINGS: settings_screen,
         Screens.DEV_MENU: dev_screen,
+        Screens.DAN_SELECT: dan_select_screen,
         Screens.LOADING: load_screen
     }
     target = ray.load_render_texture(screen_width, screen_height)
@@ -195,7 +199,7 @@ def main():
         next_screen = screen.update()
         if screen.screen_init:
             ray.clear_background(ray.BLACK)
-            screen.draw()
+            screen._do_draw()
 
         if next_screen is not None:
             logger.info(f"Screen changed from {current_screen} to {next_screen}")

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+import json
 import logging
 from pathlib import Path
 import random
@@ -134,7 +136,8 @@ class SongBox:
                 if not (-56 <= self.position <= 1280):
                     self.reset()
 
-    def update(self, is_diff_select):
+    def update(self, is_diff_select: bool):
+        current_time = get_current_ms()
         self.is_diff_select = is_diff_select
         is_open_prev = self.is_open
         self.move_box()
@@ -146,10 +149,10 @@ class SongBox:
             self.yellow_box.update(is_diff_select)
 
         if self.history_wait == 0:
-            self.history_wait = get_current_ms()
+            self.history_wait = current_time
 
         if self.score_history is None and {k: v for k, v in self.scores.items() if v is not None}:
-            self.score_history = ScoreHistory(self.scores, get_current_ms())
+            self.score_history = ScoreHistory(self.scores, current_time)
 
         if not is_open_prev and self.is_open:
             if self.tja is not None or self.is_back:
@@ -159,9 +162,9 @@ class SongBox:
                 self.hori_name = OutlinedText(self.text_name, 40, ray.WHITE, outline_thickness=5)
                 self.open_anim.start()
                 self.open_fade.start()
-            self.wait = get_current_ms()
-            if get_current_ms() >= self.history_wait + 3000:
-                self.history_wait = get_current_ms()
+            self.wait = current_time
+            if current_time >= self.history_wait + 3000:
+                self.history_wait = current_time
             if self.tja is None and self.texture_index != 17 and not audio.is_sound_playing('voice_enter'):
                 audio.play_sound(f'genre_voice_{self.texture_index}', 'voice')
         elif not self.is_open and is_open_prev and audio.is_sound_playing(f'genre_voice_{self.texture_index}'):
@@ -171,14 +174,14 @@ class SongBox:
         if self.box_texture is None and self.box_texture_path is not None:
             self.box_texture = ray.load_texture(self.box_texture_path)
 
-        self.open_anim.update(get_current_ms())
-        self.open_fade.update(get_current_ms())
+        self.open_anim.update(current_time)
+        self.open_fade.update(current_time)
 
         if self.name is None:
             self.name = OutlinedText(self.text_name, 40, ray.WHITE, outline_thickness=5, vertical=True)
 
         if self.score_history is not None:
-            self.score_history.update(get_current_ms())
+            self.score_history.update(current_time)
 
 
     def _draw_closed(self, x: int, y: int):
@@ -195,6 +198,7 @@ class SongBox:
 
         if self.is_back:
             tex.draw_texture('box', 'back_text', x=x, y=y)
+            return
         elif self.name is not None:
             self.name.draw(outline_color=SongBox.OUTLINE_MAP.get(self.name_texture_index, ray.Color(101, 0, 82, 255)), x=x + 47 - int(self.name.texture.width / 2), y=y+35, y2=min(self.name.texture.height, 417)-self.name.texture.height)
 
@@ -271,11 +275,12 @@ class SongBox:
 
 class YellowBox:
     """A song box when it is opened."""
-    def __init__(self, name: OutlinedText, is_back: bool, tja: Optional[TJAParser] = None):
+    def __init__(self, name: Optional[OutlinedText], is_back: bool, tja: Optional[TJAParser] = None, is_dan: bool = False):
         self.is_diff_select = False
         self.name = name
         self.is_back = is_back
         self.tja = tja
+        self.is_dan = is_dan
         self.subtitle = None
         if self.tja is not None:
             subtitle_text = self.tja.metadata.subtitle.get(global_data.config['general']['language'], '')
@@ -469,6 +474,8 @@ class YellowBox:
 
     def draw(self, song_box: SongBox, fade_override: Optional[float], is_ura: bool):
         self._draw_yellow_box()
+        if self.is_dan:
+            return
         if self.is_diff_select and self.tja is not None:
             self._draw_tja_data_diff(is_ura, song_box)
         else:
@@ -480,6 +487,103 @@ class YellowBox:
             self._draw_tja_data(song_box, ray.fade(ray.WHITE, fade), fade)
 
         self._draw_text(song_box)
+
+class DanBox:
+    def __init__(self, title: str, color: int, songs: list[tuple[TJAParser, int, int]], exams: list['Exam']):
+        self.position = -11111
+        self.start_position = -1
+        self.target_position = -1
+        self.move = None
+        self.is_open = False
+        self.is_back = False
+        self.title = title
+        self.color = color
+        self.songs = songs
+        self.exams = exams
+        self.song_text: list[tuple[OutlinedText, OutlinedText]] = []
+        self.name = None
+        self.yellow_box = None
+
+    def move_box(self):
+        if self.position != self.target_position and self.move is None:
+            if self.position < self.target_position:
+                direction = 1
+            else:
+                direction = -1
+            if abs(self.target_position - self.position) > 250:
+                direction *= -1
+            self.move = Animation.create_move(83.3*2, start_position=0, total_distance=300 * direction, ease_out='cubic')
+            self.move.start()
+            if self.is_open or self.target_position == BOX_CENTER + 150:
+                self.move.total_distance = 450 * direction
+            self.start_position = self.position
+        if self.move is not None:
+            self.move.update(get_current_ms())
+            self.position = self.start_position + int(self.move.attribute)
+            if self.move.is_finished:
+                self.position = self.target_position
+                self.move = None
+                if not (-56 <= self.position <= 1280):
+                    self.reset()
+
+    def reset(self):
+        if self.name is None:
+            self.name.unload()
+            self.name = None
+
+    def get_text(self):
+        if self.name is None:
+            self.name = OutlinedText(self.title, 40, ray.WHITE, outline_thickness=5, vertical=True)
+        if self.is_open and not self.song_text:
+            for song, genre, difficulty in self.songs:
+                title = song.metadata.title.get(global_data.config["general"]["language"], song.metadata.title["en"])
+                subtitle = song.metadata.subtitle.get(global_data.config["general"]["language"], "")
+                title_text = OutlinedText(title, 40, ray.WHITE, outline_thickness=5, vertical=True)
+                font_size = 30 if len(subtitle) < 30 else 20
+                subtitle_text = OutlinedText(subtitle, font_size, ray.WHITE, outline_thickness=5, vertical=True)
+                self.song_text.append((title_text, subtitle_text))
+
+    def update(self, is_diff_select: bool):
+        self.move_box()
+        self.get_text()
+        is_open_prev = self.is_open
+        self.is_open = self.position == BOX_CENTER + 150
+        if not is_open_prev and self.is_open:
+            self.yellow_box = YellowBox(self.name, self.is_back, is_dan=True)
+            self.yellow_box.create_anim()
+
+        if self.yellow_box is not None:
+            self.yellow_box.update(True)
+
+    def _draw_closed(self, x: int, y: int):
+        tex.draw_texture('box', 'folder', frame=self.color, x=x)
+        if self.name is not None:
+            self.name.draw(outline_color=ray.BLACK, x=x + 47 - int(self.name.texture.width / 2), y=y+35, y2=min(self.name.texture.height, 417)-self.name.texture.height)
+
+    def _draw_open(self, x: int, y: int, is_ura: bool):
+        if self.yellow_box is not None:
+            self.yellow_box.draw(x, y, False)
+            for i, song in enumerate(self.song_text):
+                title, subtitle = song
+                x = i * 140
+                tex.draw_texture('yellow_box', 'genre_banner', x=x, frame=self.songs[i][1])
+                tex.draw_texture('yellow_box', 'difficulty', x=x, frame=self.songs[i][2])
+                tex.draw_texture('yellow_box', 'difficulty_x', x=x)
+                tex.draw_texture('yellow_box', 'difficulty_star', x=x)
+                level = self.songs[i][0].metadata.course_data[self.songs[i][2]].level
+                counter = str(level)
+                total_width = len(counter) * 10
+                for i in range(len(counter)):
+                    tex.draw_texture('yellow_box', 'difficulty_num', frame=int(counter[i]), x=x-(total_width // 2) + (i * 10))
+
+                title.draw(outline_color=ray.BLACK, x=665+x, y=127, y2=min(title.texture.height, 400)-title.texture.height)
+                subtitle.draw(outline_color=ray.BLACK, x=620+x, y=525-min(subtitle.texture.height, 400), y2=min(subtitle.texture.height, 400)-subtitle.texture.height)
+
+    def draw(self, x: int, y: int, is_ura: bool):
+        if self.is_open:
+            self._draw_open(x, y, is_ura)
+        else:
+            self._draw_closed(x, y)
 
 class GenreBG:
     """The background for a genre box."""
@@ -651,6 +755,34 @@ class FileSystemItem:
         self.path = path
         self.name = name
 
+def parse_box_def(path: Path):
+    """Parse box.def file for directory metadata"""
+    texture_index = SongBox.DEFAULT_INDEX
+    name = path.name
+    collection = None
+    encoding = test_encodings(path / "box.def")
+
+    try:
+        with open(path / "box.def", 'r', encoding=encoding) as box_def:
+            for line in box_def:
+                line = line.strip()
+                if line.startswith("#GENRE:"):
+                    genre = line.split(":", 1)[1].strip()
+                    texture_index = FileSystemItem.GENRE_MAP.get(genre, SongBox.DEFAULT_INDEX)
+                    if texture_index == SongBox.DEFAULT_INDEX:
+                        texture_index = FileSystemItem.GENRE_MAP_2.get(genre, SongBox.DEFAULT_INDEX)
+                elif line.startswith("#TITLE:"):
+                    name = line.split(":", 1)[1].strip()
+                elif line.startswith("#TITLEJA:"):
+                    if global_data.config['general']['language'] == 'ja':
+                        name = line.split(":", 1)[1].strip()
+                elif line.startswith("#COLLECTION"):
+                    collection = line.split(":", 1)[1].strip()
+    except Exception as e:
+        logger.error(f"Error parsing box.def in {path}: {e}")
+
+    return name, texture_index, collection
+
 class Directory(FileSystemItem):
     """Represents a directory in the navigation system"""
     COLLECTIONS = [
@@ -690,6 +822,42 @@ class SongFile(FileSystemItem):
         self.box.hash = global_data.song_hashes[self.hash][0]["diff_hashes"]
         self.box.get_scores()
 
+@dataclass
+class Exam:
+    type: str
+    red: int
+    gold: int
+    range: str
+
+class DanCourse(FileSystemItem):
+    def __init__(self, path: Path, name: str):
+        super().__init__(path, name)
+        if name != "dan.json":
+            self.logging.error(f"Invalid dan course file: {path}")
+        with open(path, 'r') as f:
+            data = json.load(f)
+            title = data["title"]
+            color = data["color"]
+            songs = []
+            for song in data["songs"]:
+                hash = song["hash"]
+                song_title = song["title"]
+                song_subtitle = song["subtitle"]
+                difficulty = song["difficulty"]
+                if hash in global_data.song_hashes:
+                    path = Path(global_data.song_hashes[hash][0]["file_path"])
+                    if (path.parent.parent / "box.def").exists():
+                        _, genre_index, _ = parse_box_def(path.parent.parent)
+                    songs.append((TJAParser(path), genre_index, difficulty))
+                else:
+                    pass
+                    #do something with song_title, song_subtitle
+            exams = []
+            for exam in data["exams"]:
+                exams.append(Exam(exam["type"], exam["red"], exam["gold"], exam["range"]))
+
+        self.box = DanBox(title, color, songs, exams)
+
 class FileNavigator:
     """Manages navigation through pre-generated Directory and SongFile objects"""
     def __init__(self):
@@ -717,6 +885,7 @@ class FileNavigator:
         self.box_open = False
         self.genre_bg = None
         self.song_count = 0
+        self.in_dan_select = False
         logger.info("FileNavigator initialized")
 
     def initialize(self, root_dirs: list[Path]):
@@ -796,7 +965,7 @@ class FileNavigator:
             box_texture = None
             collection = None
 
-            name, texture_index, collection = self._parse_box_def(dir_path)
+            name, texture_index, collection = parse_box_def(dir_path)
             box_png_path = dir_path / "box.png"
             if box_png_path.exists():
                 box_texture = str(box_png_path)
@@ -847,7 +1016,10 @@ class FileNavigator:
             # Create SongFile objects
             for tja_path in sorted(tja_files):
                 song_key = str(tja_path)
-                if song_key not in self.all_song_files and tja_path in global_data.song_paths:
+                if song_key not in self.all_song_files and tja_path.name == "dan.json":
+                    song_obj = DanCourse(tja_path, tja_path.name)
+                    self.all_song_files[song_key] = song_obj
+                elif song_key not in self.all_song_files and tja_path in global_data.song_paths:
                     song_obj = SongFile(tja_path, tja_path.name, texture_index)
                     song_obj.box.get_scores()
                     for course in song_obj.tja.metadata.course_data:
@@ -872,10 +1044,10 @@ class FileNavigator:
                                 self.diff_sort_statistics[course][level][1] += 1
                             elif is_cleared:
                                 self.diff_sort_statistics[course][level][2] += 1
-                    self.song_count += 1
-                    global_data.song_progress = self.song_count / global_data.total_songs
                     if song_obj.is_recent:
                         self.new_items.append(SongFile(tja_path, tja_path.name, SongBox.DEFAULT_INDEX, name_texture_index=texture_index))
+                    self.song_count += 1
+                    global_data.song_progress = self.song_count / global_data.total_songs
                     self.all_song_files[song_key] = song_obj
 
                 if song_key in self.all_song_files:
@@ -914,7 +1086,7 @@ class FileNavigator:
 
         # Determine if current directory has child directories with box.def
         has_children = False
-        if self.is_at_root():
+        if self.is_at_root() or selected_item and selected_item.box.texture_index == 13:
             has_children = True  # Root always has "children" (the root directories)
         else:
             has_children = any(item.is_dir() and (item / "box.def").exists()
@@ -987,7 +1159,7 @@ class FileNavigator:
                                         temp_items.append(item)
                     content_items = random.sample(temp_items, 10)
 
-            if content_items == [] or (selected_item is not None and selected_item.box.texture_index == 13):
+            if content_items == []:
                 self.go_back()
                 return
             i = 1
@@ -1060,8 +1232,7 @@ class FileNavigator:
 
             self.load_current_directory(selected_item=selected_item)
 
-        elif isinstance(selected_item, SongFile):
-            return selected_item
+        return selected_item
 
     def go_back(self):
         """Navigate back to the previous directory"""
@@ -1109,6 +1280,8 @@ class FileNavigator:
             song_key = str(tja_path)
             if song_key in self.all_song_files:
                 song_obj = self.all_song_files[song_key]
+                if not isinstance(song_obj, SongFile):
+                    continue
                 for diff in song_obj.box.scores:
                     if diff not in all_scores:
                         all_scores[diff] = []
@@ -1136,7 +1309,7 @@ class FileNavigator:
         tja_files: list[Path] = []
 
         for path in directory.iterdir():
-            if path.is_file() and path.suffix.lower() == ".tja":
+            if (path.is_file() and path.suffix.lower() == ".tja") or path.name == "dan.json":
                 tja_files.append(path)
             elif path.is_dir():
                 # Only recurse into subdirectories that don't have box.def
@@ -1162,34 +1335,6 @@ class FileNavigator:
                     tja_files.extend(self._find_tja_files_recursive(path, box_def_dirs_only))
 
         return tja_files
-
-    def _parse_box_def(self, path: Path):
-        """Parse box.def file for directory metadata"""
-        texture_index = SongBox.DEFAULT_INDEX
-        name = path.name
-        collection = None
-        encoding = test_encodings(path / "box.def")
-
-        try:
-            with open(path / "box.def", 'r', encoding=encoding) as box_def:
-                for line in box_def:
-                    line = line.strip()
-                    if line.startswith("#GENRE:"):
-                        genre = line.split(":", 1)[1].strip()
-                        texture_index = FileSystemItem.GENRE_MAP.get(genre, SongBox.DEFAULT_INDEX)
-                        if texture_index == SongBox.DEFAULT_INDEX:
-                            texture_index = FileSystemItem.GENRE_MAP_2.get(genre, SongBox.DEFAULT_INDEX)
-                    elif line.startswith("#TITLE:"):
-                        name = line.split(":", 1)[1].strip()
-                    elif line.startswith("#TITLEJA:"):
-                        if global_data.config['general']['language'] == 'ja':
-                            name = line.split(":", 1)[1].strip()
-                    elif line.startswith("#COLLECTION"):
-                        collection = line.split(":", 1)[1].strip()
-        except Exception as e:
-            logger.error(f"Error parsing box.def in {path}: {e}")
-
-        return name, texture_index, collection
 
     def _read_song_list(self, path: Path):
         """Read and process song_list.txt file"""
@@ -1251,13 +1396,24 @@ class FileNavigator:
             elif offset < -len(self.items) // 2:
                 offset += len(self.items)
 
-            position = BOX_CENTER + (100 * offset)
+            # Adjust spacing based on dan select mode
+            base_spacing = 100
+            center_offset = 150
+            side_offset_l = 0
+            side_offset_r = 300
+
+            if self.in_dan_select:
+                base_spacing = 150
+                side_offset_l = 200
+                side_offset_r = 500
+
+            position = BOX_CENTER + (base_spacing * offset)
             if position == BOX_CENTER:
-                position += 150
+                position += center_offset
             elif position > BOX_CENTER:
-                position += 300
+                position += side_offset_r
             else:
-                position -= 0
+                position -= side_offset_l
 
             if item.box.position == -11111:
                 item.box.position = position

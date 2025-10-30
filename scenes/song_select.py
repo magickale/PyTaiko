@@ -64,6 +64,7 @@ class SongSelectScreen(Screen):
         self.timer_selected = Timer(40, get_current_ms(), self._confirm_selection_wrapper)
         self.screen_init = True
         self.ura_switch_animation = UraSwitchAnimation()
+        self.dan_transition = DanTransition()
 
         self.player_1 = SongSelectPlayer(str(global_data.player_num), self.text_fade_in)
 
@@ -88,7 +89,9 @@ class SongSelectScreen(Screen):
         self.reset_demo_music()
         self.finalize_song()
         self.player_1.nameplate.unload()
-        self.navigator.get_current_item().box.yellow_box.create_anim()
+        current_item = self.navigator.get_current_item()
+        if current_item.box.yellow_box is not None:
+            current_item.box.yellow_box.create_anim()
         return super().on_screen_end(next_screen)
 
     def reset_demo_music(self):
@@ -130,8 +133,13 @@ class SongSelectScreen(Screen):
             self.text_fade_in.start()
             self.text_fade_out.start()
         elif action == "select_song":
+            current_song = self.navigator.get_current_item()
+            if isinstance(current_song, Directory) and current_song.box.texture_index == 13:
+                self.dan_transition.start()
+                audio.stop_sound('bgm')
+                return
             selected_song = self.navigator.select_current_item()
-            if selected_song:
+            if isinstance(selected_song, SongFile):
                 self.state = State.SONG_SELECTED
                 self.player_1.on_song_selected(selected_song)
                 audio.play_sound('don', 'sound')
@@ -240,6 +248,9 @@ class SongSelectScreen(Screen):
         self.indicator.update(current_time)
         self.blue_arrow_fade.update(current_time)
         self.blue_arrow_move.update(current_time)
+        self.dan_transition.update(current_time)
+        if self.dan_transition.is_finished:
+            return self.on_screen_end('DAN_SELECT')
 
         next_screen = self.update_players(current_time)
 
@@ -353,6 +364,8 @@ class SongSelectScreen(Screen):
         if self.game_transition is not None:
             self.game_transition.draw()
 
+        if self.dan_transition.is_started:
+            self.dan_transition.draw()
         self.allnet_indicator.draw()
 
 class SongSelectPlayer:
@@ -998,7 +1011,7 @@ class NeiroSelector:
         self.move_sideways.start()
         self.fade_sideways.start()
         self.text_2.unload()
-        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE)
         self.direction = -1
         if self.selected_sound == len(self.sounds):
             return
@@ -1013,7 +1026,7 @@ class NeiroSelector:
         self.move_sideways.start()
         self.fade_sideways.start()
         self.text_2.unload()
-        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+        self.text_2 = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE)
         self.direction = 1
         if self.selected_sound == len(self.sounds):
             return
@@ -1037,7 +1050,7 @@ class NeiroSelector:
         self.fade_sideways.update(current_ms)
         if self.move_sideways.is_finished:
             self.text.unload()
-            self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE, ray.BLACK)
+            self.text = OutlinedText(self.sounds[self.selected_sound], 50, ray.WHITE)
         self.is_finished = self.move.is_finished and self.is_confirmed
 
     def draw(self):
@@ -1208,8 +1221,7 @@ class ModifierSelector:
             else:
                 tex.draw_texture('modifier', 'mod_bg', y=move + (i*50), x=x)
             tex.draw_texture('modifier', 'mod_box', y=move + (i*50), x=x)
-            dest = ray.Rectangle(92 + x, 819 + move + (i*50), self.text_name[i].texture.width, self.text_name[i].texture.height)
-            self.text_name[i].draw(self.text_name[i].default_src, dest, ray.Vector2(0, 0), 0, ray.WHITE)
+            self.text_name[i].draw(outline_color=ray.BLACK, x=92 + x, y=819 + move + (i*50))
 
             current_mod = self.mods[i]
             current_value = getattr(global_data.modifiers[int(self.player_num)-1], current_mod.name)
@@ -1255,3 +1267,21 @@ class ModifierSelector:
             if i == self.current_mod_index:
                 tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=x-self.blue_arrow_move.attribute, fade=self.blue_arrow_fade.attribute)
                 tex.draw_texture('modifier', 'blue_arrow', y=move + (i*50), x=x+110 + self.blue_arrow_move.attribute, mirror='horizontal', fade=self.blue_arrow_fade.attribute)
+
+class DanTransition:
+    def __init__(self):
+        self.slide_in = tex.get_animation(38)
+        self.is_finished = False
+        self.is_started = False
+
+    def start(self):
+        self.slide_in.start()
+        self.is_started = True
+
+    def update(self, current_time_ms: float):
+        self.slide_in.update(current_time_ms)
+        if self.slide_in.is_finished:
+            self.is_finished = True
+
+    def draw(self):
+        tex.draw_texture('dan_transition', 'background', x2=self.slide_in.attribute)

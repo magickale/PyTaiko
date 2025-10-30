@@ -39,3 +39,7 @@ class Screen:
 
     def draw(self):
         pass
+
+    def _do_draw(self):
+        if self.screen_init:
+            self.draw()
