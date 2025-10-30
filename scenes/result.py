@@ -72,7 +72,7 @@ class ResultScreen(Screen):
 
     def draw_song_info(self):
         tex.draw_texture('song_info', 'song_num', frame=global_data.songs_played%4)
-        self.song_info.draw(x=1252 - self.song_info.texture.width, y=35 - self.song_info.texture.height / 2)
+        self.song_info.draw(outline_color=ray.BLACK, x=1252 - self.song_info.texture.width, y=35 - self.song_info.texture.height / 2)
 
     def draw(self):
         self.background.draw()

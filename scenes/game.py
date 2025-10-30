@@ -52,10 +52,8 @@ class GameScreen(Screen):
         self.end_ms = 0
         self.start_delay = 1000
         self.song_started = False
-        self.screen_init = True
         self.movie = None
         self.song_music = None
-        logger.info("Game screen textures loaded")
         if global_data.config["general"]["nijiiro_notes"]:
             # drop original
             if "notes" in tex.textures:
@@ -65,7 +63,6 @@ class GameScreen(Screen):
             tex.load_zip("game", "notes_nijiiro")
             tex.textures["notes"] = tex.textures.pop("notes_nijiiro")
             logger.info("Loaded nijiiro notes textures")
-        logger.info("Game screen sounds loaded")
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
         session_data = global_data.session_data[global_data.player_num-1]

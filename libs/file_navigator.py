@@ -501,7 +501,18 @@ class DanBox:
         self.songs = songs
         self.exams = exams
         self.song_text: list[tuple[OutlinedText, OutlinedText]] = []
+        self.total_notes = 0
+        for song, genre_index, difficulty in self.songs:
+            notes, branch_m, branch_e, branch_n = song.notes_to_position(difficulty)
+            self.total_notes += len(notes.play_notes)
+            for branch in branch_m:
+                self.total_notes += len(branch.play_notes)
+            for branch in branch_e:
+                self.total_notes += len(branch.play_notes)
+            for branch in branch_n:
+                self.total_notes += len(branch.play_notes)
         self.name = None
+        self.hori_name = None
         self.yellow_box = None
 
     def move_box(self):
@@ -533,14 +544,15 @@ class DanBox:
 
     def get_text(self):
         if self.name is None:
-            self.name = OutlinedText(self.title, 40, ray.WHITE, outline_thickness=5, vertical=True)
+            self.name = OutlinedText(self.title, 40, ray.WHITE, vertical=True)
+            self.hori_name = OutlinedText(self.title, 40, ray.WHITE)
         if self.is_open and not self.song_text:
             for song, genre, difficulty in self.songs:
                 title = song.metadata.title.get(global_data.config["general"]["language"], song.metadata.title["en"])
                 subtitle = song.metadata.subtitle.get(global_data.config["general"]["language"], "")
-                title_text = OutlinedText(title, 40, ray.WHITE, outline_thickness=5, vertical=True)
+                title_text = OutlinedText(title, 40, ray.WHITE, vertical=True)
                 font_size = 30 if len(subtitle) < 30 else 20
-                subtitle_text = OutlinedText(subtitle, font_size, ray.WHITE, outline_thickness=5, vertical=True)
+                subtitle_text = OutlinedText(subtitle, font_size, ray.WHITE, vertical=True)
                 self.song_text.append((title_text, subtitle_text))
 
     def update(self, is_diff_select: bool):
@@ -578,6 +590,16 @@ class DanBox:
 
                 title.draw(outline_color=ray.BLACK, x=665+x, y=127, y2=min(title.texture.height, 400)-title.texture.height)
                 subtitle.draw(outline_color=ray.BLACK, x=620+x, y=525-min(subtitle.texture.height, 400), y2=min(subtitle.texture.height, 400)-subtitle.texture.height)
+
+            tex.draw_texture('yellow_box', 'total_notes_bg')
+            tex.draw_texture('yellow_box', 'total_notes')
+            counter = str(self.total_notes)
+            for i in range(len(counter)):
+                tex.draw_texture('yellow_box', 'total_notes_counter', frame=int(counter[i]), x=(i * 25))
+
+            tex.draw_texture('yellow_box', 'frame', frame=self.color)
+            if self.hori_name is not None:
+                self.hori_name.draw(outline_color=ray.BLACK, x=434 - (self.hori_name.texture.width//2), y=84, x2=min(self.hori_name.texture.width, 275)-self.hori_name.texture.width)
 
     def draw(self, x: int, y: int, is_ura: bool):
         if self.is_open:

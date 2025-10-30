@@ -69,6 +69,8 @@ class Transition:
         if self.is_second:
             offset = self.chara_down.attribute - self.mini_up.attribute//3
             chara_offset = 408
+        if self.title == '' and self.subtitle == '':
+            return
         global_tex.draw_texture('rainbow_transition', 'chara_left', x=-self.mini_up.attribute//2 - chara_offset, y=-self.mini_up.attribute + offset - total_offset)
         global_tex.draw_texture('rainbow_transition', 'chara_right', x=self.mini_up.attribute//2 + chara_offset, y=-self.mini_up.attribute + offset - total_offset)
         global_tex.draw_texture('rainbow_transition', 'chara_center', y=-self.rainbow_up.attribute + offset - total_offset)
