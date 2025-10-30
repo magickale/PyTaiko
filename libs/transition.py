@@ -54,7 +54,7 @@ class Transition:
 
         texture = self.subtitle.texture
         x = 1280//2 - texture.width//2
-        self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y + 30, color=color_1)
+        self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y + 50, color=color_1)
 
     def draw(self):
         """Draw the transition effect."""
