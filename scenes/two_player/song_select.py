@@ -53,6 +53,10 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
             self.text_fade_in.start()
             self.text_fade_out.start()
         elif action == "select_song":
+            current_song = self.navigator.get_current_item()
+            if not isinstance(current_song, SongFile):
+                self.navigator.select_current_item()
+                return
             selected_song = self.navigator.select_current_item()
             if selected_song:
                 self.state = State.SONG_SELECTED
