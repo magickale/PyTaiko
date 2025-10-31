@@ -76,6 +76,9 @@ class DanGameScreen(GameScreen):
         self.dan_transition.start()
         self.allnet_indicator = AllNetIcon()
 
+        self.dan_info_cache = None
+        self.exam_failed = [False] * len(self.exams)
+
     def change_song(self):
         session_data = global_data.session_data[global_data.player_num-1]
         songs = session_data.selected_dan
@@ -94,6 +97,59 @@ class DanGameScreen(GameScreen):
         self.dan_transition.start()
         self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
 
+    def _calculate_dan_info(self):
+        """Calculate all dan info data for drawing"""
+        remaining_notes = self.total_notes - self.player_1.good_count - self.player_1.ok_count - self.player_1.bad_count
+
+        exam_data = []
+        for exam in self.exams:
+            progress_value = self._get_exam_progress(exam)
+            progress = progress_value / exam.red
+
+            if exam.range == 'less':
+                progress = 1 - progress
+                counter_value = max(0, exam.red - progress_value)
+            elif exam.range == 'more':
+                counter_value = max(0, progress_value)
+            else:
+                counter_value = max(0, progress_value)
+
+            # Clamp progress
+            progress = max(0, min(progress, 1))
+
+            # Determine progress bar texture
+            if progress == 1:
+                bar_texture = 'exam_max'
+            elif progress >= 0.5:
+                bar_texture = 'exam_gold'
+            else:
+                bar_texture = 'exam_red'
+
+            exam_data.append({
+                'exam': exam,
+                'progress': progress,
+                'bar_texture': bar_texture,
+                'counter_value': counter_value,
+                'red_value': exam.red
+            })
+
+        return {
+            'remaining_notes': remaining_notes,
+            'exam_data': exam_data
+        }
+
+    def _get_exam_progress(self, exam: Exam) -> int:
+        """Get progress value based on exam type"""
+        type_mapping = {
+            'gauge': (self.player_1.gauge.gauge_length / self.player_1.gauge.gauge_max) * 100,
+            'judgeperfect': self.player_1.good_count,
+            'judgegood': self.player_1.ok_count + self.player_1.bad_count,
+            'judgebad': self.player_1.bad_count,
+            'score': self.player_1.score,
+            'combo': self.player_1.max_combo
+        }
+        return int(type_mapping.get(exam.type, 0))
+
     def update(self):
         super(GameScreen, self).update()
         current_time = get_current_ms()
@@ -109,6 +165,10 @@ class DanGameScreen(GameScreen):
         self.player_1.update(self.current_ms, current_time, self.background)
         self.song_info.update(current_time)
         self.result_transition.update(current_time)
+
+        self.dan_info_cache = self._calculate_dan_info()
+        self._check_exam_failures()
+
         if self.result_transition.is_finished and not audio.is_sound_playing('result_transition'):
             logger.info("Result transition finished, moving to RESULT screen")
             return self.on_screen_end('RESULT')
@@ -133,40 +193,71 @@ class DanGameScreen(GameScreen):
 
         return self.global_keys()
 
+    def _check_exam_failures(self):
+        for i, exam in enumerate(self.exams):
+            progress_value = self._get_exam_progress(exam)
+
+            if self.exam_failed[i]:
+                continue
+
+            if exam.range == 'more':
+                if progress_value < exam.red and self.end_ms != 0:
+                    self.exam_failed[i] = True
+                    audio.play_sound('exam_failed', 'sound')
+                    logger.info(f"Exam {i} ({exam.type}) failed: {progress_value} < {exam.red}")
+            elif exam.range == 'less':
+                counter_value = max(0, exam.red - progress_value)
+                if counter_value == 0:
+                    self.exam_failed[i] = True
+                    audio.play_sound('dan_failed', 'sound')
+                    logger.info(f"Exam {i} ({exam.type}) failed: counter reached 0")
+
     def draw_dan_info(self):
+        if self.dan_info_cache is None:
+            return
+
+        cache = self.dan_info_cache
+
+        # Draw total notes counter
         tex.draw_texture('dan_info', 'total_notes')
-        counter = str(self.total_notes - self.player_1.good_count - self.player_1.ok_count - self.player_1.bad_count)
+        counter = str(cache['remaining_notes'])
         self._draw_counter(counter, margin=45, texture='total_notes_counter')
 
-        for i, exam in enumerate(self.exams):
+        # Draw exam info
+        for i, exam_info in enumerate(cache['exam_data']):
             y_offset = i * 94
+            exam = exam_info['exam']
+
             tex.draw_texture('dan_info', 'exam_bg', y=y_offset)
             tex.draw_texture('dan_info', 'exam_overlay_1', y=y_offset)
 
-            # Get progress based on exam type
-            progress = self._get_exam_progress(exam) / exam.red
-            if exam.range == 'less':
-                progress = 1 - progress
-            self._draw_progress_bar(progress, y_offset)
-            # Draw exam type and counter
-            counter = str(exam.red)
-            self._draw_counter(counter, margin=22, texture='value_counter', index=0, y=y_offset)
-            tex.draw_texture('dan_info', f'exam_{exam.type}', y=y_offset, x=-len(counter)*20)
+            # Draw progress bar
+            tex.draw_texture('dan_info', exam_info['bar_texture'], x2=940*exam_info['progress'], y=y_offset)
 
+            # Draw exam type and red value counter
+            red_counter = str(exam_info['red_value'])
+            self._draw_counter(red_counter, margin=22, texture='value_counter', index=0, y=y_offset)
+            tex.draw_texture('dan_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*20)
+
+            # Draw range indicator
             if exam.range == 'less':
                 tex.draw_texture('dan_info', 'exam_less', y=y_offset)
             elif exam.range == 'more':
                 tex.draw_texture('dan_info', 'exam_more', y=y_offset)
 
+            # Draw current value counter
             tex.draw_texture('dan_info', 'exam_overlay_2', y=y_offset)
-            if exam.range == 'less':
-                counter = str(max(0, exam.red - self._get_exam_progress(exam)))
-            elif exam.range == 'more':
-                counter = str(max(0, self._get_exam_progress(exam)))
-            self._draw_counter(counter, margin=22, texture='value_counter', index=1, y=y_offset)
+            value_counter = str(exam_info['counter_value'])
+            self._draw_counter(value_counter, margin=22, texture='value_counter', index=1, y=y_offset)
+
             if exam.type == 'gauge':
                 tex.draw_texture('dan_info', 'exam_percent', y=y_offset, index=1)
 
+            if self.exam_failed[i]:
+                tex.draw_texture('dan_info', 'exam_bg', fade=0.5, y=y_offset)
+                tex.draw_texture('dan_info', 'exam_failed', y=y_offset)
+
+        # Draw frame and title
         tex.draw_texture('dan_info', 'frame', frame=self.color)
         if self.hori_name is not None:
             self.hori_name.draw(outline_color=ray.BLACK, x=154 - (self.hori_name.texture.width//2),
@@ -179,32 +270,6 @@ class DanGameScreen(GameScreen):
             if index is not None:
                 kwargs['index'] = index
             tex.draw_texture('dan_info', texture, **kwargs)
-
-    def _get_exam_progress(self, exam: Exam) -> int:
-        """Get progress value based on exam type"""
-        type_mapping = {
-            'gauge': (self.player_1.gauge.gauge_length / self.player_1.gauge.gauge_max) * 100,
-            'judgeperfect': self.player_1.good_count,
-            'judgegood': self.player_1.ok_count,
-            'judgebad': self.player_1.bad_count,
-            'score': self.player_1.score,
-            'combo': self.player_1.max_combo
-        }
-        return int(type_mapping.get(exam.type, 0))
-
-    def _draw_progress_bar(self, progress, y_offset):
-        """Draw the progress bar with appropriate color"""
-        progress = max(0, progress)  # Clamp to 0 minimum
-        progress = min(progress, 1)  # Clamp to 1 maximum
-
-        if progress == 1:
-            texture = 'exam_max'
-        elif progress >= 0.5:
-            texture = 'exam_gold'
-        else:
-            texture = 'exam_red'
-
-        tex.draw_texture('dan_info', texture, x2=940*progress, y=y_offset)
 
     @override
     def draw(self):

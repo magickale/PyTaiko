@@ -350,17 +350,47 @@ class TJAParser:
                     region_code = (item[len('TITLE'):len('TITLE')+2]).lower()
                 self.metadata.title[region_code] = ''.join(item.split(':')[1:])
             elif item.startswith('BPM'):
-                self.metadata.bpm = float(item.split(':')[1])
+                data = item.split(':')[1]
+                if not data:
+                    logger.warning(f"Invalid BPM value: {data} in TJA file {self.file_path}")
+                    self.metadata.bpm = 0.0
+                else:
+                    self.metadata.bpm = float(data)
             elif item.startswith('WAVE'):
-                self.metadata.wave = self.file_path.parent / item.split(':')[1].strip()
+                data = item.split(':')[1]
+                if not data:
+                    logger.warning(f"Invalid WAVE value: {data} in TJA file {self.file_path}")
+                    self.metadata.wave = ''
+                else:
+                    self.metadata.wave = self.file_path.parent / data.strip()
             elif item.startswith('OFFSET'):
-                self.metadata.offset = float(item.split(':')[1])
+                data = item.split(':')[1]
+                if not data:
+                    logger.warning(f"Invalid OFFSET value: {data} in TJA file {self.file_path}")
+                    self.metadata.offset = 0.0
+                else:
+                    self.metadata.offset = float(data)
             elif item.startswith('DEMOSTART'):
-                self.metadata.demostart = float(item.split(':')[1]) if item.split(':')[1] != '' else 0
+                data = item.split(':')[1]
+                if not data:
+                    logger.warning(f"Invalid DEMOSTART value: {data} in TJA file {self.file_path}")
+                    self.metadata.demostart = 0.0
+                else:
+                    self.metadata.demostart = float(data)
             elif item.startswith('BGMOVIE'):
-                self.metadata.bgmovie = self.file_path.parent / item.split(':')[1].strip()
+                data = item.split(':')[1]
+                if not data:
+                    logger.warning(f"Invalid BGMOVIE value: {data} in TJA file {self.file_path}")
+                    self.metadata.bgmovie = None
+                else:
+                    self.metadata.bgmovie = self.file_path.parent / data.strip()
             elif item.startswith('MOVIEOFFSET'):
-                self.metadata.movieoffset = float(item.split(':')[1])
+                data = item.split(':')[1]
+                if not data:
+                    logger.warning(f"Invalid MOVIEOFFSET value: {data} in TJA file {self.file_path}")
+                    self.metadata.movieoffset = 0.0
+                else:
+                    self.metadata.movieoffset = float(data)
             elif item.startswith('SCENEPRESET'):
                 self.metadata.scene_preset = item.split(':')[1]
             elif item.startswith('COURSE'):
@@ -381,24 +411,32 @@ class TJAParser:
                 elif course == '0' or course == 'easy':
                     current_diff = 0
                 else:
-                    raise Exception("course level empty")
+                    logger.error(f"Course level empty in {self.file_path}")
                 self.metadata.course_data[current_diff] = CourseData()
             elif current_diff is not None:
                 if item.startswith('LEVEL'):
-                    self.metadata.course_data[current_diff].level = int(float(item.split(':')[1]))
+                    data = item.split(':')[1]
+                    if not data:
+                        self.metadata.course_data[current_diff].level = 0
+                        logger.warning(f"Invalid LEVEL value: {data} in TJA file {self.file_path}")
+                    else:
+                        self.metadata.course_data[current_diff].level = int(float(data))
                 elif item.startswith('BALLOONNOR'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
+                        logger.warning(f"Invalid BALLOONNOR value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',') if x != ''])
                 elif item.startswith('BALLOONEXP'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
+                        logger.warning(f"Invalid BALLOONEXP value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',') if x != ''])
                 elif item.startswith('BALLOONMAS'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
+                        logger.warning(f"Invalid BALLOONMAS value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('BALLOON'):
@@ -407,20 +445,23 @@ class TJAParser:
                         continue
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
+                        logger.warning(f"Invalid BALLOON value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('SCOREINIT'):
                     score_init = item.split(':')[1]
                     if score_init == '':
+                        logger.warning(f"Invalid SCOREINIT value: {score_init} in TJA file {self.file_path}")
                         continue
                     try:
                         self.metadata.course_data[current_diff].scoreinit = [int(x) for x in score_init.split(',') if x != '']
                     except Exception as e:
-                        print("Failed to parse SCOREINIT: ", e)
+                        logger.error(f"Failed to parse SCOREINIT: {e} in TJA file {self.file_path}")
                         self.metadata.course_data[current_diff].scoreinit = [0, 0]
                 elif item.startswith('SCOREDIFF'):
                     score_diff = item.split(':')[1]
                     if score_diff == '':
+                        logger.error(f"Invalid SCOREDIFF value: {score_diff} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].scorediff = int(float(score_diff))
         for region_code in self.metadata.title:
