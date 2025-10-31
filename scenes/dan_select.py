@@ -29,6 +29,8 @@ class DanSelectScreen(Screen):
         self.state = State.BROWSING
         self.transition = Transition('', '')
         self.last_moved = 0
+        audio.play_sound('bgm', 'music')
+        audio.play_sound('dan_select', 'voice')
 
     def on_screen_end(self, next_screen: str):
         session_data = global_data.session_data[global_data.player_num-1]
@@ -173,6 +175,9 @@ class DanSelectPlayer:
                 return "go_back"
             else:
                 self.confirmation_window.start()
+                audio.play_sound('don', 'sound')
+                audio.play_sound('confirm_box', 'sound')
+                audio.play_sound('dan_confirm', 'voice')
                 return "select_song"
 
         return None
@@ -193,12 +198,15 @@ class DanSelectPlayer:
     def handle_input_selected(self):
         """Handle input for selecting difficulty. Returns 'cancel', 'confirm', or None"""
         if is_l_kat_pressed(self.player_num):
+            audio.play_sound('kat', 'sound')
             self.is_confirmed = False
         if is_r_kat_pressed(self.player_num):
+            audio.play_sound('kat', 'sound')
             self.is_confirmed = True
 
         if is_l_don_pressed(self.player_num) or is_r_don_pressed(self.player_num):
             if self.is_confirmed:
+                audio.play_sound('don', 'sound')
                 return "confirm"
             else:
                 self.confirmation_window = ConfirmationWindow()
