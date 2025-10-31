@@ -251,6 +251,7 @@ class SongSelectScreen(Screen):
         self.blue_arrow_move.update(current_time)
         self.dan_transition.update(current_time)
         if self.dan_transition.is_finished:
+            self.navigator.select_current_item()
             return self.on_screen_end('DAN_SELECT')
 
         next_screen = self.update_players(current_time)

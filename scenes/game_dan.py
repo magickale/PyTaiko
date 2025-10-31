@@ -1,3 +1,4 @@
+import copy
 from typing import override
 import pyray as ray
 import logging
@@ -44,9 +45,21 @@ class DanGameScreen(GameScreen):
             logger.info("Loaded nijiiro notes textures")
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
+        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num-1].song_title, 40, ray.WHITE)
+        self.init_dan()
+        self.background = Background(global_data.player_num, self.bpm, scene_preset='DAN')
+        self.transition = Transition('', '', is_second=True)
+        self.transition.start()
+        self.dan_transition = DanTransition()
+        self.dan_transition.start()
+        self.allnet_indicator = AllNetIcon()
+        self.result_transition = ResultTransition(4)
+        self.load_hitsounds()
+
+    def init_dan(self):
         session_data = global_data.session_data[global_data.player_num-1]
-        songs = session_data.selected_dan
-        self.exams = session_data.selected_dan_exam
+        songs = copy.deepcopy(session_data.selected_dan)
+        self.exams = copy.deepcopy(session_data.selected_dan_exam)
         self.total_notes = 0
         for song, genre_index, difficulty in songs:
             notes, branch_m, branch_e, branch_n = song.notes_to_position(difficulty)
@@ -59,22 +72,14 @@ class DanGameScreen(GameScreen):
                 self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
         song, genre_index, difficulty = songs[self.song_index]
         session_data.selected_difficulty = difficulty
-        self.hori_name = OutlinedText(session_data.song_title, 40, ray.WHITE)
         self.init_tja(song.file_path)
         self.color = session_data.dan_color
         self.player_1.is_dan = True
         self.player_1.gauge = DanGauge(str(global_data.player_num), self.total_notes)
-        logger.info(f"TJA initialized for song: {song.file_path}")
-        self.load_hitsounds()
         self.song_info = SongInfo(song.metadata.title.get(global_data.config["general"]["language"], "en"), genre_index)
-        self.result_transition = ResultTransition(4)
         self.bpm = self.tja.metadata.bpm
-        self.background = Background(global_data.player_num, self.bpm, scene_preset='DAN')
-        self.transition = Transition('', '', is_second=True)
-        self.transition.start()
-        self.dan_transition = DanTransition()
-        self.dan_transition.start()
-        self.allnet_indicator = AllNetIcon()
+        logger.info(f"TJA initialized for song: {song.file_path}")
+
 
         self.dan_info_cache = None
         self.exam_failed = [False] * len(self.exams)
@@ -150,6 +155,22 @@ class DanGameScreen(GameScreen):
         }
         return int(type_mapping.get(exam.type, 0))
 
+    @override
+    def global_keys(self):
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_F1):
+            if self.song_music is not None:
+                audio.stop_music_stream(self.song_music)
+                audio.seek_music_stream(self.song_music, 0)
+                self.song_started = False
+            audio.play_sound('restart', 'sound')
+            self.init_dan()
+
+        if ray.is_key_pressed(ray.KeyboardKey.KEY_ESCAPE):
+            if self.song_music is not None:
+                audio.stop_music_stream(self.song_music)
+            return self.on_screen_end('DAN_SELECT')
+
+    @override
     def update(self):
         super(GameScreen, self).update()
         current_time = get_current_ms()

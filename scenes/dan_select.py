@@ -20,7 +20,6 @@ class DanSelectScreen(Screen):
         super().on_screen_start()
         self.navigator = navigator
         self.navigator.in_dan_select = True
-        self.navigator.select_current_item()
         self.coin_overlay = CoinOverlay()
         self.allnet_indicator = AllNetIcon()
         self.timer = Timer(60, get_current_ms(), self.navigator.select_current_item)

@@ -424,19 +424,19 @@ class TJAParser:
                 elif item.startswith('BALLOONNOR'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
-                        logger.warning(f"Invalid BALLOONNOR value: {balloon_data} in TJA file {self.file_path}")
+                        logger.debug(f"Invalid BALLOONNOR value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',') if x != ''])
                 elif item.startswith('BALLOONEXP'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
-                        logger.warning(f"Invalid BALLOONEXP value: {balloon_data} in TJA file {self.file_path}")
+                        logger.debug(f"Invalid BALLOONEXP value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon.extend([int(x) for x in balloon_data.split(',') if x != ''])
                 elif item.startswith('BALLOONMAS'):
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
-                        logger.warning(f"Invalid BALLOONMAS value: {balloon_data} in TJA file {self.file_path}")
+                        logger.debug(f"Invalid BALLOONMAS value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('BALLOON'):
@@ -445,13 +445,13 @@ class TJAParser:
                         continue
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
-                        logger.warning(f"Invalid BALLOON value: {balloon_data} in TJA file {self.file_path}")
+                        logger.debug(f"Invalid BALLOON value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('SCOREINIT'):
                     score_init = item.split(':')[1]
                     if score_init == '':
-                        logger.warning(f"Invalid SCOREINIT value: {score_init} in TJA file {self.file_path}")
+                        logger.debug(f"Invalid SCOREINIT value: {score_init} in TJA file {self.file_path}")
                         continue
                     try:
                         self.metadata.course_data[current_diff].scoreinit = [int(x) for x in score_init.split(',') if x != '']
@@ -461,7 +461,7 @@ class TJAParser:
                 elif item.startswith('SCOREDIFF'):
                     score_diff = item.split(':')[1]
                     if score_diff == '':
-                        logger.error(f"Invalid SCOREDIFF value: {score_diff} in TJA file {self.file_path}")
+                        logger.debug(f"Invalid SCOREDIFF value: {score_diff} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].scorediff = int(float(score_diff))
         for region_code in self.metadata.title:

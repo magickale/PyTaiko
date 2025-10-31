@@ -11,11 +11,11 @@ class Transition:
         subtitle: str - The subtitle of the chart.
         is_second: bool - Whether this is the second half of the transition."""
         self.is_finished = False
-        self.rainbow_up = global_tex.get_animation(0)
-        self.mini_up = global_tex.get_animation(1)
-        self.chara_down = global_tex.get_animation(2)
-        self.song_info_fade = global_tex.get_animation(3)
-        self.song_info_fade_out = global_tex.get_animation(4)
+        self.rainbow_up = global_tex.get_animation(0, is_copy=True)
+        self.mini_up = global_tex.get_animation(1, is_copy=True)
+        self.chara_down = global_tex.get_animation(2, is_copy=True)
+        self.song_info_fade = global_tex.get_animation(3, is_copy=True)
+        self.song_info_fade_out = global_tex.get_animation(4, is_copy=True)
         if title == '' and subtitle == '':
             self.title = ''
             self.subtitle = ''
