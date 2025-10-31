@@ -16,8 +16,12 @@ class Transition:
         self.chara_down = global_tex.get_animation(2)
         self.song_info_fade = global_tex.get_animation(3)
         self.song_info_fade_out = global_tex.get_animation(4)
-        self.title = OutlinedText(title, 40, ray.WHITE)
-        self.subtitle = OutlinedText(subtitle, 30, ray.WHITE)
+        if title == '' and subtitle == '':
+            self.title = ''
+            self.subtitle = ''
+        else:
+            self.title = OutlinedText(title, 40, ray.WHITE)
+            self.subtitle = OutlinedText(subtitle, 30, ray.WHITE)
         self.is_second = is_second
 
     def start(self):

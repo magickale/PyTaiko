@@ -16,6 +16,10 @@ class Modifiers:
 @dataclass
 class SessionData:
     """Data class for storing session data. Wiped after the result screen.
+    selected_song (Path): The currently selected song.
+    selected_dan (list[tuple[Any, int, int]]): The currently selected dan songs (TJA). TJAParser, Genre Index, Difficulty
+    selected_dan_exam: list[Exam]: list of dan requirements, contains Exam objects
+    dan_color: int: The emblem color of the selected dan
     selected_difficulty: The difficulty level selected by the user.
     song_title: The title of the song being played.
     genre_index: The index of the genre being played.
@@ -27,6 +31,10 @@ class SessionData:
     result_total_drumroll: The total drumroll achieved in the game.
     result_gauge_length: The length of the gauge achieved in the game.
     prev_score: The previous score pulled from the database."""
+    selected_song: Path = Path()
+    selected_dan: list[tuple[Any, int, int]] = field(default_factory=lambda: [])
+    selected_dan_exam: list[Any] = field(default_factory=lambda: [])
+    dan_color: int = 0
     selected_difficulty: int = 0
     song_title: str = ''
     genre_index: int = 0
@@ -45,7 +53,6 @@ class GlobalData:
     Global data for the game. Should be accessed via the global_data variable.
 
     Attributes:
-        selected_song (Path): The currently selected song.
         songs_played (int): The number of songs played.
         config (dict): The configuration settings.
         song_hashes (dict[str, list[dict]]): A dictionary mapping song hashes to their metadata.
@@ -58,7 +65,6 @@ class GlobalData:
         modifiers (list[Modifiers]): The modifiers for the game.
         session_data (list[SessionData]): Session data for both players.
     """
-    selected_song: Path = Path()
     songs_played: int = 0
     config: dict[str, Any] = field(default_factory=lambda: dict())
     song_hashes: dict[str, list[dict]] = field(default_factory=lambda: dict()) #Hash to path

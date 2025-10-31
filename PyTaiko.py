@@ -21,6 +21,7 @@ from libs.utils import (
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
+from scenes.game_dan import DanGameScreen
 from scenes.two_player.game import TwoPlayerGameScreen
 from scenes.two_player.result import TwoPlayerResultScreen
 from scenes.loading import LoadScreen
@@ -44,6 +45,7 @@ class Screens:
     RESULT_2P = "RESULT_2P"
     SONG_SELECT_2P = "SONG_SELECT_2P"
     DAN_SELECT = "DAN_SELECT"
+    GAME_DAN = "GAME_DAN"
     SETTINGS = "SETTINGS"
     DEV_MENU = "DEV_MENU"
     LOADING = "LOADING"
@@ -159,6 +161,7 @@ def main():
     settings_screen = SettingsScreen('settings')
     dev_screen = DevScreen('dev')
     dan_select_screen = DanSelectScreen('dan_select')
+    game_screen_dan = DanGameScreen('game_dan')
 
     screen_mapping = {
         Screens.ENTRY: entry_screen,
@@ -172,6 +175,7 @@ def main():
         Screens.SETTINGS: settings_screen,
         Screens.DEV_MENU: dev_screen,
         Screens.DAN_SELECT: dan_select_screen,
+        Screens.GAME_DAN: game_screen_dan,
         Screens.LOADING: load_screen
     }
     target = ray.load_render_texture(screen_width, screen_height)

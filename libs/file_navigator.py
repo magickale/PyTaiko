@@ -504,13 +504,13 @@ class DanBox:
         self.total_notes = 0
         for song, genre_index, difficulty in self.songs:
             notes, branch_m, branch_e, branch_n = song.notes_to_position(difficulty)
-            self.total_notes += len(notes.play_notes)
+            self.total_notes += sum(1 for note in notes.play_notes if note.type < 5)
             for branch in branch_m:
-                self.total_notes += len(branch.play_notes)
+                self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
             for branch in branch_e:
-                self.total_notes += len(branch.play_notes)
+                self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
             for branch in branch_n:
-                self.total_notes += len(branch.play_notes)
+                self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
         self.name = None
         self.hori_name = None
         self.yellow_box = None
@@ -567,6 +567,36 @@ class DanBox:
         if self.yellow_box is not None:
             self.yellow_box.update(True)
 
+    def _draw_exam_box(self):
+        tex.draw_texture('yellow_box', 'exam_box_bottom_right')
+        tex.draw_texture('yellow_box', 'exam_box_bottom_left')
+        tex.draw_texture('yellow_box', 'exam_box_top_right')
+        tex.draw_texture('yellow_box', 'exam_box_top_left')
+        tex.draw_texture('yellow_box', 'exam_box_bottom')
+        tex.draw_texture('yellow_box', 'exam_box_right')
+        tex.draw_texture('yellow_box', 'exam_box_left')
+        tex.draw_texture('yellow_box', 'exam_box_top')
+        tex.draw_texture('yellow_box', 'exam_box_center')
+        tex.draw_texture('yellow_box', 'exam_header')
+
+        for i, exam in enumerate(self.exams):
+            tex.draw_texture('yellow_box', 'judge_box', y=(i*83))
+            tex.draw_texture('yellow_box', 'exam_' + self.exams[i].type, y=(i*83))
+            counter = str(self.exams[i].red)
+            margin = 20
+            if self.exams[i].type == 'gauge':
+                tex.draw_texture('yellow_box', 'exam_percent', y=(i*83))
+                offset = -8
+            else:
+                offset = 0
+            for j in range(len(counter)):
+                tex.draw_texture('yellow_box', 'judge_num', frame=int(counter[j]), x=offset-(len(counter) - j) * margin, y=(i*83))
+
+            if self.exams[i].range == 'more':
+                tex.draw_texture('yellow_box', 'exam_more', x=(offset*-1.7), y=(i*83))
+            elif self.exams[i].range == 'less':
+                tex.draw_texture('yellow_box', 'exam_less', x=(offset*-1.7), y=(i*83))
+
     def _draw_closed(self, x: int, y: int):
         tex.draw_texture('box', 'folder', frame=self.color, x=x)
         if self.name is not None:
@@ -600,6 +630,8 @@ class DanBox:
             tex.draw_texture('yellow_box', 'frame', frame=self.color)
             if self.hori_name is not None:
                 self.hori_name.draw(outline_color=ray.BLACK, x=434 - (self.hori_name.texture.width//2), y=84, x2=min(self.hori_name.texture.width, 275)-self.hori_name.texture.width)
+
+            self._draw_exam_box()
 
     def draw(self, x: int, y: int, is_ura: bool):
         if self.is_open:
@@ -858,27 +890,27 @@ class DanCourse(FileSystemItem):
             self.logging.error(f"Invalid dan course file: {path}")
         with open(path, 'r') as f:
             data = json.load(f)
-            title = data["title"]
-            color = data["color"]
-            songs = []
-            for song in data["songs"]:
-                hash = song["hash"]
-                song_title = song["title"]
-                song_subtitle = song["subtitle"]
-                difficulty = song["difficulty"]
+            self.title = data["title"]
+            self.color = data["color"]
+            self.charts = []
+            for chart in data["charts"]:
+                hash = chart["hash"]
+                chart_title = chart["title"]
+                chart_subtitle = chart["subtitle"]
+                difficulty = chart["difficulty"]
                 if hash in global_data.song_hashes:
                     path = Path(global_data.song_hashes[hash][0]["file_path"])
                     if (path.parent.parent / "box.def").exists():
                         _, genre_index, _ = parse_box_def(path.parent.parent)
-                    songs.append((TJAParser(path), genre_index, difficulty))
+                    self.charts.append((TJAParser(path), genre_index, difficulty))
                 else:
                     pass
                     #do something with song_title, song_subtitle
-            exams = []
+            self.exams = []
             for exam in data["exams"]:
-                exams.append(Exam(exam["type"], exam["red"], exam["gold"], exam["range"]))
+                self.exams.append(Exam(exam["type"], exam["value"][0], exam["value"][1], exam["range"]))
 
-        self.box = DanBox(title, color, songs, exams)
+        self.box = DanBox(self.title, self.color, self.charts, self.exams)
 
 class FileNavigator:
     """Manages navigation through pre-generated Directory and SongFile objects"""
@@ -1251,6 +1283,7 @@ class FileNavigator:
                 # Save current state to history
                 self.history.append((self.current_dir, self.selected_index))
                 self.current_dir = selected_item.path
+                logger.info(f"Entered Directory {selected_item.path}")
 
             self.load_current_directory(selected_item=selected_item)
 
@@ -1459,12 +1492,14 @@ class FileNavigator:
         if self.items:
             self.selected_index = (self.selected_index - 1) % len(self.items)
             self.calculate_box_positions()
+            logger.info(f"Moved Left to {self.items[self.selected_index].path}")
 
     def navigate_right(self):
         """Move selection right with wrap-around"""
         if self.items:
             self.selected_index = (self.selected_index + 1) % len(self.items)
             self.calculate_box_positions()
+            logger.info(f"Moved Right to {self.items[self.selected_index].path}")
 
     def get_current_item(self):
         """Get the currently selected item"""

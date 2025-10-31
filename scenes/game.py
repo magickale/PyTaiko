@@ -66,8 +66,8 @@ class GameScreen(Screen):
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
         session_data = global_data.session_data[global_data.player_num-1]
-        self.init_tja(global_data.selected_song)
-        logger.info(f"TJA initialized for song: {global_data.selected_song}")
+        self.init_tja(session_data.selected_song)
+        logger.info(f"TJA initialized for song: {session_data.selected_song}")
         self.load_hitsounds()
         self.song_info = SongInfo(session_data.song_title, session_data.genre_index)
         self.result_transition = ResultTransition(global_data.player_num)
@@ -292,53 +292,14 @@ class Player:
 
     def __init__(self, tja: TJAParser, player_number: int, difficulty: int, is_2p: bool, modifiers: Modifiers):
         self.is_2p = is_2p
+        self.is_dan = False
         self.player_number = str(player_number)
         self.difficulty = difficulty
         self.visual_offset = global_data.config["general"]["visual_offset"]
         self.modifiers = modifiers
+        self.tja = tja
 
-        notes, self.branch_m, self.branch_e, self.branch_n = tja.notes_to_position(self.difficulty)
-        self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes, self.modifiers)
-        self.end_time = 0
-        if self.play_notes:
-            self.end_time = self.play_notes[-1].hit_ms
-        if self.branch_m:
-            for section in self.branch_m:
-                if section.play_notes:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
-        if self.branch_e:
-            for section in self.branch_e:
-                if section.play_notes:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
-        if self.branch_n:
-            for section in self.branch_n:
-                if section.play_notes:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
-
-        self.don_notes = deque([note for note in self.play_notes if note.type in {1, 3}])
-        self.kat_notes = deque([note for note in self.play_notes if note.type in {2, 4}])
-        self.other_notes = deque([note for note in self.play_notes if note.type not in {1, 2, 3, 4}])
-        self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
-        total_notes = notes
-        if self.branch_m:
-            for section in self.branch_m:
-                self.total_notes += len([note for note in section.play_notes if 0 < note.type < 5])
-                total_notes += section
-        self.base_score = calculate_base_score(total_notes)
-
-        #Note management
-        self.current_bars: list[Note] = []
-        self.current_notes_draw: list[Note | Drumroll | Balloon] = []
-        self.is_drumroll = False
-        self.curr_drumroll_count = 0
-        self.is_balloon = False
-        self.curr_balloon_count = 0
-        self.is_branch = False
-        self.curr_branch_reqs = []
-        self.branch_condition_count = 0
-        self.branch_condition = ''
-        self.balloon_index = 0
-        self.bpm = self.play_notes[0].bpm if self.play_notes else 120
+        self.reset_chart()
 
         #Score management
         self.good_count = 0
@@ -381,6 +342,50 @@ class Player:
 
         self.autoplay_hit_side = 'L'
         self.last_subdivision = -1
+
+    def reset_chart(self):
+        notes, self.branch_m, self.branch_e, self.branch_n = self.tja.notes_to_position(self.difficulty)
+        self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes, self.modifiers)
+        self.end_time = 0
+        if self.play_notes:
+            self.end_time = self.play_notes[-1].hit_ms
+        if self.branch_m:
+            for section in self.branch_m:
+                if section.play_notes:
+                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+        if self.branch_e:
+            for section in self.branch_e:
+                if section.play_notes:
+                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+        if self.branch_n:
+            for section in self.branch_n:
+                if section.play_notes:
+                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+
+        self.don_notes = deque([note for note in self.play_notes if note.type in {1, 3}])
+        self.kat_notes = deque([note for note in self.play_notes if note.type in {2, 4}])
+        self.other_notes = deque([note for note in self.play_notes if note.type not in {1, 2, 3, 4}])
+        self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
+        total_notes = notes
+        if self.branch_m:
+            for section in self.branch_m:
+                self.total_notes += len([note for note in section.play_notes if 0 < note.type < 5])
+                total_notes += section
+        self.base_score = calculate_base_score(total_notes)
+
+        #Note management
+        self.current_bars: list[Note] = []
+        self.current_notes_draw: list[Note | Drumroll | Balloon] = []
+        self.is_drumroll = False
+        self.curr_drumroll_count = 0
+        self.is_balloon = False
+        self.curr_balloon_count = 0
+        self.is_branch = False
+        self.curr_branch_reqs = []
+        self.branch_condition_count = 0
+        self.branch_condition = ''
+        self.balloon_index = 0
+        self.bpm = self.play_notes[0].bpm if self.play_notes else 120
 
     def merge_branch_section(self, branch_section: NoteList, current_ms: float):
         """Merges the branch notes into the current notes"""
@@ -1043,7 +1048,7 @@ class Player:
         for modifier in modifiers_to_draw:
             tex.draw_texture('lane', modifier, index=self.is_2p)
 
-    def draw(self, ms_from_start: float, start_ms: float, mask_shader: ray.Shader):
+    def draw(self, ms_from_start: float, start_ms: float, mask_shader: ray.Shader, dan_transition = None):
         # Group 1: Background and lane elements
         tex.draw_texture('lane', 'lane_background', index=self.is_2p)
         if self.branch_indicator is not None:
@@ -1062,9 +1067,13 @@ class Player:
         # Group 3: Notes and bars (game content)
         self.draw_bars(ms_from_start)
         self.draw_notes(ms_from_start, start_ms)
+        if dan_transition is not None:
+            dan_transition.draw()
 
         # Group 4: Lane covers and UI elements (batch similar textures)
         tex.draw_texture('lane', f'{self.player_number}p_lane_cover', index=self.is_2p)
+        if self.is_dan:
+            tex.draw_texture('lane', 'dan_lane_cover')
         tex.draw_texture('lane', 'drum', index=self.is_2p)
         if self.ending_anim is not None:
             self.ending_anim.draw()
@@ -1085,7 +1094,10 @@ class Player:
         else:
             tex.draw_texture('lane', 'lane_score_cover', index=self.is_2p)
         tex.draw_texture('lane', f'{self.player_number}p_icon', index=self.is_2p)
-        tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty, index=self.is_2p)
+        if self.is_dan:
+            tex.draw_texture('lane', 'lane_difficulty', frame=6)
+        else:
+            tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty, index=self.is_2p)
         if self.judge_counter is not None:
             self.judge_counter.draw()
 

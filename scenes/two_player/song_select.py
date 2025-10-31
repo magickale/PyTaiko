@@ -14,9 +14,9 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
         self.player_2 = SongSelectPlayer('2', self.text_fade_in)
 
     def finalize_song(self):
-        global_data.selected_song = self.navigator.get_current_item().path
+        global_data.session_data[0].selected_song = self.navigator.get_current_item().path
         global_data.session_data[0].genre_index = self.navigator.get_current_item().box.name_texture_index
-        logger.info(f"Finalized song selection: {global_data.selected_song}")
+        logger.info(f"Finalized song selection: {global_data.session_data[0].selected_song}")
 
     def handle_input_browsing(self):
         """Handle input for browsing songs."""

@@ -66,21 +66,22 @@ class SongSelectScreen(Screen):
         self.ura_switch_animation = UraSwitchAnimation()
         self.dan_transition = DanTransition()
 
+        session_data = global_data.session_data[global_data.player_num-1]
         self.player_1 = SongSelectPlayer(str(global_data.player_num), self.text_fade_in)
 
         if self.navigator.items == []:
             logger.warning("No navigator items found, returning to ENTRY screen")
             return self.on_screen_end("ENTRY")
 
-        if str(global_data.selected_song) in self.navigator.all_song_files:
-            self.navigator.mark_crowns_dirty_for_song(self.navigator.all_song_files[str(global_data.selected_song)])
+        if str(session_data.selected_song) in self.navigator.all_song_files:
+            self.navigator.mark_crowns_dirty_for_song(self.navigator.all_song_files[str(session_data.selected_song)])
 
         curr_item = self.navigator.get_current_item()
         curr_item.box.get_scores()
         self.navigator.add_recent()
 
     def finalize_song(self):
-        global_data.selected_song = self.navigator.get_current_item().path
+        global_data.session_data[global_data.player_num-1].selected_song = self.navigator.get_current_item().path
         global_data.session_data[global_data.player_num-1].selected_difficulty = self.player_1.selected_difficulty
         global_data.session_data[global_data.player_num-1].genre_index = self.navigator.get_current_item().box.name_texture_index
 
