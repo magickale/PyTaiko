@@ -13,12 +13,14 @@ log_level = 30
 [nameplate_1p]
 name = 'どんちゃん'
 title = 'ドンだーデビュー！'
+title_bg = 0
 dan = -1
 gold = false
 
 [nameplate_2p]
 name = 'かつちゃん'
 title = 'ドンだーデビュー！'
+title_bg = 1
 dan = -1
 gold = false
 

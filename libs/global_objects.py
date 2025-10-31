@@ -7,7 +7,7 @@ from libs.audio import audio
 
 class Nameplate:
     """Nameplate for displaying player information."""
-    def __init__(self, name: str, title: str, player_num: int, dan: int, is_gold: bool):
+    def __init__(self, name: str, title: str, player_num: int, dan: int, is_gold: bool, title_bg: int):
         """Initialize a Nameplate object.
 
         Args:
@@ -22,6 +22,7 @@ class Nameplate:
         self.dan_index = dan
         self.player_num = player_num
         self.is_gold = is_gold
+        self.title_bg = title_bg
     def update(self, current_time_ms: float):
         """Update the Nameplate object.
 
@@ -49,7 +50,7 @@ class Nameplate:
             frame = 2
             title_offset = 0
         else:
-            frame = self.player_num-1
+            frame = self.title_bg
             title_offset = 14
         tex.draw_texture('nameplate', 'frame_top', frame=frame, x=x, y=y, fade=fade)
         tex.draw_texture('nameplate', 'outline', x=x, y=y, fade=fade)

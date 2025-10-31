@@ -136,7 +136,7 @@ class DanSelectPlayer:
         self.chara = Chara2D(int(self.player_num) - 1, 100)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'],
-            int(self.player_num), plate_info['dan'], plate_info['gold'])
+            int(self.player_num), plate_info['dan'], plate_info['gold'], plate_info['title_bg'])
 
     def update(self, current_time):
         """Update player state"""

@@ -34,7 +34,7 @@ class EntryScreen(Screen):
 
         # Initial nameplate for side selection
         plate_info = global_data.config['nameplate_1p']
-        self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False)
+        self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False, 0)
 
         self.coin_overlay = CoinOverlay()
         self.allnet_indicator = AllNetIcon()
@@ -102,7 +102,7 @@ class EntryScreen(Screen):
                 audio.play_sound('don', 'sound')
                 self.state = State.SELECT_SIDE
                 plate_info = global_data.config['nameplate_2p']
-                self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False)
+                self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False, 1)
                 self.chara = Chara2D(1, 100)
                 self.side_select_fade.restart()
                 self.side = 1
@@ -239,7 +239,8 @@ class EntryPlayer:
             plate_info['title'],
             player_num,
             plate_info['dan'],
-            plate_info['gold']
+            plate_info['gold'],
+            plate_info['title_bg']
         )
         self.indicator = Indicator(Indicator.State.SELECT)
 

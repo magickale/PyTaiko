@@ -328,7 +328,7 @@ class Player:
         self.ending_anim: Optional[FailAnimation | ClearAnimation | FCAnimation] = None
         self.is_gogo_time = False
         plate_info = global_data.config[f'nameplate_{self.is_2p+1}p']
-        self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'])
+        self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'], plate_info['title_bg'])
         self.chara = Chara2D(player_number - 1, self.bpm)
         if global_data.config['general']['judge_counter']:
             self.judge_counter = JudgeCounter()
