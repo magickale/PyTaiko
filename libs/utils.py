@@ -75,6 +75,7 @@ class VolumeConfig(TypedDict):
     music: float
     voice: float
     hitsound: float
+    attract_mode: float
 
 class VideoConfig(TypedDict):
     screen_width: int

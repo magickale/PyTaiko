@@ -63,6 +63,7 @@ sound = 1.0
 music = 1.0
 voice = 1.0
 hitsound = 1.0
+attract_mode = 1.0
 
 [video]
 screen_width = 1280
