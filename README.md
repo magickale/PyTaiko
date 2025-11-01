@@ -1,3 +1,7 @@
+[![GitHub Releases Downloads](https://img.shields.io/github/downloads/Yonokid/PyTaiko/total)](https://github.com/Yonokid/PyTaiko/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/Yonokid/PyTaiko?style=flat&label=stars)](https://github.com/Yonokid/PyTaiko/stargazers)
+[![Discord Members](https://img.shields.io/discord/722513061419810946.svg?label=Discord&logo=discord)](https://discord.gg/XHcVYKW)
+[![Builds](https://github.com/Yonokid/PyTaiko/actions/workflows/python-app.yml/badge.svg)](https://github.com/Yonokid/PyTaiko/actions/workflows/python-app.yml)
 # PyTaiko
 
 This is a TJA player / Taiko simulator written in Python and uses the [raylib](https://www.raylib.com/) library.

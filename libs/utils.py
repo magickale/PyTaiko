@@ -178,7 +178,8 @@ def is_l_don_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_1p"]["left_don"]
     elif player_num == '2':
         keys = global_data.config["keys_2p"]["left_don"]
-    gamepad_buttons = global_data.config["gamepad"]["left_don"]
+    else:
+        return False
     for key in keys:
         if len(key) == 1 and key.isalnum():
             key_code = ord(key.upper())
@@ -190,6 +191,7 @@ def is_l_don_pressed(player_num: str = '0') -> bool:
         if ray.is_key_pressed(key_code):
             return True
 
+    gamepad_buttons = global_data.config["gamepad"]["left_don"]
     if ray.is_gamepad_available(0):
         for button in gamepad_buttons:
             if ray.is_gamepad_button_pressed(0, button):
@@ -217,7 +219,8 @@ def is_r_don_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_1p"]["right_don"]
     elif player_num == '2':
         keys = global_data.config["keys_2p"]["right_don"]
-    gamepad_buttons = global_data.config["gamepad"]["right_don"]
+    else:
+        return False
     for key in keys:
         if len(key) == 1 and key.isalnum():
             key_code = ord(key.upper())
@@ -229,6 +232,7 @@ def is_r_don_pressed(player_num: str = '0') -> bool:
         if ray.is_key_pressed(key_code):
             return True
 
+    gamepad_buttons = global_data.config["gamepad"]["right_don"]
     if ray.is_gamepad_available(0):
         for button in gamepad_buttons:
             if ray.is_gamepad_button_pressed(0, button):
@@ -256,7 +260,8 @@ def is_l_kat_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_1p"]["left_kat"]
     elif player_num == '2':
         keys = global_data.config["keys_2p"]["left_kat"]
-    gamepad_buttons = global_data.config["gamepad"]["left_kat"]
+    else:
+        return False
     for key in keys:
         if len(key) == 1 and key.isalnum():
             key_code = ord(key.upper())
@@ -268,6 +273,7 @@ def is_l_kat_pressed(player_num: str = '0') -> bool:
         if ray.is_key_pressed(key_code):
             return True
 
+    gamepad_buttons = global_data.config["gamepad"]["left_kat"]
     if ray.is_gamepad_available(0):
         for button in gamepad_buttons:
             if ray.is_gamepad_button_pressed(0, button):
@@ -295,7 +301,8 @@ def is_r_kat_pressed(player_num: str = '0') -> bool:
         keys = global_data.config["keys_1p"]["right_kat"]
     elif player_num == '2':
         keys = global_data.config["keys_2p"]["right_kat"]
-    gamepad_buttons = global_data.config["gamepad"]["right_kat"]
+    else:
+        return False
     for key in keys:
         if len(key) == 1 and key.isalnum():
             key_code = ord(key.upper())
@@ -307,6 +314,7 @@ def is_r_kat_pressed(player_num: str = '0') -> bool:
         if ray.is_key_pressed(key_code):
             return True
 
+    gamepad_buttons = global_data.config["gamepad"]["right_kat"]
     if ray.is_gamepad_available(0):
         for button in gamepad_buttons:
             if ray.is_gamepad_button_pressed(0, button):
