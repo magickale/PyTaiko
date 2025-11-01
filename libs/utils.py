@@ -5,10 +5,10 @@ import sys
 import logging
 import time
 import json
-from libs.global_data import global_data
+from libs.global_data import Config, global_data
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional, TypedDict
+from typing import Any, Optional
 
 import pyray as ray
 import tomlkit
@@ -21,81 +21,6 @@ from raylib import (
 from libs.texture import TextureWrapper
 
 logger = logging.getLogger(__name__)
-
-class GeneralConfig(TypedDict):
-    fps_counter: bool
-    audio_offset: int
-    visual_offset: int
-    language: str
-    hard_judge: int
-    touch_enabled: bool
-    timer_frozen: bool
-    judge_counter: bool
-    nijiiro_notes: bool
-    log_level: int
-
-class NameplateConfig(TypedDict):
-    name: str
-    title: str
-    title_bg: int
-    dan: int
-    gold: bool
-
-class PathsConfig(TypedDict):
-    tja_path: list[str]
-    video_path: list[str]
-
-class Keys1PConfig(TypedDict):
-    exit_key: str
-    left_kat: list[str]
-    left_don: list[str]
-    right_don: list[str]
-    right_kat: list[str]
-
-class Keys2PConfig(TypedDict):
-    left_kat: list[str]
-    left_don: list[str]
-    right_don: list[str]
-    right_kat: list[str]
-
-class GamepadConfig(TypedDict):
-    left_kat: list[int]
-    left_don: list[int]
-    right_don: list[int]
-    right_kat: list[int]
-
-class AudioConfig(TypedDict):
-    device_type: int
-    sample_rate: int
-    buffer_size: int
-    exclusive: bool
-
-class VolumeConfig(TypedDict):
-    sound: float
-    music: float
-    voice: float
-    hitsound: float
-    attract_mode: float
-
-class VideoConfig(TypedDict):
-    screen_width: int
-    screen_height: int
-    fullscreen: bool
-    borderless: bool
-    target_fps: int
-    vsync: bool
-
-class Config(TypedDict):
-    general: GeneralConfig
-    nameplate_1p: NameplateConfig
-    nameplate_2p: NameplateConfig
-    paths: PathsConfig
-    keys_1p: Keys1PConfig
-    keys_2p: Keys2PConfig
-    gamepad: GamepadConfig
-    audio: AudioConfig
-    volume: VolumeConfig
-    video: VideoConfig
 
 def force_dedicated_gpu():
     """Force Windows to use dedicated GPU for this application"""

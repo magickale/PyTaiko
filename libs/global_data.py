@@ -1,8 +1,81 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
-from libs.utils import Config
+class GeneralConfig(TypedDict):
+    fps_counter: bool
+    audio_offset: int
+    visual_offset: int
+    language: str
+    hard_judge: int
+    touch_enabled: bool
+    timer_frozen: bool
+    judge_counter: bool
+    nijiiro_notes: bool
+    log_level: int
+
+class NameplateConfig(TypedDict):
+    name: str
+    title: str
+    title_bg: int
+    dan: int
+    gold: bool
+
+class PathsConfig(TypedDict):
+    tja_path: list[str]
+    video_path: list[str]
+
+class Keys1PConfig(TypedDict):
+    exit_key: str
+    left_kat: list[str]
+    left_don: list[str]
+    right_don: list[str]
+    right_kat: list[str]
+
+class Keys2PConfig(TypedDict):
+    left_kat: list[str]
+    left_don: list[str]
+    right_don: list[str]
+    right_kat: list[str]
+
+class GamepadConfig(TypedDict):
+    left_kat: list[int]
+    left_don: list[int]
+    right_don: list[int]
+    right_kat: list[int]
+
+class AudioConfig(TypedDict):
+    device_type: int
+    sample_rate: int
+    buffer_size: int
+    exclusive: bool
+
+class VolumeConfig(TypedDict):
+    sound: float
+    music: float
+    voice: float
+    hitsound: float
+    attract_mode: float
+
+class VideoConfig(TypedDict):
+    screen_width: int
+    screen_height: int
+    fullscreen: bool
+    borderless: bool
+    target_fps: int
+    vsync: bool
+
+class Config(TypedDict):
+    general: GeneralConfig
+    nameplate_1p: NameplateConfig
+    nameplate_2p: NameplateConfig
+    paths: PathsConfig
+    keys_1p: Keys1PConfig
+    keys_2p: Keys2PConfig
+    gamepad: GamepadConfig
+    audio: AudioConfig
+    volume: VolumeConfig
+    video: VideoConfig
 
 @dataclass
 class Modifiers:
