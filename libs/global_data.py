@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from libs.utils import Config
+
 @dataclass
 class Modifiers:
     """
@@ -66,7 +68,7 @@ class GlobalData:
         session_data (list[SessionData]): Session data for both players.
     """
     songs_played: int = 0
-    config: dict[str, Any] = field(default_factory=lambda: dict())
+    config: Config = field(default_factory=lambda: dict())
     song_hashes: dict[str, list[dict]] = field(default_factory=lambda: dict()) #Hash to path
     song_paths: dict[Path, str] = field(default_factory=lambda: dict()) #path to hash
     song_progress: float = 0.0

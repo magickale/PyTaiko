@@ -18,6 +18,7 @@ Download for OS of choice on releases page
 
 How to run:
 Windows:
+Install VC redistributable package from Microsoft
 ```
   Run PyTaiko.exe
 ```
