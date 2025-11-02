@@ -122,12 +122,12 @@ class ResultPlayer:
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], int(self.player_num), plate_info['dan'], plate_info['gold'], plate_info['title_bg'])
         self.score, self.good, self.ok, self.bad, self.max_combo, self.total_drumroll = '', '', '', '', '', ''
-        self.update_list: list[tuple[str, int]] = [['score', session_data.result_score],
-            ['good', session_data.result_good],
-            ['ok', session_data.result_ok],
-            ['bad', session_data.result_bad],
-            ['max_combo', session_data.result_max_combo],
-            ['total_drumroll', session_data.result_total_drumroll]]
+        self.update_list: list[tuple[str, int]] = [('score', session_data.result_score),
+            ('good', session_data.result_good),
+            ('ok', session_data.result_ok),
+            ('bad', session_data.result_bad),
+            ('max_combo', session_data.result_max_combo),
+            ('total_drumroll', session_data.result_total_drumroll)]
         self.update_index = 0
         if session_data.result_ok == 0 and session_data.result_bad == 0:
             self.crown_type = 'crown_dfc'

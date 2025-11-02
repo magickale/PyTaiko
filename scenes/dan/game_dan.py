@@ -12,7 +12,7 @@ from libs.tja import TJAParser
 from libs.transition import Transition
 from libs.utils import OutlinedText, get_current_ms
 from libs.texture import tex
-from scenes.game import ClearAnimation, FCAnimation, FailAnimation, GameScreen, ResultTransition, SongInfo
+from scenes.game import ClearAnimation, FCAnimation, FailAnimation, GameScreen, Gauge, ResultTransition, SongInfo
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ class DanGameScreen(GameScreen):
         session_data.selected_difficulty = difficulty
         self.player_1.difficulty = difficulty
         self.tja = TJAParser(song.file_path, start_delay=self.start_delay, distance=SCREEN_WIDTH - GameScreen.JUDGE_X)
-        audio.unload_music_stream(self.song_music)
+        if self.song_music is not None:
+            audio.unload_music_stream(self.song_music)
         self.song_music = None
         self.song_started = False
 
@@ -326,7 +327,7 @@ class DanTransition:
         tex.draw_texture('dan', 'transition', index=1, x=-self.move.attribute)
 
 
-class DanGauge:
+class DanGauge(Gauge):
     """The player's gauge"""
     def __init__(self, player_num: str, total_notes: int):
         self.player_num = player_num

@@ -75,10 +75,6 @@ class DonBG(DonBGBase):
         self.move = Animation.create_move(10000, total_distance=-1280)
         self.move.start()
         self.move.loop = True
-    def draw(self, tex: TextureWrapper):
-        self._draw_textures(tex, 1.0)
-        if self.is_clear:
-            self._draw_textures(tex, self.clear_fade.attribute)
-    def _draw_textures(self, tex: TextureWrapper, fade: float):
+    def _draw_textures(self, tex: TextureWrapper, fade: float, y: float):
         for i in range(2):
             tex.draw_texture(self.name, 'background', frame=self.is_clear, fade=fade, x=(i*1280)+self.move.attribute)

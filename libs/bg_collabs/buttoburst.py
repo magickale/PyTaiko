@@ -36,8 +36,6 @@ class DancerGroup(BaseDancerGroup):
 class BGFever(BGFeverBase):
     def start(self):
         self.transitioned = True
-    def update(self, current_time_ms: float):
-        pass
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, 'background')
         tex.draw_texture(self.name, 'overlay')

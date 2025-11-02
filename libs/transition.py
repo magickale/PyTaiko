@@ -51,14 +51,17 @@ class Transition:
             offset = 816 - self.rainbow_up.attribute
         global_tex.draw_texture('rainbow_transition', 'text_bg', y=-self.rainbow_up.attribute - offset, color=color_2)
 
-        texture = self.title.texture
-        x = 1280//2 - texture.width//2
-        y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset - 20
-        self.title.draw(outline_color=ray.BLACK, x=x, y=y, color=color_1)
+        if isinstance(self.title, OutlinedText):
+            texture = self.title.texture
+            x = 1280//2 - texture.width//2
+            y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset - 20
+            self.title.draw(outline_color=ray.BLACK, x=x, y=y, color=color_1)
 
-        texture = self.subtitle.texture
-        x = 1280//2 - texture.width//2
-        self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y + 50, color=color_1)
+        if isinstance(self.subtitle, OutlinedText):
+            texture = self.subtitle.texture
+            x = 1280//2 - texture.width//2
+            y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset - 20
+            self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y + 50, color=color_1)
 
     def draw(self):
         """Draw the transition effect."""

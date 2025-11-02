@@ -21,7 +21,7 @@ from libs.utils import (
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
-from scenes.game_dan import DanGameScreen
+from scenes.dan.game_dan import DanGameScreen
 from scenes.two_player.game import TwoPlayerGameScreen
 from scenes.two_player.result import TwoPlayerResultScreen
 from scenes.loading import LoadScreen
@@ -30,7 +30,7 @@ from scenes.settings import SettingsScreen
 from scenes.song_select import SongSelectScreen
 from scenes.title import TitleScreen
 from scenes.two_player.song_select import TwoPlayerSongSelectScreen
-from scenes.dan_select import DanSelectScreen
+from scenes.dan.dan_select import DanSelectScreen
 
 
 logger = logging.getLogger(__name__)

@@ -3,6 +3,7 @@ import platform
 import logging
 from pathlib import Path
 
+from libs.global_data import VolumeConfig
 from libs.utils import get_config
 
 ffi = cffi.FFI()
@@ -118,7 +119,7 @@ except OSError as e:
 
 class AudioEngine:
     """Initialize an audio engine for playing sounds and music."""
-    def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: dict[str, float]):
+    def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: VolumeConfig):
         self.device_type = device_type
         if sample_rate < 0:
             self.target_sample_rate = 44100
@@ -142,7 +143,10 @@ class AudioEngine:
     def get_host_api_name(self, api_id: int) -> str:
         """Returns the name of the host API with the given ID"""
         result = lib.get_host_api_name(api_id) # type: ignore
-        return ffi.string(result).decode('utf-8')
+        result = ffi.string(result)
+        if isinstance(result, bytes):
+            result = result.decode('utf-8')
+        return result
 
     def init_audio_device(self) -> bool:
         """Initialize the audio device"""

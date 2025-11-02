@@ -183,16 +183,13 @@ class DanSelectPlayer:
 
     def handle_input(self, state, screen):
         """Main input dispatcher. Delegates to state-specific handlers."""
-        if self.is_voice_playing():
-            return
 
         if state == State.BROWSING:
             screen.handle_input_browsing()
         elif state == State.SONG_SELECTED:
             res = screen.handle_input_selected()
-
-        if res:
-            return res
+            if res:
+                return res
 
     def handle_input_selected(self):
         """Handle input for selecting difficulty. Returns 'cancel', 'confirm', or None"""

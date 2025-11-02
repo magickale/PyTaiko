@@ -54,9 +54,10 @@ class VideoPlayer:
                 image = ray.Image(frame_data, self.video.w, self.video.h, 1, ray.PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8)
                 self.texture = ray.load_texture_from_image(image)
             else:
-                frame_bytes = frame_data.tobytes()
-                pixels_ptr = ray.ffi.cast('void *', ray.ffi.from_buffer('unsigned char[]', frame_bytes))
-                ray.update_texture(self.texture, pixels_ptr)
+                if frame_data is not None:
+                    frame_bytes = frame_data.tobytes()
+                    pixels_ptr = ray.ffi.cast('void *', ray.ffi.from_buffer('unsigned char[]', frame_bytes))
+                    ray.update_texture(self.texture, pixels_ptr)
 
             self.current_frame_data = frame_data
             return True

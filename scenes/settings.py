@@ -252,7 +252,7 @@ class SettingsScreen(Screen):
                     display_value = ', '.join(map(str, value))
                 else:
                     display_value = str(value)
-                if key == 'device_type':
+                if key == 'device_type' and not isinstance(value, list):
                     display_value = f'{display_value} ({audio.get_host_api_name(value)})'
                 ray.draw_text(f'{key}: {display_value}', 250, i*25 + 70, 20, color)
 

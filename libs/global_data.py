@@ -120,7 +120,7 @@ class SessionData:
     result_bad: int = 0
     result_max_combo: int = 0
     result_total_drumroll: int = 0
-    result_gauge_length: int = 0
+    result_gauge_length: float = 0
     prev_score: int = 0
 
 @dataclass
@@ -142,7 +142,7 @@ class GlobalData:
         session_data (list[SessionData]): Session data for both players.
     """
     songs_played: int = 0
-    config: Config = field(default_factory=lambda: dict())
+    config: dict = field(default_factory=dict)
     song_hashes: dict[str, list[dict]] = field(default_factory=lambda: dict()) #Hash to path
     song_paths: dict[Path, str] = field(default_factory=lambda: dict()) #path to hash
     song_progress: float = 0.0

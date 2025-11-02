@@ -404,7 +404,7 @@ class YellowBox:
             if self.tja.metadata.course_data[diff].is_branching and (get_current_ms() // 1000) % 2 == 0:
                 tex.draw_texture('yellow_box', 'branch_indicator', x=(diff*60), color=color)
 
-    def _draw_tja_data_diff(self, is_ura: bool, song_box):
+    def _draw_tja_data_diff(self, is_ura: bool, song_box: Optional[SongBox] = None):
         if self.tja is None:
             return
         tex.draw_texture('diff_select', 'back', fade=self.fade_in.attribute)
@@ -412,6 +412,8 @@ class YellowBox:
         tex.draw_texture('diff_select', 'neiro', fade=self.fade_in.attribute)
 
         for diff in self.tja.metadata.course_data:
+            if song_box is None:
+                continue
             if diff >= 4:
                 continue
             elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
@@ -472,7 +474,7 @@ class YellowBox:
         tex.draw_texture('yellow_box', 'yellow_box_top', x=self.left_x + self.edge_height, y=self.top_y, x2=self.center_width)
         tex.draw_texture('yellow_box', 'yellow_box_center', x=self.left_x + self.edge_height, y=self.top_y + self.edge_height, x2=self.center_width, y2=self.center_height)
 
-    def draw(self, song_box: SongBox, fade_override: Optional[float], is_ura: bool):
+    def draw(self, song_box: Optional[SongBox], fade_override: Optional[float], is_ura: bool):
         self._draw_yellow_box()
         if self.is_dan:
             return
@@ -604,7 +606,7 @@ class DanBox:
 
     def _draw_open(self, x: int, y: int, is_ura: bool):
         if self.yellow_box is not None:
-            self.yellow_box.draw(x, y, False)
+            self.yellow_box.draw(None, None, False)
             for i, song in enumerate(self.song_text):
                 title, subtitle = song
                 x = i * 140
@@ -895,8 +897,8 @@ class DanCourse(FileSystemItem):
             self.charts = []
             for chart in data["charts"]:
                 hash = chart["hash"]
-                chart_title = chart["title"]
-                chart_subtitle = chart["subtitle"]
+                #chart_title = chart["title"]
+                #chart_subtitle = chart["subtitle"]
                 difficulty = chart["difficulty"]
                 if hash in global_data.song_hashes:
                     path = Path(global_data.song_hashes[hash][0]["file_path"])
@@ -997,10 +999,11 @@ class FileNavigator:
             song_list = self._read_song_list(self.favorite_folder.path)
             for song_obj in song_list:
                 if str(song_obj) in self.all_song_files:
-                    if isinstance(self.all_song_files[str(song_obj)].box, DanBox):
+                    box = self.all_song_files[str(song_obj)].box
+                    if isinstance(box, DanBox):
                         logger.warning(f"Cannot favorite DanCourse: {song_obj}")
                     else:
-                        self.all_song_files[str(song_obj)].box.is_favorite = True
+                        box.is_favorite = True
 
         logging.info(f"Object generation complete. "
                     f"Directories: {len(self.all_directories)}, "

@@ -128,7 +128,7 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
         super()._cancel_selection()
         self.player_2.selected_song = False
 
-    def _confirm_selection(self, player_selected: int):
+    def _confirm_selection(self, player_selected: int = 1):
         """Confirm song selection and create game transition"""
         audio.play_sound('don', 'sound')
         audio.play_sound(f'voice_start_song_{global_data.player_num}p', 'voice')
@@ -160,7 +160,7 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
             self.game_transition.start()
             logger.info(f"Game transition started for song: {title} - {subtitle}")
 
-    def update_players(self, current_time):
+    def update_players(self, current_time) -> str:
         self.player_1.update(current_time)
         self.player_2.update(current_time)
         if self.text_fade_out.is_finished:

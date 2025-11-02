@@ -19,8 +19,8 @@ class Background:
         self.chibi = ChibiController(self.tex_wrapper, 2, bpm, path)
 
 class DonBG(DonBG6):
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str):
-        super().__init__(tex, player_num, bpm, path)
+    def __init__(self, tex: TextureWrapper, index: int, player_num: int, path: str):
+        super().__init__(tex, index, player_num, path)
         self.overlay_move_2 = Animation.create_move(8000, total_distance=-760)
         self.overlay_move_2.loop = True
         self.overlay_move_2.start()

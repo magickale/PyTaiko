@@ -5,7 +5,7 @@ from pathlib import Path
 import pyray as ray
 import logging
 
-from libs.file_navigator import navigator
+from libs.file_navigator import DanCourse, navigator
 from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.file_navigator import Directory, SongBox, SongFile
@@ -74,7 +74,9 @@ class SongSelectScreen(Screen):
             return self.on_screen_end("ENTRY")
 
         if str(session_data.selected_song) in self.navigator.all_song_files:
-            self.navigator.mark_crowns_dirty_for_song(self.navigator.all_song_files[str(session_data.selected_song)])
+            selected_song = self.navigator.all_song_files[str(session_data.selected_song)]
+            if not isinstance(selected_song, DanCourse):
+                self.navigator.mark_crowns_dirty_for_song(selected_song)
 
         curr_item = self.navigator.get_current_item()
         curr_item.box.get_scores()
@@ -214,7 +216,7 @@ class SongSelectScreen(Screen):
     def handle_input(self):
         self.player_1.handle_input(self.state, self)
 
-    def update_players(self, current_time):
+    def update_players(self, current_time) -> str:
         self.player_1.update(current_time)
         if self.text_fade_out.is_finished:
             self.player_1.selected_song = True
@@ -376,6 +378,7 @@ class SongSelectPlayer:
         self.selected_difficulty = -3
         self.prev_diff = -3
         self.selected_song = False
+        self.is_ready = False
         self.is_ura = False
         self.ura_toggle = 0
         self.diff_select_move_right = False
@@ -492,7 +495,7 @@ class SongSelectPlayer:
 
     def handle_input(self, state, screen):
         """Main input dispatcher. Delegates to state-specific handlers."""
-        if self.is_voice_playing():
+        if self.is_voice_playing() or self.is_ready:
             return
 
         if state == State.BROWSING:
@@ -538,6 +541,7 @@ class SongSelectPlayer:
                 self.neiro_selector = NeiroSelector(self.player_num)
                 return None
             else:
+                self.is_ready = True
                 return "confirm"
 
         if is_l_kat_pressed(self.player_num) or is_r_kat_pressed(self.player_num):
