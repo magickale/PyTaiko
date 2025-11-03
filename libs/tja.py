@@ -360,7 +360,7 @@ class TJAParser:
                 data = item.split(':')[1]
                 if not data:
                     logger.warning(f"Invalid WAVE value: {data} in TJA file {self.file_path}")
-                    self.metadata.wave = ''
+                    self.metadata.wave = Path()
                 else:
                     self.metadata.wave = self.file_path.parent / data.strip()
             elif item.startswith('OFFSET'):
@@ -381,7 +381,7 @@ class TJAParser:
                 data = item.split(':')[1]
                 if not data:
                     logger.warning(f"Invalid BGMOVIE value: {data} in TJA file {self.file_path}")
-                    self.metadata.bgmovie = None
+                    self.metadata.bgmovie = Path()
                 else:
                     self.metadata.bgmovie = self.file_path.parent / data.strip()
             elif item.startswith('MOVIEOFFSET'):
@@ -412,7 +412,8 @@ class TJAParser:
                     current_diff = 0
                 else:
                     logger.error(f"Course level empty in {self.file_path}")
-                self.metadata.course_data[current_diff] = CourseData()
+                if current_diff is not None:
+                    self.metadata.course_data[current_diff] = CourseData()
             elif current_diff is not None:
                 if item.startswith('LEVEL'):
                     data = item.split(':')[1]
@@ -445,13 +446,11 @@ class TJAParser:
                         continue
                     balloon_data = item.split(':')[1]
                     if balloon_data == '':
-                        logger.debug(f"Invalid BALLOON value: {balloon_data} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].balloon = [int(x) for x in balloon_data.split(',') if x != '']
                 elif item.startswith('SCOREINIT'):
                     score_init = item.split(':')[1]
                     if score_init == '':
-                        logger.debug(f"Invalid SCOREINIT value: {score_init} in TJA file {self.file_path}")
                         continue
                     try:
                         self.metadata.course_data[current_diff].scoreinit = [int(x) for x in score_init.split(',') if x != '']
@@ -461,7 +460,6 @@ class TJAParser:
                 elif item.startswith('SCOREDIFF'):
                     score_diff = item.split(':')[1]
                     if score_diff == '':
-                        logger.debug(f"Invalid SCOREDIFF value: {score_diff} in TJA file {self.file_path}")
                         continue
                     self.metadata.course_data[current_diff].scorediff = int(float(score_diff))
         for region_code in self.metadata.title:
@@ -628,6 +626,7 @@ class TJAParser:
         start_branch_gogo = gogo_time
         branch_balloon_count = 0
         is_branching = False
+        prev_note = None
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
@@ -849,17 +848,8 @@ class TJAParser:
                             note = Balloon(note)
                         note.count = 1 if not balloon else balloon.pop(0)
                     elif item == '8':
-                        if not curr_note_list or curr_note_list[-1].type not in {5, 6, 7, 9}:
-                            if master_notes.play_notes and master_notes.play_notes[-1].type in {5, 6, 7, 9}:
-                                prev_note = master_notes.play_notes[-1]
-                            elif branch_m[-1].play_notes and branch_m[-1].play_notes[-1].type in {5, 6, 7, 9}:
-                                prev_note = branch_m[-1].play_notes[-1]
-                            elif branch_e[-1].play_notes and branch_e[-1].play_notes[-1].type in {5, 6, 7, 9}:
-                                prev_note = branch_e[-1].play_notes[-1]
-                            elif branch_n[-1].play_notes and branch_n[-1].play_notes[-1].type in {5, 6, 7, 9}:
-                                prev_note = branch_n[-1].play_notes[-1]
-                        else:
-                            prev_note = curr_note_list[-1]
+                        if prev_note is None:
+                            raise ValueError("No previous note found")
                         new_pixels_per_ms = prev_note.pixels_per_frame_x / (1000 / 60)
                         if new_pixels_per_ms == 0:
                             note.load_ms = note.hit_ms
@@ -871,6 +861,7 @@ class TJAParser:
                     bisect.insort(curr_draw_list, note, key=lambda x: x.load_ms)
                     self.get_moji(curr_note_list, ms_per_measure)
                     index += 1
+                    prev_note = note
         # Sorting by load_ms is necessary for drawing, as some notes appear on the
         # screen slower regardless of when they reach the judge circle
         # Bars can be sorted like this because they don't need hit detection
