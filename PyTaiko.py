@@ -196,6 +196,17 @@ def main():
             ray.toggle_borderless_windowed()
             logger.info("Toggled borderless windowed mode")
 
+        curr_screen_width = ray.get_screen_width()
+        curr_screen_height = ray.get_screen_height()
+
+        if curr_screen_width == 0 or curr_screen_height == 0:
+            dest_rect = ray.Rectangle(0, 0, screen_width, screen_height)
+        else:    
+            scale = min(curr_screen_width / screen_width, curr_screen_height / screen_height)
+            dest_rect = ray.Rectangle((curr_screen_width - (screen_width * scale)) * 0.5,
+                (curr_screen_height - (screen_height * scale)) * 0.5,
+                screen_width * scale, screen_height * scale)
+
         ray.begin_texture_mode(target)
         ray.begin_blend_mode(ray.BlendMode.BLEND_CUSTOM_SEPARATE)
 
@@ -216,11 +227,11 @@ def main():
         ray.end_blend_mode()
         ray.end_texture_mode()
         ray.begin_drawing()
-        ray.clear_background(ray.WHITE)
+        ray.clear_background(ray.BLACK)
         ray.draw_texture_pro(
              target.texture,
              ray.Rectangle(0, 0, target.texture.width, -target.texture.height),
-             ray.Rectangle(0, 0, ray.get_screen_width(), ray.get_screen_height()),
+             dest_rect,
              ray.Vector2(0,0),
              0,
              ray.WHITE
