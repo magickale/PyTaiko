@@ -133,7 +133,7 @@ uv run nuitka --mode=app --noinclude-setuptools-mode=nofollow --noinclude-IPytho
 
 Contributions are welcome! Please keep in mind:
 - Be mindful of existing built-in functions for animations, videos, and other features. Nearly everything has been abstracted and the libs folder has proper documentation for usage.
-- You can also check the [DeepWiki](https://deepwiki.com/Yonokid/PyTaiko) page for a detailed explanation of any code at 
+- You can also check the [DeepWiki](https://deepwiki.com/Yonokid/PyTaiko) page for a detailed explanation of any code.
 - Check the [issues page](https://github.com/Yonokid/PyTaiko/issues) for enhancements and bugs before starting work
 - Feel free to open new issues for bugs or feature requests
 
