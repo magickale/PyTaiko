@@ -113,6 +113,7 @@ class SongBox:
                         continue
                     diff_hash = self.hash[diff]
                     self.scores[diff] = hash_to_score.get(diff_hash)
+                self.score_history = None
 
     def move_box(self):
         if self.position != self.target_position and self.move is None:

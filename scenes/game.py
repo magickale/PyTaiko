@@ -170,6 +170,7 @@ class GameScreen(Screen):
                 crown = 2
             elif self.player_1.gauge.is_clear:
                 crown = 1
+            logger.info(f"Existing score: {existing_score}, Existing crown: {existing_crown}, New score: {session_data.result_score}, New crown: {crown}")
             if result is None or (existing_score is not None and session_data.result_score > existing_score):
                 insert_query = '''
                 INSERT OR REPLACE INTO Scores (hash, en_name, jp_name, diff, score, good, ok, bad, drumroll, combo, clear)
@@ -181,6 +182,8 @@ class GameScreen(Screen):
                         session_data.result_ok, session_data.result_bad,
                         session_data.result_total_drumroll, session_data.result_max_combo, crown)
                 cursor.execute(insert_query, data)
+                session_data.prev_score = existing_score if existing_score is not None else 0
+                logger.info(f"Wrote score {session_data.result_score} for {self.tja.metadata.title['en']}")
                 con.commit()
             if result is None or (existing_crown is not None and crown > existing_crown):
                 cursor.execute("UPDATE Scores SET crown = ? WHERE hash = ?", (crown, hash))

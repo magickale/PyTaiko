@@ -466,7 +466,7 @@ class HighScoreIndicator:
 
 class Gauge:
     """The gauge from the game screen, at 0.9x scale"""
-    def __init__(self, player_num: str, gauge_length: int, is_2p: bool):
+    def __init__(self, player_num: str, gauge_length: float, is_2p: bool):
         self.is_2p = is_2p
         self.player_num = player_num
         self.difficulty = min(2, global_data.session_data[int(player_num)-1].selected_difficulty)
