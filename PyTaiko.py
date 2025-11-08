@@ -32,6 +32,7 @@ from scenes.song_select import SongSelectScreen
 from scenes.title import TitleScreen
 from scenes.two_player.song_select import TwoPlayerSongSelectScreen
 from scenes.dan.dan_select import DanSelectScreen
+from scenes.dan.dan_result import DanResultScreen
 
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ class Screens:
     SONG_SELECT_2P = "SONG_SELECT_2P"
     DAN_SELECT = "DAN_SELECT"
     GAME_DAN = "GAME_DAN"
+    DAN_RESULT = "DAN_RESULT"
     SETTINGS = "SETTINGS"
     DEV_MENU = "DEV_MENU"
     LOADING = "LOADING"
@@ -163,6 +165,7 @@ def main():
     dev_screen = DevScreen('dev')
     dan_select_screen = DanSelectScreen('dan_select')
     game_screen_dan = DanGameScreen('game_dan')
+    dan_result_screen = DanResultScreen('dan_result')
 
     screen_mapping: dict[str, Screen] = {
         Screens.ENTRY: entry_screen,
@@ -177,6 +180,7 @@ def main():
         Screens.DEV_MENU: dev_screen,
         Screens.DAN_SELECT: dan_select_screen,
         Screens.GAME_DAN: game_screen_dan,
+        Screens.DAN_RESULT: dan_result_screen,
         Screens.LOADING: load_screen
     }
     target = ray.load_render_texture(screen_width, screen_height)

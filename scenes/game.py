@@ -164,29 +164,29 @@ class GameScreen(Screen):
             existing_score = result[0] if result is not None else None
             existing_crown = result[1] if result is not None and len(result) > 1 and result[1] is not None else 0
             crown = 0
-            if session_data.result_bad and session_data.result_ok == 0:
+            if session_data.result_data.bad and session_data.result_data.ok == 0:
                 crown = 3
-            elif session_data.result_bad == 0:
+            elif session_data.result_data.bad == 0:
                 crown = 2
             elif self.player_1.gauge.is_clear:
                 crown = 1
-            logger.info(f"Existing score: {existing_score}, Existing crown: {existing_crown}, New score: {session_data.result_score}, New crown: {crown}")
-            if result is None or (existing_score is not None and session_data.result_score > existing_score):
+            logger.info(f"Existing score: {existing_score}, Existing crown: {existing_crown}, New score: {session_data.result_data.score}, New crown: {crown}")
+            if result is None or (existing_score is not None and session_data.result_data.score > existing_score):
                 insert_query = '''
                 INSERT OR REPLACE INTO Scores (hash, en_name, jp_name, diff, score, good, ok, bad, drumroll, combo, clear)
                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 '''
                 data = (hash, self.tja.metadata.title['en'],
                         self.tja.metadata.title.get('ja', ''), self.player_1.difficulty,
-                        session_data.result_score, session_data.result_good,
-                        session_data.result_ok, session_data.result_bad,
-                        session_data.result_total_drumroll, session_data.result_max_combo, crown)
+                        session_data.result_data.score, session_data.result_data.good,
+                        session_data.result_data.ok, session_data.result_data.bad,
+                        session_data.result_data.total_drumroll, session_data.result_data.max_combo, crown)
                 cursor.execute(insert_query, data)
-                session_data.prev_score = existing_score if existing_score is not None else 0
-                logger.info(f"Wrote score {session_data.result_score} for {self.tja.metadata.title['en']}")
+                session_data.result_data.prev_score = existing_score if existing_score is not None else 0
+                logger.info(f"Wrote score {session_data.result_data.score} for {self.tja.metadata.title['en']}")
                 con.commit()
             if result is None or (existing_crown is not None and crown > existing_crown):
-                cursor.execute("UPDATE Scores SET crown = ? WHERE hash = ?", (crown, hash))
+                cursor.execute("UPDATE Scores SET clear = ? WHERE hash = ?", (crown, hash))
                 con.commit()
 
     def start_song(self, current_time):
@@ -212,7 +212,7 @@ class GameScreen(Screen):
             return self.on_screen_end('SONG_SELECT')
 
     def spawn_ending_anims(self):
-        if global_data.session_data[global_data.player_num-1].result_bad == 0:
+        if global_data.session_data[global_data.player_num-1].result_data.bad == 0:
             self.player_1.ending_anim = FCAnimation(self.player_1.is_2p)
         elif self.player_1.gauge.is_clear:
             self.player_1.ending_anim = ClearAnimation(self.player_1.is_2p)
@@ -247,8 +247,8 @@ class GameScreen(Screen):
             return self.on_screen_end('RESULT')
         elif self.current_ms >= self.player_1.end_time:
             session_data = global_data.session_data[global_data.player_num-1]
-            session_data.result_score, session_data.result_good, session_data.result_ok, session_data.result_bad, session_data.result_max_combo, session_data.result_total_drumroll = self.player_1.get_result_score()
-            session_data.result_gauge_length = self.player_1.gauge.gauge_length
+            session_data.result_data.score, session_data.result_data.good, session_data.result_data.ok, session_data.result_data.bad, session_data.result_data.max_combo, session_data.result_data.total_drumroll = self.player_1.get_result_score()
+            session_data.result_data.gauge_length = self.player_1.gauge.gauge_length
             if self.end_ms != 0:
                 if current_time >= self.end_ms + 1000:
                     if self.player_1.ending_anim is None:

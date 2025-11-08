@@ -118,20 +118,20 @@ class ResultPlayer:
         self.high_score_indicator = None
         self.chara = Chara2D(int(self.player_num) - 1, 100)
         session_data = global_data.session_data[int(self.player_num)-1]
-        self.score_animator = ScoreAnimator(session_data.result_score)
+        self.score_animator = ScoreAnimator(session_data.result_data.score)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], int(self.player_num), plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
         self.score, self.good, self.ok, self.bad, self.max_combo, self.total_drumroll = '', '', '', '', '', ''
-        self.update_list: list[tuple[str, int]] = [('score', session_data.result_score),
-            ('good', session_data.result_good),
-            ('ok', session_data.result_ok),
-            ('bad', session_data.result_bad),
-            ('max_combo', session_data.result_max_combo),
-            ('total_drumroll', session_data.result_total_drumroll)]
+        self.update_list: list[tuple[str, int]] = [('score', session_data.result_data.score),
+            ('good', session_data.result_data.good),
+            ('ok', session_data.result_data.ok),
+            ('bad', session_data.result_data.bad),
+            ('max_combo', session_data.result_data.max_combo),
+            ('total_drumroll', session_data.result_data.total_drumroll)]
         self.update_index = 0
-        if session_data.result_ok == 0 and session_data.result_bad == 0:
+        if session_data.result_data.ok == 0 and session_data.result_data.bad == 0:
             self.crown_type = 'crown_dfc'
-        elif session_data.result_bad == 0:
+        elif session_data.result_data.bad == 0:
             self.crown_type = 'crown_fc'
         else:
             self.crown_type = 'crown_clear'
@@ -163,13 +163,13 @@ class ResultPlayer:
                     self.score_delay += 16.67 * 3
         if self.update_index > 0 and self.high_score_indicator is None:
             session_data = global_data.session_data[int(self.player_num)-1]
-            if session_data.result_score > session_data.prev_score:
-                self.high_score_indicator = HighScoreIndicator(session_data.prev_score, session_data.result_score, self.is_2p)
+            if session_data.result_data.score > session_data.result_data.prev_score:
+                self.high_score_indicator = HighScoreIndicator(session_data.result_data.prev_score, session_data.result_data.score, self.is_2p)
 
     def update(self, current_ms: float, fade_in_finished: bool, is_skipped: bool):
         self.fade_in_finished = fade_in_finished
         if self.fade_in_finished and self.gauge is None:
-            self.gauge = Gauge(self.player_num, global_data.session_data[int(self.player_num)-1].result_gauge_length, self.is_2p)
+            self.gauge = Gauge(self.player_num, global_data.session_data[int(self.player_num)-1].result_data.gauge_length, self.is_2p)
             self.bottom_characters.start()
         self.bottom_characters.update(self.state)
         self.update_score_animation(is_skipped)

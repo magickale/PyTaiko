@@ -11,7 +11,6 @@ class TwoPlayerResultScreen(ResultScreen):
         self.fade_in = FadeIn('3')
         self.player_1 = ResultPlayer('1', True, False)
         self.player_2 = ResultPlayer('2', True, True)
-        logger.info("TwoPlayerResultScreen started, background and players initialized")
 
     def update(self):
         super(ResultScreen, self).update()

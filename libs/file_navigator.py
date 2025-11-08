@@ -492,7 +492,7 @@ class YellowBox:
         self._draw_text(song_box)
 
 class DanBox:
-    def __init__(self, title: str, color: int, songs: list[tuple[TJAParser, int, int]], exams: list['Exam']):
+    def __init__(self, title: str, color: int, songs: list[tuple[TJAParser, int, int, int]], exams: list['Exam']):
         self.position = -11111
         self.start_position = -1
         self.target_position = -1
@@ -505,7 +505,7 @@ class DanBox:
         self.exams = exams
         self.song_text: list[tuple[OutlinedText, OutlinedText]] = []
         self.total_notes = 0
-        for song, genre_index, difficulty in self.songs:
+        for song, genre_index, difficulty, level in self.songs:
             notes, branch_m, branch_e, branch_n = song.notes_to_position(difficulty)
             self.total_notes += sum(1 for note in notes.play_notes if note.type < 5)
             for branch in branch_m:
@@ -550,7 +550,7 @@ class DanBox:
             self.name = OutlinedText(self.title, 40, ray.WHITE, vertical=True)
             self.hori_name = OutlinedText(self.title, 40, ray.WHITE)
         if self.is_open and not self.song_text:
-            for song, genre, difficulty in self.songs:
+            for song, genre, difficulty, level in self.songs:
                 title = song.metadata.title.get(global_data.config["general"]["language"], song.metadata.title["en"])
                 subtitle = song.metadata.subtitle.get(global_data.config["general"]["language"], "")
                 title_text = OutlinedText(title, 40, ray.WHITE, vertical=True)
@@ -907,7 +907,8 @@ class DanCourse(FileSystemItem):
                         _, genre_index, _ = parse_box_def(path.parent.parent)
                     else:
                         genre_index = 9
-                    self.charts.append((TJAParser(path), genre_index, difficulty))
+                    tja = TJAParser(path)
+                    self.charts.append((tja, genre_index, difficulty, tja.metadata.course_data[difficulty].level))
                 else:
                     pass
                     #do something with song_title, song_subtitle

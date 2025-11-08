@@ -6,7 +6,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.file_navigator import Exam
-from libs.global_data import global_data
+from libs.global_data import DanResultExam, DanResultSong, global_data
 from libs.global_objects import AllNetIcon
 from libs.tja import TJAParser
 from libs.transition import Transition
@@ -61,7 +61,7 @@ class DanGameScreen(GameScreen):
         songs = copy.deepcopy(session_data.selected_dan)
         self.exams = copy.deepcopy(session_data.selected_dan_exam)
         self.total_notes = 0
-        for song, genre_index, difficulty in songs:
+        for song, genre_index, difficulty, level in songs:
             notes, branch_m, branch_e, branch_n = song.notes_to_position(difficulty)
             self.total_notes += sum(1 for note in notes.play_notes if note.type < 5)
             for branch in branch_m:
@@ -70,7 +70,7 @@ class DanGameScreen(GameScreen):
                 self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
             for branch in branch_n:
                 self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
-        song, genre_index, difficulty = songs[self.song_index]
+        song, genre_index, difficulty, level = songs[self.song_index]
         session_data.selected_difficulty = difficulty
         self.init_tja(song.file_path)
         self.color = session_data.dan_color
@@ -87,7 +87,7 @@ class DanGameScreen(GameScreen):
     def change_song(self):
         session_data = global_data.session_data[global_data.player_num-1]
         songs = session_data.selected_dan
-        song, genre_index, difficulty = songs[self.song_index]
+        song, genre_index, difficulty, level = songs[self.song_index]
         session_data.selected_difficulty = difficulty
         self.player_1.difficulty = difficulty
         self.tja = TJAParser(song.file_path, start_delay=self.start_delay, distance=SCREEN_WIDTH - GameScreen.JUDGE_X)
@@ -174,6 +174,8 @@ class DanGameScreen(GameScreen):
 
     @override
     def spawn_ending_anims(self):
+        if sum(song.bad for song in global_data.session_data[global_data.player_num-1].dan_result_data.songs) == 0:
+            self.player_1.ending_anim = FCAnimation(self.player_1.is_2p)
         if self.player_1.gauge.is_clear and not any(self.exam_failed):
             self.player_1.ending_anim = ClearAnimation(self.player_1.is_2p)
         elif not self.player_1.gauge.is_clear:
@@ -201,12 +203,40 @@ class DanGameScreen(GameScreen):
 
         if self.result_transition.is_finished and not audio.is_sound_playing('dan_transition'):
             logger.info("Result transition finished, moving to RESULT screen")
-            return self.on_screen_end('RESULT')
+            return self.on_screen_end('DAN_RESULT')
         elif self.current_ms >= self.player_1.end_time + 1000:
             session_data = global_data.session_data[global_data.player_num-1]
+            if len(session_data.selected_dan) > len(session_data.dan_result_data.songs):
+                song_info = DanResultSong()
+                song_info.song_title = self.song_info.song_name
+                song_info.genre_index = session_data.selected_dan[self.song_index][1]
+                song_info.selected_difficulty = session_data.selected_dan[self.song_index][2]
+                song_info.diff_level = session_data.selected_dan[self.song_index][3]
+                prev_good_count = sum(song.good for song in session_data.dan_result_data.songs)
+                prev_ok_count = sum(song.ok for song in session_data.dan_result_data.songs)
+                prev_bad_count = sum(song.bad for song in session_data.dan_result_data.songs)
+                prev_drumroll_count = sum(song.drumroll for song in session_data.dan_result_data.songs)
+                song_info.good = self.player_1.good_count - prev_good_count
+                song_info.ok = self.player_1.ok_count - prev_ok_count
+                song_info.bad = self.player_1.bad_count - prev_bad_count
+                song_info.drumroll = self.player_1.total_drumroll - prev_drumroll_count
+                session_data.dan_result_data.songs.append(song_info)
             if self.song_index == len(session_data.selected_dan) - 1:
                 if self.end_ms != 0:
                     if current_time >= self.end_ms + 1000:
+                        session_data.dan_result_data.dan_color = self.color
+                        session_data.dan_result_data.dan_title = self.hori_name.text
+                        session_data.dan_result_data.score = self.player_1.score
+                        session_data.dan_result_data.gauge_length = self.player_1.gauge.gauge_length
+                        session_data.dan_result_data.max_combo = self.player_1.max_combo
+                        session_data.dan_result_data.exams = self.exams
+                        for i in range(len(self.exams)):
+                            exam_data = DanResultExam()
+                            exam_data.bar_texture = self.dan_info_cache["exam_data"][i]["bar_texture"]
+                            exam_data.counter_value = self.dan_info_cache["exam_data"][i]["counter_value"]
+                            exam_data.failed = self.exam_failed[i]
+                            exam_data.progress = self.dan_info_cache["exam_data"][i]["progress"]
+                            session_data.dan_result_data.exam_data.append(exam_data)
                         if self.player_1.ending_anim is None:
                             self.spawn_ending_anims()
                     if current_time >= self.end_ms + 8533.34:

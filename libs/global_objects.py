@@ -26,7 +26,7 @@ class Nameplate:
         self.is_gold = is_gold
         self.is_rainbow = is_rainbow
         self.title_bg = title_bg
-        if self.is_rainbow == True:
+        if self.is_rainbow:
             self.rainbow_animation = global_tex.get_animation(12)
             self.rainbow_animation.start()
     def update(self, current_time_ms: float):
@@ -35,7 +35,7 @@ class Nameplate:
         Args:
             current_time_ms (float): The current time in milliseconds.
         """
-        if self.is_rainbow == True:
+        if self.is_rainbow:
             self.rainbow_animation.update(current_time_ms)
             if self.rainbow_animation.is_finished:
                 self.rainbow_animation.restart()
@@ -60,7 +60,7 @@ class Nameplate:
         else:
             frame = self.title_bg
             title_offset = 14
-        if self.is_rainbow == True:
+        if self.is_rainbow:
             if 0 < self.rainbow_animation.attribute < 6:
                 tex.draw_texture('nameplate', 'frame_top_rainbow', frame=self.rainbow_animation.attribute-1, x=x, y=y, fade=fade)
             tex.draw_texture('nameplate', 'frame_top_rainbow', frame=self.rainbow_animation.attribute, x=x, y=y, fade=fade)
