@@ -7,8 +7,9 @@ def create_dan(cache_path: Path):
     dan_data = {}
     dan_data["title"] = input("Enter the title: ")
     dan_data["color"] = int(input("Enter the color (0 10th Kyuu, 1 5th Kyuu, 2 Shodan, 3 6th Dan, 4 Kurouto, 5 Tatsujin, 6 Gaidan): "))
+    exam_num = int(input("Enter the number of exams: "))
     dan_data["exams"] = []
-    for i in range(3):
+    for i in range(exam_num):
         exam = dict()
         exam["type"] = input(f"Enter exam type {i+1}: ")
         exam["red_value"] = int(input(f"Enter exam red value {i+1}: "))
@@ -33,6 +34,7 @@ def create_dan(cache_path: Path):
         dan_data["charts"].append(chart)
     with open("dan.json", "w", encoding="utf-8") as f:
         json.dump(dan_data, f, indent=4, ensure_ascii=False)
+        print("Dan data saved successfully.")
 
 def main():
     create_dan(Path(sys.argv[1]))

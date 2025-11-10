@@ -529,7 +529,7 @@ class DanBox:
             self.move = Animation.create_move(83.3*2, start_position=0, total_distance=300 * direction, ease_out='cubic')
             self.move.start()
             if self.is_open or self.target_position == BOX_CENTER + 150:
-                self.move.total_distance = 450 * direction
+                self.move.total_distance = 450 * direction * -1
             self.start_position = self.position
         if self.move is not None:
             self.move.update(get_current_ms())
