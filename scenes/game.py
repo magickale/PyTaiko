@@ -1071,32 +1071,7 @@ class Player:
         for modifier in modifiers_to_draw:
             tex.draw_texture('lane', modifier, index=self.is_2p)
 
-    def draw_note_types(self, ms_from_start: float, start_ms: float):
-        self.draw_bars(ms_from_start)
-        self.draw_notes(ms_from_start, start_ms)
-
-    def draw(self, ms_from_start: float, start_ms: float, mask_shader: ray.Shader, dan_transition = None):
-        # Group 1: Background and lane elements
-        tex.draw_texture('lane', 'lane_background', index=self.is_2p)
-        if self.branch_indicator is not None:
-            self.branch_indicator.draw()
-        if self.gauge is not None:
-            self.gauge.draw()
-        if self.lane_hit_effect is not None:
-            self.lane_hit_effect.draw()
-        tex.draw_texture('lane', 'lane_hit_circle', index=self.is_2p)
-
-        # Group 2: Judgement and hit effects
-        if self.gogo_time is not None:
-            self.gogo_time.draw()
-        for anim in self.draw_judge_list:
-            anim.draw()
-
-        # Group 3: Notes and bars (game content)
-        self.draw_note_types(ms_from_start, start_ms)
-        if dan_transition is not None:
-            dan_transition.draw()
-
+    def draw_overlays(self, mask_shader: ray.Shader):
         # Group 4: Lane covers and UI elements (batch similar textures)
         tex.draw_texture('lane', f'{self.player_number}p_lane_cover', index=self.is_2p)
         if self.is_dan:
@@ -1150,6 +1125,31 @@ class Player:
         for anim in self.base_score_list:
             anim.draw()
         #ray.draw_circle(game_screen.width//2, game_screen.height, 300, ray.ORANGE)
+
+    def draw(self, ms_from_start: float, start_ms: float, mask_shader: ray.Shader, dan_transition = None):
+        # Group 1: Background and lane elements
+        tex.draw_texture('lane', 'lane_background', index=self.is_2p)
+        if self.branch_indicator is not None:
+            self.branch_indicator.draw()
+        if self.gauge is not None:
+            self.gauge.draw()
+        if self.lane_hit_effect is not None:
+            self.lane_hit_effect.draw()
+        tex.draw_texture('lane', 'lane_hit_circle', index=self.is_2p)
+
+        # Group 2: Judgement and hit effects
+        if self.gogo_time is not None:
+            self.gogo_time.draw()
+        for anim in self.draw_judge_list:
+            anim.draw()
+
+        # Group 3: Notes and bars (game content)
+        self.draw_bars(ms_from_start)
+        self.draw_notes(ms_from_start, start_ms)
+        if dan_transition is not None:
+            dan_transition.draw()
+
+        self.draw_overlays(mask_shader)
 
 class Judgement:
     """Shows the judgement of the player's hit"""
