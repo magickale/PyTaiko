@@ -57,15 +57,13 @@ right_don = [17]
 right_kat = [12]
 
 [audio]
-# device_type: 0 = default, check console output from list_host_apis() for other options
-# Windows users should generally pick 3 (WASAPI) and Linux users should pick 0 (ALSA)
-device_type = 0
-# sample_rate: -1 = use device default (usually 44100 or 48000)
-sample_rate = -1
+# device_type: -1 = default, this will be set on first launch to the recommended setting
+# Windows users should generally pick 4 (WDM-KS) and Linux users should pick 0 (ALSA)
+device_type = -1
+sample_rate = 44100
 # buffer_size: Size in samples per audio buffer
 # - 0 = let driver choose (may result in very small buffers with ASIO, typically 64)
-buffer_size = 0
-exclusive = false
+buffer_size = 32
 
 [volume]
 sound = 1.0

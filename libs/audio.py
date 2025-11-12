@@ -198,7 +198,7 @@ class AudioEngine:
         """Load a sound file and return sound ID"""
         try:
             if platform.system() == 'Windows':
-                # Use Windows ANSI codepage (e.g., cp932 for Japanese, cp1252 for Western)
+                # Use Windows ANSI codepage (cp932 for Japanese)
                 file_path_str = str(file_path).encode('cp932', errors='replace')
             else:
                 file_path_str = str(file_path).encode('utf-8')
@@ -319,7 +319,7 @@ class AudioEngine:
     def load_music_stream(self, file_path: Path, name: str) -> str:
         """Load a music stream and return music ID"""
         if platform.system() == 'Windows':
-            # Use Windows ANSI codepage (e.g., cp932 for Japanese, cp1252 for Western)
+            # Use Windows ANSI codepage (cp932 for Japanese)
             file_path_str = str(file_path).encode('cp932', errors='replace')
         else:
             file_path_str = str(file_path).encode('utf-8')

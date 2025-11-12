@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, TypedDict
+from typing import Any, TypedDict
 
 class GeneralConfig(TypedDict):
     fps_counter: bool
@@ -56,7 +56,6 @@ class AudioConfig(TypedDict):
     device_type: int
     sample_rate: int
     buffer_size: int
-    exclusive: bool
 
 class VolumeConfig(TypedDict):
     sound: float
