@@ -123,24 +123,7 @@ class AudioEngine:
     def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: VolumeConfig):
         if device_type == -1:
             if sys.platform == "win32":
-                ffi = cffi.FFI()
-                ffi.cdef("""
-                    typedef int PaHostApiIndex;
-                    const char* get_host_api_name(PaHostApiIndex hostApi);
-                """)
-                lib = ffi.dlopen("libaudio.dll")
-                for i in range(5):
-                    result = lib.get_host_api_name(i) # type: ignore
-                    if result == ffi.NULL:
-                        continue
-                    result = ffi.string(result)
-                    if isinstance(result, bytes):
-                        result = result.decode('utf-8')
-                    if "WDM" in result:
-                        device_type = i
-                        break
-                else:
-                    device_type = 0
+                device_type = next((i for i in range(5) if "WDM" in self.get_host_api_name(i)), 0)
             else:
                 device_type = 0
         self.device_type = device_type
@@ -165,8 +148,14 @@ class AudioEngine:
 
     def get_host_api_name(self, api_id: int) -> str:
         """Returns the name of the host API with the given ID"""
-        result = lib.get_host_api_name(api_id) # type: ignore
+        if api_id == -1:
+            id = self.device_type
+        else:
+            id = api_id
+        result = lib.get_host_api_name(id) # type: ignore
         result = ffi.string(result)
+        if result == ffi.NULL:
+            return ""
         if isinstance(result, bytes):
             result = result.decode('utf-8')
         return result
