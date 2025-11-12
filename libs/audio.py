@@ -1,3 +1,4 @@
+import sys
 import cffi
 import platform
 import logging
@@ -120,6 +121,28 @@ except OSError as e:
 class AudioEngine:
     """Initialize an audio engine for playing sounds and music."""
     def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: VolumeConfig):
+        if device_type == -1:
+            if sys.platform == "win32":
+                ffi = cffi.FFI()
+                ffi.cdef("""
+                    typedef int PaHostApiIndex;
+                    const char* get_host_api_name(PaHostApiIndex hostApi);
+                """)
+                lib = ffi.dlopen("libaudio.dll")
+                for i in range(5):
+                    result = lib.get_host_api_name(i) # type: ignore
+                    if result == ffi.NULL:
+                        continue
+                    result = ffi.string(result)
+                    if isinstance(result, bytes):
+                        result = result.decode('utf-8')
+                    if "WDM" in result:
+                        device_type = i
+                        break
+                else:
+                    device_type = 0
+            else:
+                device_type = 0
         self.device_type = device_type
         if sample_rate < 0:
             self.target_sample_rate = 44100

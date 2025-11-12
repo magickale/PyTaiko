@@ -84,30 +84,6 @@ def get_config() -> Config:
         config_file = tomlkit.load(f)
 
     config: Config = json.loads(json.dumps(config_file))
-    if config["audio"]["device_type"] == -1:
-        if sys.platform == "win32":
-            ffi = cffi.FFI()
-            ffi.cdef("""
-                typedef int PaHostApiIndex;
-                const char* get_host_api_name(PaHostApiIndex hostApi);
-            """)
-            lib = ffi.dlopen("libaudio.dll")
-            for i in range(5):
-                result = lib.get_host_api_name(i) # type: ignore
-                if result == ffi.NULL:
-                    continue
-                result = ffi.string(result)
-                if isinstance(result, bytes):
-                    result = result.decode('utf-8')
-                if "WDM" in result:
-                    config["audio"]["device_type"] = i
-                    break
-            else:
-                config["audio"]["device_type"] = 0
-        else:
-            config["audio"]["device_type"] = 0
-        save_config(config)
-
     return config
 
 def save_config(config: Config) -> None:
