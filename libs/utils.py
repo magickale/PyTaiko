@@ -88,6 +88,7 @@ def get_config() -> Config:
         if sys.platform == "win32":
             ffi = cffi.FFI()
             ffi.cdef("""
+                typedef int PaHostApiIndex;
                 const char* get_host_api_name(PaHostApiIndex hostApi);
             """)
             lib = ffi.dlopen("libaudio.dll")
