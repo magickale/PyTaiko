@@ -56,6 +56,7 @@ class Note:
     moji: int = field(init=False)
     is_branch_start: bool = field(init=False)
     branch_params: str = field(init=False)
+    lyric: str = field(init=False)
 
     def __lt__(self, other):
         return self.hit_ms < other.hit_ms
@@ -630,6 +631,7 @@ class TJAParser:
         prev_note = None
         is_section_start = False
         section_bar = None
+        lyric = ""
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
@@ -736,6 +738,7 @@ class TJAParser:
                     is_branching = True
                     continue
                 if '#LYRIC' in part:
+                    lyric = part[6:]
                     continue
                 if '#JPOSSCROLL' in part:
                     continue
@@ -839,6 +842,7 @@ class TJAParser:
                     note.bpm = bpm
                     note.gogo_time = gogo_time
                     note.moji = -1
+                    note.lyric = lyric
                     if item in {'5', '6'}:
                         note = Drumroll(note)
                         note.color = 255

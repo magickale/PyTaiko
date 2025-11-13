@@ -1057,6 +1057,7 @@ class Player:
                 if note.display:
                     tex.draw_texture('notes', str(note.type), frame=current_eighth % 2, x=x_position, y=y_position+192+(self.is_2p*176), center=True)
                 tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position - (168//2) + 64, y=323 + y_position+(self.is_2p*176))
+        ray.draw_text(self.current_notes_draw[0].lyric, SCREEN_WIDTH//2 - (ray.measure_text(self.current_notes_draw[0].lyric, 40)//2), SCREEN_HEIGHT - 50, 40, ray.BLUE)
 
 
     def draw_modifiers(self):
