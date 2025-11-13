@@ -477,6 +477,7 @@ class Player:
             delattr(self.current_bars[-1], 'branch_params')
             e_req = float(e_req)
             m_req = float(m_req)
+            logger.info(f'branch condition measures started with conditions {self.branch_condition}, {e_req}, {m_req}, {self.current_bars[-1].hit_ms}')
             if not self.is_branch:
                 self.is_branch = True
                 if self.branch_condition == 'r':
@@ -874,7 +875,7 @@ class Player:
         if current_ms >= end_time:
             self.is_branch = False
             if self.branch_condition == 'p':
-                self.branch_condition_count = min((self.branch_condition_count/total_notes)*100, 100)
+                self.branch_condition_count = max(min((self.branch_condition_count/total_notes)*100, 100), 0)
             if self.branch_condition_count >= e_req and self.branch_condition_count < m_req:
                 self.merge_branch_section(self.branch_e.pop(0), current_ms)
                 if self.branch_indicator is not None and self.branch_indicator.difficulty != 'expert':
@@ -896,6 +897,7 @@ class Player:
                     self.branch_indicator.level_down('normal')
                 self.branch_m.pop(0)
                 self.branch_e.pop(0)
+            logger.info(f"Branch set to {self.branch_indicator.difficulty} based on conditions {self.branch_condition_count}, {e_req, m_req}")
             self.branch_condition_count = 0
 
     def update(self, ms_from_start: float, current_time: float, background: Optional[Background]):

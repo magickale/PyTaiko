@@ -7,6 +7,7 @@ from collections import deque
 from dataclasses import dataclass, field, fields
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from libs.global_data import Modifiers
 from libs.utils import get_pixels_per_frame, strip_comments
@@ -358,7 +359,7 @@ class TJAParser:
                     self.metadata.bpm = float(data)
             elif item.startswith('WAVE'):
                 data = item.split(':')[1]
-                if not data:
+                if not Path(self.file_path.parent / data.strip()).exists():
                     logger.warning(f"Invalid WAVE value: {data} in TJA file {self.file_path}")
                     self.metadata.wave = Path()
                 else:
@@ -627,11 +628,16 @@ class TJAParser:
         branch_balloon_count = 0
         is_branching = False
         prev_note = None
+        is_section_start = False
+        section_bar = None
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
             barline_added = False
             for part in bar:
+                if part.startswith('#SECTION'):
+                    is_section_start = True
+                    continue
                 if part.startswith('#BRANCHSTART'):
                     start_branch_ms = self.current_ms
                     start_branch_bpm = bpm
@@ -667,25 +673,41 @@ class TJAParser:
                         if branch_n and len(branch_n) > 0:
                             set_drumroll_branch_params(branch_n[-1].play_notes, branch_n[-1].bars)
                     else:
-                        if len(curr_bar_list) > 1:
-                            curr_bar_list[-2].branch_params = branch_params
-                        elif len(curr_bar_list) > 0:
-                            curr_bar_list[-1].branch_params = branch_params
+                        def set_branch_params(bar_list: list[Note], branch_params: str, section_bar: Optional[Note]):
+                            if bar_list and len(bar_list) > 1:
+                                section_index = -2
+                                if section_bar and section_bar.hit_ms < self.current_ms:
+                                    if section_bar in bar_list:
+                                        section_index = bar_list.index(section_bar)
+                                bar_list[section_index].branch_params = branch_params
+                            elif bar_list:
+                                section_index = -1
+                                bar_list[section_index].branch_params = branch_params
+                            elif bar_list == []:
+                                bar_line = Note()
+                                bar_line.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
+                                bar_line.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
+                                pixels_per_ms = get_pixels_per_ms(bar_line.pixels_per_frame_x)
 
-                        if branch_m and len(branch_m[-1].bars) > 1:
-                            branch_m[-1].bars[-2].branch_params = branch_params
-                        elif branch_m and len(branch_m[-1].bars) > 0:
-                            branch_m[-1].bars[-1].branch_params = branch_params
-                        if branch_e and len(branch_e[-1].bars) > 1:
-                            branch_e[-1].bars[-2].branch_params = branch_params
-                        elif branch_e and len(branch_e[-1].bars) > 0:
-                            branch_e[-1].bars[-1].branch_params = branch_params
-                        if branch_n and len(branch_n[-1].bars) > 1:
-                            branch_n[-1].bars[-2].branch_params = branch_params
-                        elif branch_n and len(branch_n[-1].bars) > 0:
-                            branch_n[-1].bars[-1].branch_params = branch_params
-                        if branch_m and len(branch_m[-1].bars) > 0:
-                            branch_m[-1].bars[-1].branch_params = branch_params
+                                bar_line.hit_ms = self.current_ms
+                                if pixels_per_ms == 0:
+                                    bar_line.load_ms = bar_line.hit_ms
+                                else:
+                                    bar_line.load_ms = bar_line.hit_ms - (self.distance / pixels_per_ms)
+                                bar_line.type = 0
+                                bar_line.display = False
+                                bar_line.gogo_time = gogo_time
+                                bar_line.bpm = bpm
+                                bar_line.branch_params = branch_params
+                                bar_list.append(bar_line)
+
+                        for bars in [curr_bar_list,
+                                     branch_m[-1].bars if branch_m else None,
+                                     branch_e[-1].bars if branch_e else None,
+                                     branch_n[-1].bars if branch_n else None]:
+                            set_branch_params(bars, branch_params, section_bar)
+                        if section_bar:
+                            section_bar = None
                     continue
                 elif part.startswith('#BRANCHEND'):
                     curr_note_list = master_notes.play_notes
@@ -751,6 +773,7 @@ class TJAParser:
                     scroll_value = part[7:]
                     if 'i' in scroll_value:
                         normalized = scroll_value.replace('.i', 'j').replace('i', 'j')
+                        normalized = normalized.replace(',', '')
                         c = complex(normalized)
                         x_scroll_modifier = c.real
                         y_scroll_modifier = c.imag
@@ -775,6 +798,7 @@ class TJAParser:
                     continue
                 #Unrecognized commands will be skipped for now
                 elif len(part) > 0 and not part[0].isdigit():
+                    logger.warning(f"Unrecognized command: {part}")
                     continue
 
                 ms_per_measure = get_ms_per_measure(bpm, time_signature)
@@ -802,6 +826,10 @@ class TJAParser:
                 if is_branching:
                     bar_line.is_branch_start = True
                     is_branching = False
+
+                if is_section_start:
+                    section_bar = bar_line
+                    is_section_start = False
 
                 bisect.insort(curr_bar_list, bar_line, key=lambda x: x.load_ms)
                 barline_added = True
