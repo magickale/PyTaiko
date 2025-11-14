@@ -6,7 +6,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.file_navigator import Exam
-from libs.global_data import DanResultExam, DanResultSong, global_data
+from libs.global_data import DanResultExam, DanResultSong, PlayerNum, global_data
 from libs.global_objects import AllNetIcon
 from libs.tja import TJAParser
 from libs.transition import Transition
@@ -45,7 +45,7 @@ class DanGameScreen(GameScreen):
             logger.info("Loaded nijiiro notes textures")
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
-        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num-1].song_title, 40, ray.WHITE)
+        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num].song_title, 40, ray.WHITE)
         self.init_dan()
         self.background = Background(global_data.player_num, self.bpm, scene_preset='DAN')
         self.transition = Transition('', '', is_second=True)
@@ -53,11 +53,11 @@ class DanGameScreen(GameScreen):
         self.dan_transition = DanTransition()
         self.dan_transition.start()
         self.allnet_indicator = AllNetIcon()
-        self.result_transition = ResultTransition(4)
+        self.result_transition = ResultTransition(PlayerNum.DAN)
         self.load_hitsounds()
 
     def init_dan(self):
-        session_data = global_data.session_data[global_data.player_num-1]
+        session_data = global_data.session_data[global_data.player_num]
         songs = copy.deepcopy(session_data.selected_dan)
         self.exams = copy.deepcopy(session_data.selected_dan_exam)
         self.total_notes = 0
@@ -75,7 +75,7 @@ class DanGameScreen(GameScreen):
         self.init_tja(song.file_path)
         self.color = session_data.dan_color
         self.player_1.is_dan = True
-        self.player_1.gauge = DanGauge(str(global_data.player_num), self.total_notes)
+        self.player_1.gauge = DanGauge(global_data.player_num, self.total_notes)
         self.song_info = SongInfo(song.metadata.title.get(global_data.config["general"]["language"], "en"), genre_index)
         self.bpm = self.tja.metadata.bpm
         logger.info(f"TJA initialized for song: {song.file_path}")
@@ -85,7 +85,7 @@ class DanGameScreen(GameScreen):
         self.exam_failed = [False] * len(self.exams)
 
     def change_song(self):
-        session_data = global_data.session_data[global_data.player_num-1]
+        session_data = global_data.session_data[global_data.player_num]
         songs = session_data.selected_dan
         song, genre_index, difficulty, level = songs[self.song_index]
         session_data.selected_difficulty = difficulty
@@ -174,7 +174,7 @@ class DanGameScreen(GameScreen):
 
     @override
     def spawn_ending_anims(self):
-        if sum(song.bad for song in global_data.session_data[global_data.player_num-1].dan_result_data.songs) == 0:
+        if sum(song.bad for song in global_data.session_data[global_data.player_num].dan_result_data.songs) == 0:
             self.player_1.ending_anim = FCAnimation(self.player_1.is_2p)
         if self.player_1.gauge.is_clear and not any(self.exam_failed):
             self.player_1.ending_anim = ClearAnimation(self.player_1.is_2p)
@@ -205,7 +205,7 @@ class DanGameScreen(GameScreen):
             logger.info("Result transition finished, moving to RESULT screen")
             return self.on_screen_end('DAN_RESULT')
         elif self.current_ms >= self.player_1.end_time + 1000:
-            session_data = global_data.session_data[global_data.player_num-1]
+            session_data = global_data.session_data[global_data.player_num]
             if len(session_data.selected_dan) > len(session_data.dan_result_data.songs):
                 song_info = DanResultSong()
                 song_info.song_title = self.song_info.song_name
@@ -359,7 +359,7 @@ class DanTransition:
 
 class DanGauge(Gauge):
     """The player's gauge"""
-    def __init__(self, player_num: str, total_notes: int):
+    def __init__(self, player_num: PlayerNum, total_notes: int):
         self.player_num = player_num
         self.string_diff = "_hard"
         self.gauge_length = 0

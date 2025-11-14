@@ -1,11 +1,10 @@
 import ctypes
 import hashlib
-import math
 import sys
 import logging
 import time
 import json
-from libs.global_data import Config, global_data
+from libs.global_data import Config, PlayerNum, global_data
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -103,149 +102,73 @@ def get_key_code(key: str) -> int:
             raise ValueError(f"Invalid key: {key}")
         return key_code
 
-def is_l_don_pressed(player_num: str = '0') -> bool:
-    """Check if the left don button is pressed"""
+def is_input_key_pressed(keys: list[str], gamepad_buttons: list[int]):
     if global_data.input_locked:
         return False
-    if player_num == '0':
+    for key in keys:
+        key_code = get_key_code(key)
+
+        if ray.is_key_pressed(key_code):
+            return True
+
+    if ray.is_gamepad_available(0):
+        for button in gamepad_buttons:
+            if ray.is_gamepad_button_pressed(0, button):
+                return True
+
+    return False
+
+def is_l_don_pressed(player_num: PlayerNum = PlayerNum.ALL) -> bool:
+    """Check if the left don button is pressed"""
+    if player_num == PlayerNum.ALL:
         keys = global_data.config["keys_1p"]["left_don"] + global_data.config["keys_2p"]["left_don"]
-    elif player_num == '1':
+    elif player_num == PlayerNum.P1:
         keys = global_data.config["keys_1p"]["left_don"]
-    elif player_num == '2':
+    elif player_num == PlayerNum.P2:
         keys = global_data.config["keys_2p"]["left_don"]
     else:
         return False
-    for key in keys:
-        key_code = get_key_code(key)
-
-        if ray.is_key_pressed(key_code):
-            return True
-
     gamepad_buttons = global_data.config["gamepad"]["left_don"]
-    if ray.is_gamepad_available(0):
-        for button in gamepad_buttons:
-            if ray.is_gamepad_button_pressed(0, button):
-                return True
+    return is_input_key_pressed(keys, gamepad_buttons)
 
-    if not global_data.config["general"]["touch_enabled"]:
-        return False
-    mid_x, mid_y = (1280//2, 720)
-    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
-    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
-        for i in range(min(ray.get_touch_point_count(), 10)):
-            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
-            if math.dist(tap_pos, (mid_x, mid_y)) < 300 and tap_pos[0] <= mid_x:
-                return True
-
-    return False
-
-def is_r_don_pressed(player_num: str = '0') -> bool:
+def is_r_don_pressed(player_num: PlayerNum = PlayerNum.ALL) -> bool:
     """Check if the right don button is pressed"""
-    if global_data.input_locked:
-        return False
-    if player_num == '0':
+    if player_num == PlayerNum.ALL:
         keys = global_data.config["keys_1p"]["right_don"] + global_data.config["keys_2p"]["right_don"]
-    elif player_num == '1':
+    elif player_num == PlayerNum.P1:
         keys = global_data.config["keys_1p"]["right_don"]
-    elif player_num == '2':
+    elif player_num == PlayerNum.P2:
         keys = global_data.config["keys_2p"]["right_don"]
     else:
         return False
-    for key in keys:
-        key_code = get_key_code(key)
-
-        if ray.is_key_pressed(key_code):
-            return True
-
     gamepad_buttons = global_data.config["gamepad"]["right_don"]
-    if ray.is_gamepad_available(0):
-        for button in gamepad_buttons:
-            if ray.is_gamepad_button_pressed(0, button):
-                return True
+    return is_input_key_pressed(keys, gamepad_buttons)
 
-    if not global_data.config["general"]["touch_enabled"]:
-        return False
-    mid_x, mid_y = (1280//2, 720)
-    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
-    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
-        for i in range(min(ray.get_touch_point_count(), 10)):
-            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
-            if math.dist(tap_pos, (mid_x, mid_y)) < 300 and tap_pos[0] > mid_x:
-                return True
-
-    return False
-
-def is_l_kat_pressed(player_num: str = '0') -> bool:
+def is_l_kat_pressed(player_num: PlayerNum = PlayerNum.ALL) -> bool:
     """Check if the left kat button is pressed"""
-    if global_data.input_locked:
-        return False
-    if player_num == '0':
+    if player_num == PlayerNum.ALL:
         keys = global_data.config["keys_1p"]["left_kat"] + global_data.config["keys_2p"]["left_kat"]
-    elif player_num == '1':
+    elif player_num == PlayerNum.P1:
         keys = global_data.config["keys_1p"]["left_kat"]
-    elif player_num == '2':
+    elif player_num == PlayerNum.P2:
         keys = global_data.config["keys_2p"]["left_kat"]
     else:
         return False
-    for key in keys:
-        key_code = get_key_code(key)
-
-        if ray.is_key_pressed(key_code):
-            return True
-
     gamepad_buttons = global_data.config["gamepad"]["left_kat"]
-    if ray.is_gamepad_available(0):
-        for button in gamepad_buttons:
-            if ray.is_gamepad_button_pressed(0, button):
-                return True
+    return is_input_key_pressed(keys, gamepad_buttons)
 
-    if not global_data.config["general"]["touch_enabled"]:
-        return False
-    mid_x, mid_y = (1280//2, 720)
-    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
-    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
-        for i in range(min(ray.get_touch_point_count(), 10)):
-            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
-            if math.dist(tap_pos, (mid_x, mid_y)) >= 300 and tap_pos[0] <= mid_x:
-                return True
-
-    return False
-
-def is_r_kat_pressed(player_num: str = '0') -> bool:
+def is_r_kat_pressed(player_num: PlayerNum = PlayerNum.ALL) -> bool:
     """Check if the right kat button is pressed"""
-    if global_data.input_locked:
-        return False
-    if player_num == '0':
+    if player_num == PlayerNum.ALL:
         keys = global_data.config["keys_1p"]["right_kat"] + global_data.config["keys_2p"]["right_kat"]
-    elif player_num == '1':
+    elif player_num == PlayerNum.P1:
         keys = global_data.config["keys_1p"]["right_kat"]
-    elif player_num == '2':
+    elif player_num == PlayerNum.P2:
         keys = global_data.config["keys_2p"]["right_kat"]
     else:
         return False
-    for key in keys:
-        key_code = get_key_code(key)
-
-        if ray.is_key_pressed(key_code):
-            return True
-
     gamepad_buttons = global_data.config["gamepad"]["right_kat"]
-    if ray.is_gamepad_available(0):
-        for button in gamepad_buttons:
-            if ray.is_gamepad_button_pressed(0, button):
-                return True
-
-    if not global_data.config["general"]["touch_enabled"]:
-        return False
-    mid_x, mid_y = (1280//2, 720)
-    allowed_gestures = {ray.Gesture.GESTURE_TAP, ray.Gesture.GESTURE_DOUBLETAP}
-    if ray.get_gesture_detected() in allowed_gestures and ray.is_gesture_detected(ray.get_gesture_detected()):
-        for i in range(min(ray.get_touch_point_count(), 10)):
-            tap_pos = (ray.get_touch_position(i).x, ray.get_touch_position(i).y)
-            if math.dist(tap_pos, (mid_x, mid_y)) >= 300 and tap_pos[0] > mid_x:
-                return True
-
-    return False
+    return is_input_key_pressed(keys, gamepad_buttons)
 
 global_tex = TextureWrapper()
 

@@ -1,5 +1,6 @@
 import logging
 from libs.file_navigator import SongFile
+from libs.global_data import PlayerNum
 from libs.transition import Transition
 from scenes.song_select import DiffSortSelect, SongSelectPlayer, SongSelectScreen, State
 from libs.utils import get_current_ms, global_data
@@ -10,13 +11,13 @@ logger = logging.getLogger(__name__)
 class TwoPlayerSongSelectScreen(SongSelectScreen):
     def on_screen_start(self):
         super().on_screen_start()
-        self.player_1 = SongSelectPlayer('1', self.text_fade_in)
-        self.player_2 = SongSelectPlayer('2', self.text_fade_in)
+        self.player_1 = SongSelectPlayer(PlayerNum.P1, self.text_fade_in)
+        self.player_2 = SongSelectPlayer(PlayerNum.P2, self.text_fade_in)
 
     def finalize_song(self):
-        global_data.session_data[0].selected_song = self.navigator.get_current_item().path
-        global_data.session_data[0].genre_index = self.navigator.get_current_item().box.name_texture_index
-        logger.info(f"Finalized song selection: {global_data.session_data[0].selected_song}")
+        global_data.session_data[PlayerNum.P1].selected_song = self.navigator.get_current_item().path
+        global_data.session_data[PlayerNum.P1].genre_index = self.navigator.get_current_item().box.name_texture_index
+        logger.info(f"Finalized song selection: {global_data.session_data[PlayerNum.P1].selected_song}")
 
     def handle_input(self):
         if self.player_1.is_ready:
@@ -139,12 +140,12 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
         audio.play_sound('don', 'sound')
         audio.play_sound(f'voice_start_song_{global_data.player_num}p', 'voice')
         if player_selected == 1:
-            global_data.session_data[0].selected_difficulty = self.player_1.selected_difficulty
+            global_data.session_data[PlayerNum.P1].selected_difficulty = self.player_1.selected_difficulty
             self.player_1.selected_diff_highlight_fade.start()
             self.player_1.selected_diff_text_resize.start()
             self.player_1.selected_diff_text_fadein.start()
         elif player_selected == 2:
-            global_data.session_data[1].selected_difficulty = self.player_2.selected_difficulty
+            global_data.session_data[PlayerNum.P2].selected_difficulty = self.player_2.selected_difficulty
             self.player_2.selected_diff_highlight_fade.start()
             self.player_2.selected_diff_text_resize.start()
             self.player_2.selected_diff_text_fadein.start()

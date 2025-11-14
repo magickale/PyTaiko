@@ -1,13 +1,14 @@
 from enum import Enum
 import pyray as ray
 
+from libs.global_data import PlayerNum
 from libs.utils import OutlinedText, get_config, global_tex
 from libs.audio import audio
 
 
 class Nameplate:
     """Nameplate for displaying player information."""
-    def __init__(self, name: str, title: str, player_num: int, dan: int, is_gold: bool, is_rainbow: bool, title_bg: int):
+    def __init__(self, name: str, title: str, player_num: PlayerNum, dan: int, is_gold: bool, is_rainbow: bool, title_bg: int):
         """Initialize a Nameplate object.
 
         Args:
@@ -54,7 +55,7 @@ class Nameplate:
         """
         tex = global_tex
         tex.draw_texture('nameplate', 'shadow', x=x, y=y, fade=min(0.5, fade))
-        if self.player_num == -1:
+        if self.player_num == 0:
             frame = 2
             title_offset = 0
         else:
@@ -75,7 +76,7 @@ class Nameplate:
             else:
                 tex.draw_texture('nameplate', 'dan_emblem', x=x, y=y, frame=self.dan_index, fade=fade)
             offset = 34
-        if self.player_num != -1:
+        if self.player_num != 0:
             tex.draw_texture('nameplate', f'{self.player_num}p', x=x, y=y, fade=fade)
 
         self.name.draw(outline_color=ray.BLACK, x=x+136 - (min(255 - offset*4, self.name.texture.width)//2) + offset, y=y+24, x2=min(255 - offset*4, self.name.texture.width)-self.name.texture.width, color=ray.fade(ray.WHITE, fade))

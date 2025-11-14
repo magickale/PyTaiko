@@ -6,10 +6,11 @@ from libs.bg_objects.chibi import ChibiController
 from libs.bg_objects.dancer import BaseDancer, BaseDancerGroup
 from libs.bg_objects.don_bg import DonBGBase
 from libs.bg_objects.renda import RendaController
+from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
 
 class Background:
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str, max_dancers: int):
+    def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex
         self.max_dancers = max_dancers
         self.don_bg = DonBG(self.tex_wrapper, 0, 1, path)

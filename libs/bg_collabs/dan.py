@@ -3,13 +3,14 @@ from libs.bg_objects.bg_normal import BGNormalBase
 from libs.bg_objects.chibi import ChibiController
 from libs.bg_objects.don_bg import DonBG6
 from libs.bg_objects.footer import Footer
+from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
 
 class Background:
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str, max_dancers: int):
+    def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex
         self.max_dancers = max_dancers
-        self.don_bg = DonBG(self.tex_wrapper, 0, 1, path)
+        self.don_bg = DonBG(self.tex_wrapper, 0, PlayerNum.P1, path)
         self.bg_normal = BGNormalBase(self.tex_wrapper, 0, path)
         self.bg_fever = None
         self.footer = Footer(self.tex_wrapper, 0, path)
@@ -19,7 +20,7 @@ class Background:
         self.chibi = ChibiController(self.tex_wrapper, 2, bpm, path)
 
 class DonBG(DonBG6):
-    def __init__(self, tex: TextureWrapper, index: int, player_num: int, path: str):
+    def __init__(self, tex: TextureWrapper, index: int, player_num: PlayerNum, path: str):
         super().__init__(tex, index, player_num, path)
         self.overlay_move_2 = Animation.create_move(8000, total_distance=-760)
         self.overlay_move_2.loop = True

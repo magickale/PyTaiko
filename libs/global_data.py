@@ -3,6 +3,14 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Any, TypedDict
 
+class PlayerNum(IntEnum):
+    ALL = 0
+    P1 = 1
+    P2 = 2
+    TWO_PLAYER = 3
+    DAN = 4
+
+
 class Difficulty(IntEnum):
     EASY = 0
     NORMAL = 1
@@ -40,8 +48,8 @@ class NameplateConfig(TypedDict):
     rainbow: bool
 
 class PathsConfig(TypedDict):
-    tja_path: list[str]
-    video_path: list[str]
+    tja_path: list[Path]
+    video_path: list[Path]
 
 class KeysConfig(TypedDict):
     exit_key: str
@@ -204,7 +212,7 @@ class GlobalData:
         song_progress (float): The progress of the loading bar.
         total_songs (int): The total number of songs.
         hit_sound (list[int]): The indices of the hit sounds currently used.
-        player_num (int): The player number. Either 1 or 2.
+        player_num (PlayerNum): The player number.
         input_locked (int): The input lock status. 0 means unlocked, 1 or greater means locked.
         modifiers (list[Modifiers]): The modifiers for the game.
         session_data (list[SessionData]): Session data for both players.
@@ -215,15 +223,15 @@ class GlobalData:
     song_paths: dict[Path, str] = field(default_factory=lambda: dict()) #path to hash
     song_progress: float = 0.0
     total_songs: int = 0
-    hit_sound: list[int] = field(default_factory=lambda: [0, 0])
-    player_num: int = 1
+    hit_sound: list[int] = field(default_factory=lambda: [0, 0, 0])
+    player_num: PlayerNum = PlayerNum.P1
     input_locked: int = 0
-    modifiers: list[Modifiers] = field(default_factory=lambda: [Modifiers(), Modifiers()])
-    session_data: list[SessionData] = field(default_factory=lambda: [SessionData(), SessionData()])
+    modifiers: list[Modifiers] = field(default_factory=lambda: [Modifiers(), Modifiers(), Modifiers()])
+    session_data: list[SessionData] = field(default_factory=lambda: [SessionData(), SessionData(), SessionData()])
 
 global_data = GlobalData()
 
 def reset_session():
     """Reset the session data."""
-    global_data.session_data[0] = SessionData()
     global_data.session_data[1] = SessionData()
+    global_data.session_data[2] = SessionData()

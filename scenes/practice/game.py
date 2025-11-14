@@ -8,7 +8,7 @@ import copy
 from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
-from libs.global_data import Modifiers, global_data
+from libs.global_data import Modifiers, PlayerNum, global_data
 from libs.tja import Balloon, Drumroll, Note, NoteType, TJAParser, apply_modifiers
 from libs.utils import get_current_ms, get_key_code
 from libs.texture import tex
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class PracticeGameScreen(GameScreen):
     def on_screen_start(self):
         super().on_screen_start()
-        self.background = Background(1, self.bpm, scene_preset='PRACTICE')
+        self.background = Background(PlayerNum.P1, self.bpm, scene_preset='PRACTICE')
 
     def init_tja(self, song: Path):
         """Initialize the TJA file"""
@@ -28,7 +28,7 @@ class PracticeGameScreen(GameScreen):
         global_data.session_data[0].song_title = self.tja.metadata.title.get(global_data.config['general']['language'].lower(), self.tja.metadata.title['en'])
         if self.tja.metadata.wave.exists() and self.tja.metadata.wave.is_file() and self.song_music is None:
             self.song_music = audio.load_music_stream(self.tja.metadata.wave, 'song')
-        self.player_1 = PracticePlayer(self.tja, global_data.player_num, global_data.session_data[global_data.player_num-1].selected_difficulty, False, global_data.modifiers[0])
+        self.player_1 = PracticePlayer(self.tja, global_data.player_num, global_data.session_data[global_data.player_num].selected_difficulty, False, global_data.modifiers[global_data.player_num])
         notes, branch_m, branch_e, branch_n = self.tja.notes_to_position(self.player_1.difficulty)
         _, self.scrobble_note_list, self.bars = apply_modifiers(notes, self.player_1.modifiers)
         self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
@@ -96,7 +96,7 @@ class PracticeGameScreen(GameScreen):
         if ray.is_key_pressed(get_key_code(global_data.config["keys"]["restart_key"])):
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
-            self.init_tja(global_data.session_data[global_data.player_num-1].selected_song)
+            self.init_tja(global_data.session_data[global_data.player_num].selected_song)
             audio.play_sound('restart', 'sound')
             self.song_started = False
 
@@ -253,7 +253,7 @@ class PracticeGameScreen(GameScreen):
         tex.draw_texture('practice', 'large_drum', index=1)
         self.player_1.draw_overlays(self.mask_shader)
         if not self.paused:
-            tex.draw_texture('practice', 'playing', index=int(self.player_1.player_number)-1, fade=0.5)
+            tex.draw_texture('practice', 'playing', index=self.player_1.player_num-1, fade=0.5)
         tex.draw_texture('practice', 'progress_bar_bg')
         if self.paused:
             tex.draw_texture('practice', 'paused', fade=0.5)
@@ -267,19 +267,19 @@ class PracticeGameScreen(GameScreen):
 
 
 class PracticePlayer(Player):
-    def __init__(self, tja: TJAParser, player_number: int, difficulty: int, is_2p: bool, modifiers: Modifiers):
-        super().__init__(tja, player_number, difficulty, is_2p, modifiers)
+    def __init__(self, tja: TJAParser, player_num: PlayerNum, difficulty: int, is_2p: bool, modifiers: Modifiers):
+        super().__init__(tja, player_num, difficulty, is_2p, modifiers)
         self.judge_counter = JudgeCounter()
         self.gauge = None
         self.paused = False
 
     def spawn_hit_effects(self, note_type: str, side: str):
         self.lane_hit_effect = LaneHitEffect(note_type, self.is_2p)
-        self.draw_drum_hit_list.append(PracticeDrumHitEffect(note_type, side, self.is_2p, player_number=int(self.player_number)-1))
+        self.draw_drum_hit_list.append(PracticeDrumHitEffect(note_type, side, self.is_2p, player_num=self.player_num))
 
     def draw_overlays(self, mask_shader: ray.Shader):
         # Group 4: Lane covers and UI elements (batch similar textures)
-        tex.draw_texture('lane', f'{self.player_number}p_lane_cover', index=self.is_2p)
+        tex.draw_texture('lane', f'{self.player_num}p_lane_cover', index=self.is_2p)
         tex.draw_texture('lane', 'drum', index=self.is_2p)
         if self.ending_anim is not None:
             self.ending_anim.draw()
@@ -295,7 +295,7 @@ class PracticePlayer(Player):
         # Group 6: UI overlays
         self.combo_display.draw()
         self.combo_announce.draw()
-        tex.draw_texture('lane', f'{self.player_number}p_icon', index=self.is_2p)
+        tex.draw_texture('lane', f'{self.player_num}p_icon', index=self.is_2p)
         tex.draw_texture('lane', 'lane_difficulty', frame=self.difficulty, index=self.is_2p)
         if self.judge_counter is not None:
             self.judge_counter.draw()
@@ -343,9 +343,9 @@ class PracticePlayer(Player):
             self.draw_notes(ms_from_start, start_ms)
 
 class PracticeDrumHitEffect(DrumHitEffect):
-    def __init__(self, type, side, is_2p, player_number: int = 0):
+    def __init__(self, type, side, is_2p, player_num: PlayerNum = PlayerNum.P1):
         super().__init__(type, side, is_2p)
-        self.player_number = player_number
+        self.player_num = player_num - 1
 
     def draw(self):
         if self.type == 'DON':
@@ -353,11 +353,11 @@ class PracticeDrumHitEffect(DrumHitEffect):
                 tex.draw_texture('lane', 'drum_don_l', index=self.is_2p, fade=self.fade.attribute)
             elif self.side == 'R':
                 tex.draw_texture('lane', 'drum_don_r', index=self.is_2p, fade=self.fade.attribute)
-            tex.draw_texture('practice', 'large_drum_don', index=self.player_number, fade=self.fade.attribute)
+            tex.draw_texture('practice', 'large_drum_don', index=self.player_num, fade=self.fade.attribute)
         elif self.type == 'KAT':
             if self.side == 'L':
                 tex.draw_texture('lane', 'drum_kat_l', index=self.is_2p, fade=self.fade.attribute)
-                tex.draw_texture('practice', 'large_drum_kat_l', index=self.player_number, fade=self.fade.attribute)
+                tex.draw_texture('practice', 'large_drum_kat_l', index=self.player_num, fade=self.fade.attribute)
             elif self.side == 'R':
                 tex.draw_texture('lane', 'drum_kat_r', index=self.is_2p, fade=self.fade.attribute)
-                tex.draw_texture('practice', 'large_drum_kat_r', index=self.player_number, fade=self.fade.attribute)
+                tex.draw_texture('practice', 'large_drum_kat_r', index=self.player_num, fade=self.fade.attribute)

@@ -7,13 +7,14 @@ from libs.bg_objects.dancer import BaseDancer, BaseDancerGroup
 from libs.bg_objects.don_bg import DonBGBase
 from libs.bg_objects.footer import Footer
 from libs.bg_objects.renda import RendaController
+from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
 
 class Background:
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str, max_dancers: int):
+    def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex
         self.max_dancers = max_dancers
-        self.don_bg = DonBG(self.tex_wrapper, 0, 1, path)
+        self.don_bg = DonBG(self.tex_wrapper, 0, player_num, path)
         self.bg_normal = BGNormalBase(self.tex_wrapper, 0, path)
         self.bg_fever = BGFever(self.tex_wrapper, 0, path)
         self.footer = Footer(self.tex_wrapper, 0, path)
@@ -37,7 +38,7 @@ class DancerGroup(BaseDancerGroup):
         self.add_dancer()
 
 class DonBG(DonBGBase):
-    def __init__(self, tex: TextureWrapper, index: int, player_num: int, path: str):
+    def __init__(self, tex: TextureWrapper, index: int, player_num: PlayerNum, path: str):
         super().__init__(tex, index, player_num, path)
         self.move = Animation.create_move(20000, total_distance=-1344)
         self.move.start()

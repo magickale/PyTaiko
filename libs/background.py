@@ -10,7 +10,7 @@ from libs.bg_objects.don_bg import DonBG
 from libs.bg_objects.fever import Fever
 from libs.bg_objects.footer import Footer
 from libs.bg_objects.renda import RendaController
-from libs.global_data import Difficulty
+from libs.global_data import Difficulty, PlayerNum
 from libs.texture import TextureWrapper
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Background:
         "PRACTICE": (libs.bg_collabs.practice.Background, 'background/collab/practice', 1)
     }
 
-    def __init__(self, player_num: int, bpm: float, scene_preset: str = ''):
+    def __init__(self, player_num: PlayerNum, bpm: float, scene_preset: str = ''):
         """
         Initialize the background class.
 
@@ -41,12 +41,12 @@ class Background:
         """
         self.tex_wrapper = TextureWrapper()
         self.tex_wrapper.load_animations('background')
-        if player_num == 3:
+        if player_num == PlayerNum.TWO_PLAYER:
             if scene_preset == '':
                 self.max_dancers = 5
                 don_bg_num = random.randint(0, 5)
-                self.don_bg = DonBG.create(self.tex_wrapper, don_bg_num, 1)
-                self.don_bg_2 = DonBG.create(self.tex_wrapper, don_bg_num, 2)
+                self.don_bg = DonBG.create(self.tex_wrapper, don_bg_num, PlayerNum.P1)
+                self.don_bg_2 = DonBG.create(self.tex_wrapper, don_bg_num, PlayerNum.P2)
                 self.renda = RendaController(self.tex_wrapper, random.randint(0, 2))
                 self.chibi = ChibiController(self.tex_wrapper, random.randint(0, 13), bpm)
                 self.bg_normal = None
@@ -56,7 +56,7 @@ class Background:
                 self.dancer = None
             else:
                 bg_obj, path, max_dancers = Background.COLLABS[scene_preset]
-                collab_bg = bg_obj(self.tex_wrapper, 1, bpm, path, max_dancers)
+                collab_bg = bg_obj(self.tex_wrapper, PlayerNum.P1, bpm, path, max_dancers)
                 self.max_dancers = max_dancers
                 self.don_bg = collab_bg.don_bg
                 self.don_bg_2 = collab_bg.don_bg
@@ -80,7 +80,7 @@ class Background:
             self.chibi = ChibiController(self.tex_wrapper, random.randint(0, 13), bpm)
         else:
             bg_obj, path, max_dancers = Background.COLLABS[scene_preset]
-            collab_bg = bg_obj(self.tex_wrapper, 1, bpm, path, max_dancers)
+            collab_bg = bg_obj(self.tex_wrapper, PlayerNum.P1, bpm, path, max_dancers)
             self.max_dancers = max_dancers
             self.don_bg = collab_bg.don_bg
             self.don_bg_2 = None

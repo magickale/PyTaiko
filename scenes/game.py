@@ -12,7 +12,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.chara_2d import Chara2D
-from libs.global_data import Crown, Difficulty, Modifiers
+from libs.global_data import Crown, Difficulty, Modifiers, PlayerNum
 from libs.global_objects import AllNetIcon, Nameplate
 from libs.screen import Screen
 from libs.texture import tex
@@ -71,7 +71,7 @@ class GameScreen(Screen):
             logger.info("Loaded nijiiro notes textures")
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
-        session_data = global_data.session_data[global_data.player_num-1]
+        session_data = global_data.session_data[global_data.player_num]
         self.init_tja(session_data.selected_song)
         logger.info(f"TJA initialized for song: {session_data.selected_song}")
         self.load_hitsounds()
@@ -109,16 +109,16 @@ class GameScreen(Screen):
             audio.load_sound(Path('none.wav'), 'hitsound_kat_1p')
             logger.info("Loaded default (none) hit sounds for 1P")
         if global_data.hit_sound == 0:
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[0]) / "don.wav", 'hitsound_don_1p')
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[0]) / "ka.wav", 'hitsound_kat_1p')
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[1]) / "don.wav", 'hitsound_don_2p')
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[1]) / "ka.wav", 'hitsound_kat_2p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P1]) / "don.wav", 'hitsound_don_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P1]) / "ka.wav", 'hitsound_kat_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P2]) / "don.wav", 'hitsound_don_2p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P2]) / "ka.wav", 'hitsound_kat_2p')
             logger.info("Loaded wav hit sounds for 1P and 2P")
         else:
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[0]) / "don.ogg", 'hitsound_don_1p')
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[0]) / "ka.ogg", 'hitsound_kat_1p')
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[1]) / "don.ogg", 'hitsound_don_2p')
-            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[1]) / "ka.ogg", 'hitsound_kat_2p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P1]) / "don.ogg", 'hitsound_don_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P1]) / "ka.ogg", 'hitsound_kat_1p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P2]) / "don.ogg", 'hitsound_don_2p')
+            audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[PlayerNum.P2]) / "ka.ogg", 'hitsound_kat_2p')
             logger.info("Loaded ogg hit sounds for 1P and 2P")
 
     def init_tja(self, song: Path):
@@ -129,11 +129,11 @@ class GameScreen(Screen):
             self.movie.set_volume(0.0)
         else:
             self.movie = None
-        global_data.session_data[0].song_title = self.tja.metadata.title.get(global_data.config['general']['language'].lower(), self.tja.metadata.title['en'])
+        global_data.session_data[global_data.player_num].song_title = self.tja.metadata.title.get(global_data.config['general']['language'].lower(), self.tja.metadata.title['en'])
         if self.tja.metadata.wave.exists() and self.tja.metadata.wave.is_file() and self.song_music is None:
             self.song_music = audio.load_music_stream(self.tja.metadata.wave, 'song')
 
-        self.player_1 = Player(self.tja, global_data.player_num, global_data.session_data[global_data.player_num-1].selected_difficulty, False, global_data.modifiers[0])
+        self.player_1 = Player(self.tja, global_data.player_num, global_data.session_data[global_data.player_num].selected_difficulty, False, global_data.modifiers[global_data.player_num])
         self.start_ms = (get_current_ms() - self.tja.metadata.offset*1000)
 
     def get_song_hash(self, song: Path):
@@ -158,10 +158,10 @@ class GameScreen(Screen):
 
     def write_score(self):
         """Write the score to the database"""
-        if global_data.modifiers[global_data.player_num-1].auto:
+        if global_data.modifiers[global_data.player_num].auto:
             return
         with sqlite3.connect('scores.db') as con:
-            session_data = global_data.session_data[global_data.player_num-1]
+            session_data = global_data.session_data[global_data.player_num]
             cursor = con.cursor()
             hash = self.get_song_hash(session_data.selected_song)
             check_query = "SELECT score, clear FROM Scores WHERE hash = ? LIMIT 1"
@@ -221,7 +221,7 @@ class GameScreen(Screen):
         if ray.is_key_pressed(get_key_code(global_data.config["keys"]["restart_key"])):
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
-            self.init_tja(global_data.session_data[global_data.player_num-1].selected_song)
+            self.init_tja(global_data.session_data[global_data.player_num].selected_song)
             audio.play_sound('restart', 'sound')
             self.song_started = False
 
@@ -234,7 +234,7 @@ class GameScreen(Screen):
             self.pause_song()
 
     def spawn_ending_anims(self):
-        if global_data.session_data[global_data.player_num-1].result_data.bad == 0:
+        if global_data.session_data[global_data.player_num].result_data.bad == 0:
             self.player_1.ending_anim = FCAnimation(self.player_1.is_2p)
         elif self.player_1.gauge.is_clear:
             self.player_1.ending_anim = ClearAnimation(self.player_1.is_2p)
@@ -269,7 +269,7 @@ class GameScreen(Screen):
             logger.info("Result transition finished, moving to RESULT screen")
             return self.on_screen_end('RESULT')
         elif self.current_ms >= self.player_1.end_time:
-            session_data = global_data.session_data[global_data.player_num-1]
+            session_data = global_data.session_data[global_data.player_num]
             session_data.result_data.score, session_data.result_data.good, session_data.result_data.ok, session_data.result_data.bad, session_data.result_data.max_combo, session_data.result_data.total_drumroll = self.player_1.get_result_score()
             if self.player_1.gauge is not None:
                 session_data.result_data.gauge_length = self.player_1.gauge.gauge_length
@@ -312,10 +312,10 @@ class Player:
     TIMING_OK_EASY = 108.441665649414
     TIMING_BAD_EASY = 125.125
 
-    def __init__(self, tja: TJAParser, player_number: int, difficulty: int, is_2p: bool, modifiers: Modifiers):
+    def __init__(self, tja: TJAParser, player_num: PlayerNum, difficulty: int, is_2p: bool, modifiers: Modifiers):
         self.is_2p = is_2p
         self.is_dan = False
-        self.player_number = str(player_number)
+        self.player_num = player_num
         self.difficulty = difficulty
         self.visual_offset = global_data.config["general"]["visual_offset"]
         self.modifiers = modifiers
@@ -345,13 +345,13 @@ class Player:
         self.combo_display = Combo(self.combo, 0, self.is_2p)
         self.score_counter = ScoreCounter(self.score, self.is_2p)
         self.gogo_time: Optional[GogoTime] = None
-        self.combo_announce = ComboAnnounce(self.combo, 0, player_number, self.is_2p)
+        self.combo_announce = ComboAnnounce(self.combo, 0, player_num, self.is_2p)
         self.branch_indicator = BranchIndicator(self.is_2p) if tja and tja.metadata.course_data[self.difficulty].is_branching else None
         self.ending_anim: Optional[FailAnimation | ClearAnimation | FCAnimation] = None
         self.is_gogo_time = False
         plate_info = global_data.config[f'nameplate_{self.is_2p+1}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], global_data.player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
-        self.chara = Chara2D(player_number - 1, self.bpm)
+        self.chara = Chara2D(player_num - 1, self.bpm)
         if global_data.config['general']['judge_counter']:
             self.judge_counter = JudgeCounter()
         else:
@@ -359,7 +359,7 @@ class Player:
 
         self.input_log: dict[float, str] = dict()
         stars = tja.metadata.course_data[self.difficulty].level
-        self.gauge = Gauge(self.player_number, self.difficulty, stars, self.total_notes, self.is_2p)
+        self.gauge = Gauge(self.player_num, self.difficulty, stars, self.total_notes, self.is_2p)
         self.gauge_hit_effect: list[GaugeHitEffect] = []
 
         self.autoplay_hit_side = 'L'
@@ -628,12 +628,12 @@ class Player:
             if self.combo % 10 == 0:
                 self.chara.set_animation('10_combo')
             if self.combo % 100 == 0:
-                self.combo_announce = ComboAnnounce(self.combo, current_time, int(self.player_number), self.is_2p)
+                self.combo_announce = ComboAnnounce(self.combo, current_time, self.player_num, self.is_2p)
             if self.combo > self.max_combo:
                 self.max_combo = self.combo
 
         if note.type != NoteType.KUSUDAMA:
-            self.draw_arc_list.append(NoteArc(note.type, current_time, self.is_2p + 1, note.type == NoteType.DON_L or note.type == NoteType.KAT_L or note.type == NoteType.BALLOON_HEAD, note.type == NoteType.BALLOON_HEAD))
+            self.draw_arc_list.append(NoteArc(note.type, current_time, PlayerNum(self.is_2p + 1), note.type == NoteType.DON_L or note.type == NoteType.KAT_L or note.type == NoteType.BALLOON_HEAD, note.type == NoteType.BALLOON_HEAD))
 
         if note in self.current_notes_draw:
             index = self.current_notes_draw.index(note)
@@ -641,7 +641,7 @@ class Player:
 
     def check_drumroll(self, drum_type: int, background: Optional[Background], current_time: float):
         """Checks if a note has been hit during a drumroll"""
-        self.draw_arc_list.append(NoteArc(drum_type, current_time, self.is_2p + 1, drum_type == 3 or drum_type == 4, False))
+        self.draw_arc_list.append(NoteArc(drum_type, current_time, PlayerNum(self.is_2p + 1), drum_type == 3 or drum_type == 4, False))
         self.curr_drumroll_count += 1
         self.total_drumroll += 1
         if self.is_branch and self.branch_condition == 'r':
@@ -649,7 +649,7 @@ class Player:
         if background is not None:
             background.add_renda()
         self.score += 100
-        self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100, self.is_2p))
+        self.base_score_list.append(ScoreCounterAnimation(self.player_num, 100, self.is_2p))
         if not isinstance(self.current_notes_draw[0], Drumroll):
             return
         self.current_notes_draw[0].color = max(0, 255 - (self.curr_drumroll_count * 10))
@@ -662,11 +662,11 @@ class Player:
             self.check_kusudama(note)
             return
         if self.balloon_anim is None:
-            self.balloon_anim = BalloonAnimation(current_time, note.count, int(self.player_number), self.is_2p)
+            self.balloon_anim = BalloonAnimation(current_time, note.count, self.player_num, self.is_2p)
         self.curr_balloon_count += 1
         self.total_drumroll += 1
         self.score += 100
-        self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100, self.is_2p))
+        self.base_score_list.append(ScoreCounterAnimation(self.player_num, 100, self.is_2p))
         if self.curr_balloon_count == note.count:
             self.is_balloon = False
             note.popped = True
@@ -682,7 +682,7 @@ class Player:
         self.curr_balloon_count += 1
         self.total_drumroll += 1
         self.score += 100
-        self.base_score_list.append(ScoreCounterAnimation(self.player_number, 100, self.is_2p))
+        self.base_score_list.append(ScoreCounterAnimation(self.player_num, 100, self.is_2p))
         if self.curr_balloon_count == note.count:
             audio.play_sound('kusudama_pop', 'hitsound')
             self.is_balloon = False
@@ -734,7 +734,7 @@ class Player:
                 self.lane_hit_effect = LaneHitEffect('GOOD', self.is_2p)
                 self.good_count += 1
                 self.score += self.base_score
-                self.base_score_list.append(ScoreCounterAnimation(self.player_number, self.base_score, self.is_2p))
+                self.base_score_list.append(ScoreCounterAnimation(self.player_num, self.base_score, self.is_2p))
                 self.input_log[curr_note.index] = 'GOOD'
                 self.note_correct(curr_note, current_time)
                 if self.gauge is not None:
@@ -751,7 +751,7 @@ class Player:
                 self.draw_judge_list.append(Judgement('OK', big, self.is_2p))
                 self.ok_count += 1
                 self.score += 10 * math.floor(self.base_score / 2 / 10)
-                self.base_score_list.append(ScoreCounterAnimation(self.player_number, 10 * math.floor(self.base_score / 2 / 10), self.is_2p))
+                self.base_score_list.append(ScoreCounterAnimation(self.player_num, 10 * math.floor(self.base_score / 2 / 10), self.is_2p))
                 self.input_log[curr_note.index] = 'OK'
                 self.note_correct(curr_note, current_time)
                 if self.gauge is not None:
@@ -813,13 +813,13 @@ class Player:
 
     def handle_input(self, ms_from_start: float, current_time: float, background: Optional[Background]):
         input_checks = [
-            (is_l_don_pressed, 'DON', 'L', f'hitsound_don_{self.player_number}p'),
-            (is_r_don_pressed, 'DON', 'R', f'hitsound_don_{self.player_number}p'),
-            (is_l_kat_pressed, 'KAT', 'L', f'hitsound_kat_{self.player_number}p'),
-            (is_r_kat_pressed, 'KAT', 'R', f'hitsound_kat_{self.player_number}p')
+            (is_l_don_pressed, 'DON', 'L', f'hitsound_don_{self.player_num}p'),
+            (is_r_don_pressed, 'DON', 'R', f'hitsound_don_{self.player_num}p'),
+            (is_l_kat_pressed, 'KAT', 'L', f'hitsound_kat_{self.player_num}p'),
+            (is_r_kat_pressed, 'KAT', 'R', f'hitsound_kat_{self.player_num}p')
         ]
         for check_func, note_type, side, sound in input_checks:
-            if check_func(self.player_number):
+            if check_func(self.player_num):
                 self.spawn_hit_effects(note_type, side)
                 audio.play_sound(sound, 'hitsound')
 
@@ -846,7 +846,7 @@ class Player:
                 hit_type = 'DON'
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.spawn_hit_effects(hit_type, self.autoplay_hit_side)
-                audio.play_sound(f'hitsound_don_{self.player_number}p', 'hitsound')
+                audio.play_sound(f'hitsound_don_{self.player_num}p', 'hitsound')
                 note_type = NoteType.DON_L if note.type == NoteType.ROLL_HEAD_L else NoteType.DON
                 self.check_note(ms_from_start, note_type, current_time, background)
         else:
@@ -856,7 +856,7 @@ class Player:
                 hit_type = 'DON'
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.spawn_hit_effects(hit_type, self.autoplay_hit_side)
-                audio.play_sound(f'hitsound_don_{self.player_number}p', 'hitsound')
+                audio.play_sound(f'hitsound_don_{self.player_num}p', 'hitsound')
                 self.check_note(ms_from_start, 1, current_time, background)
 
             # Handle KAT notes
@@ -865,7 +865,7 @@ class Player:
                 hit_type = 'KAT'
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.spawn_hit_effects(hit_type, self.autoplay_hit_side)
-                audio.play_sound(f'hitsound_kat_{self.player_number}p', 'hitsound')
+                audio.play_sound(f'hitsound_kat_{self.player_num}p', 'hitsound')
                 self.check_note(ms_from_start, 2, current_time, background)
 
     def evaluate_branch(self, current_ms):
@@ -1066,21 +1066,21 @@ class Player:
         modifiers_to_draw = ['mod_shinuchi']
 
         # Speed modifiers
-        if global_data.modifiers[int(self.player_number)-1].speed >= 4:
+        if global_data.modifiers[self.player_num].speed >= 4:
             modifiers_to_draw.append('mod_yonbai')
-        elif global_data.modifiers[int(self.player_number)-1].speed >= 3:
+        elif global_data.modifiers[self.player_num].speed >= 3:
             modifiers_to_draw.append('mod_sanbai')
-        elif global_data.modifiers[int(self.player_number)-1].speed > 1:
+        elif global_data.modifiers[self.player_num].speed > 1:
             modifiers_to_draw.append('mod_baisaku')
 
         # Other modifiers
-        if global_data.modifiers[int(self.player_number)-1].display:
+        if global_data.modifiers[self.player_num].display:
             modifiers_to_draw.append('mod_doron')
-        if global_data.modifiers[int(self.player_number)-1].inverse:
+        if global_data.modifiers[self.player_num].inverse:
             modifiers_to_draw.append('mod_abekobe')
-        if global_data.modifiers[int(self.player_number)-1].random == 2:
+        if global_data.modifiers[self.player_num].random == 2:
             modifiers_to_draw.append('mod_detarame')
-        elif global_data.modifiers[int(self.player_number)-1].random == 1:
+        elif global_data.modifiers[self.player_num].random == 1:
             modifiers_to_draw.append('mod_kimagure')
 
         # Draw all modifiers in one batch
@@ -1089,7 +1089,7 @@ class Player:
 
     def draw_overlays(self, mask_shader: ray.Shader):
         # Group 4: Lane covers and UI elements (batch similar textures)
-        tex.draw_texture('lane', f'{self.player_number}p_lane_cover', index=self.is_2p)
+        tex.draw_texture('lane', f'{self.player_num}p_lane_cover', index=self.is_2p)
         if self.is_dan:
             tex.draw_texture('lane', 'dan_lane_cover')
         tex.draw_texture('lane', 'drum', index=self.is_2p)
@@ -1111,7 +1111,7 @@ class Player:
             tex.draw_texture('lane', 'lane_score_cover', index=self.is_2p, mirror='vertical')
         else:
             tex.draw_texture('lane', 'lane_score_cover', index=self.is_2p)
-        tex.draw_texture('lane', f'{self.player_number}p_icon', index=self.is_2p)
+        tex.draw_texture('lane', f'{self.player_num}p_icon', index=self.is_2p)
         if self.is_dan:
             tex.draw_texture('lane', 'lane_difficulty', frame=6)
         else:
@@ -1373,7 +1373,7 @@ class GaugeHitEffect:
 
 class NoteArc:
     """Note arcing from the player to the gauge"""
-    def __init__(self, note_type: int, current_ms: float, player_number: int, big: bool, is_balloon: bool):
+    def __init__(self, note_type: int, current_ms: float, player_num: PlayerNum, big: bool, is_balloon: bool):
         self.note_type = note_type
         self.is_big = big
         self.is_balloon = is_balloon
@@ -1381,7 +1381,7 @@ class NoteArc:
         self.arc_duration = 22
         self.current_progress = 0
         self.create_ms = current_ms
-        self.player_number = player_number
+        self.player_num = player_num
 
         self.explosion_point_index = 0
         self.points_per_explosion = 5
@@ -1389,13 +1389,13 @@ class NoteArc:
         curve_height = 425
         self.start_x, self.start_y = 350, 192
         self.end_x, self.end_y = 1158, 101
-        if self.player_number == 2:
+        if self.player_num == PlayerNum.P2:
             self.start_y += 176
             self.end_y += 372
         self.explosion_x = self.start_x
         self.explosion_y = self.start_y
 
-        if self.player_number == 1:
+        if self.player_num == PlayerNum.P1:
             # Control point influences the curve shape
             self.control_x = (self.start_x + self.end_x) // 2
             self.control_y = min(self.start_y, self.end_y) - curve_height  # Arc upward
@@ -1447,7 +1447,7 @@ class NoteArc:
     def draw(self, mask_shader: ray.Shader):
         if self.is_balloon:
             rainbow = tex.textures['balloon']['rainbow']
-            if self.player_number == 2:
+            if self.player_num == PlayerNum.P2:
                 rainbow_height = -rainbow.height
             else:
                 rainbow_height = rainbow.height
@@ -1462,8 +1462,8 @@ class NoteArc:
 
                 if crop_width > 0:
                     src = ray.Rectangle(crop_start_x, 0, crop_width, rainbow_height)
-                    mirror = 'vertical' if self.player_number == 2 else ''
-                    y = 435 if self.player_number == 2 else 0
+                    mirror = 'vertical' if self.player_num == PlayerNum.P2 else ''
+                    y = 435 if self.player_num == PlayerNum.P2 else 0
                     ray.begin_shader_mode(mask_shader)
                     tex.draw_texture('balloon', 'rainbow_mask', src=src, x=crop_start_x, x2=-rainbow.width + crop_width, mirror=mirror, y=y)
                     ray.end_shader_mode()
@@ -1510,7 +1510,7 @@ class DrumrollCounter:
 
 class BalloonAnimation:
     """Draws a Balloon"""
-    def __init__(self, current_ms: float, balloon_total: int, player_num: int, is_2p: bool):
+    def __init__(self, current_ms: float, balloon_total: int, player_num: PlayerNum, is_2p: bool):
         self.player_num = player_num
         self.is_2p = is_2p
         self.create_ms = current_ms
@@ -1726,7 +1726,7 @@ class ScoreCounter:
 
 class ScoreCounterAnimation:
     """Displays the score init being added to the total score"""
-    def __init__(self, player_num: str, counter: int, is_2p: bool):
+    def __init__(self, player_num: PlayerNum, counter: int, is_2p: bool):
         self.is_2p = is_2p
         self.counter = counter
         self.direction = -1 if self.is_2p else 1
@@ -1743,7 +1743,7 @@ class ScoreCounterAnimation:
         self.move_animation_4 = Animation.create_move(80, delay=366.74, total_distance=10, start_position=148)
         self.move_animation_4.start()
 
-        if player_num == '2':
+        if player_num == PlayerNum.P2:
             self.base_color = ray.Color(84, 250, 238, 255)
         else:
             self.base_color = ray.Color(254, 102, 0, 255)
@@ -1819,7 +1819,7 @@ class SongInfo:
 
 class ResultTransition:
     """Displays the result transition animation"""
-    def __init__(self, player_num: int):
+    def __init__(self, player_num: PlayerNum):
         self.player_num = player_num
         self.move = global_tex.get_animation(5)
         self.move.reset()
@@ -1838,16 +1838,16 @@ class ResultTransition:
         x = 0
         screen_width = 1280
         while x < screen_width:
-            if self.player_num == 3:
+            if self.player_num == PlayerNum.TWO_PLAYER:
                 global_tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
                 global_tex.draw_texture('result_transition', '2p_shutter', frame=0, x=x, y=720 - self.move.attribute)
                 global_tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-432 + self.move.attribute)
                 global_tex.draw_texture('result_transition', '2p_shutter_footer', x=x, y=1008 - self.move.attribute)
             else:
-                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=-432 + self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{str(self.player_num)}p_shutter_footer', x=x, y=1008 - self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=-432 + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=1008 - self.move.attribute)
             x += 256
 
 class GogoTime:
@@ -1874,7 +1874,7 @@ class GogoTime:
 
 class ComboAnnounce:
     """Displays the combo every 100 combos"""
-    def __init__(self, combo: int, current_time_ms: float, player_num: int, is_2p: bool):
+    def __init__(self, combo: int, current_time_ms: float, player_num: PlayerNum, is_2p: bool):
         self.player_num = player_num
         self.is_2p = is_2p
         self.combo = combo
@@ -2187,7 +2187,7 @@ class JudgeCounter:
 
 class Gauge:
     """The player's gauge"""
-    def __init__(self, player_num: str, difficulty: int, level: int, total_notes: int, is_2p: bool):
+    def __init__(self, player_num: PlayerNum, difficulty: int, level: int, total_notes: int, is_2p: bool):
         self.is_2p = is_2p
         self.player_num = player_num
         self.string_diff = "_hard"

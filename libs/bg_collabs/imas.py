@@ -6,6 +6,7 @@ from libs.bg_objects.dancer import BaseDancerGroup
 from libs.bg_objects.fever import BaseFever
 from libs.bg_objects.footer import Footer
 from libs.bg_objects.renda import RendaController
+from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
 from libs.bg_objects.don_bg import DonBGBase
 
@@ -13,7 +14,7 @@ import pyray as ray
 
 
 class Background:
-    def __init__(self, tex: TextureWrapper, player_num: int, bpm: float, path: str, max_dancers: int):
+    def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex
         self.max_dancers = max_dancers
         self.don_bg = DonBGBase(self.tex_wrapper, 0, player_num, path)

@@ -4,6 +4,7 @@ import pyray as ray
 
 from libs.audio import audio
 from libs.chara_2d import Chara2D
+from libs.global_data import PlayerNum
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, EntryOverlay, Timer
 from libs.texture import tex
 from libs.screen import Screen
@@ -34,7 +35,7 @@ class EntryScreen(Screen):
 
         # Initial nameplate for side selection
         plate_info = global_data.config['nameplate_1p']
-        self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False, False, 0)
+        self.nameplate = Nameplate(plate_info['name'], plate_info['title'], PlayerNum.ALL, -1, False, False, 0)
 
         self.coin_overlay = CoinOverlay()
         self.allnet_indicator = AllNetIcon()
@@ -62,12 +63,12 @@ class EntryScreen(Screen):
             if is_l_don_pressed() or is_r_don_pressed():
                 if self.side == 1:
                     return self.on_screen_end("TITLE")
-                global_data.player_num = round((self.side/3) + 1)
+                global_data.player_num = PlayerNum.P1 if self.side == 0 else PlayerNum.P2
 
                 if self.players[0]:
                     self.players[1] = EntryPlayer(global_data.player_num, self.side, self.box_manager)
                     self.players[1].start_animations()
-                    global_data.player_num = 1
+                    global_data.player_num = PlayerNum.P1
                     self.is_2p = True
                 else:
                     self.players[0] = EntryPlayer(global_data.player_num, self.side, self.box_manager)
@@ -80,17 +81,17 @@ class EntryScreen(Screen):
                 audio.play_sound('don', 'sound')
             if is_l_kat_pressed():
                 audio.play_sound('kat', 'sound')
-                if self.players[0] and self.players[0].player_num == 1:
+                if self.players[0] and self.players[0].player_num == PlayerNum.P1:
                     self.side = 1
-                elif self.players[0] and self.players[0].player_num == 2:
+                elif self.players[0] and self.players[0].player_num == PlayerNum.P2:
                     self.side = 0
                 else:
                     self.side = max(0, self.side - 1)
             if is_r_kat_pressed():
                 audio.play_sound('kat', 'sound')
-                if self.players[0] and self.players[0].player_num == 1:
+                if self.players[0] and self.players[0].player_num == PlayerNum.P1:
                     self.side = 2
-                elif self.players[0] and self.players[0].player_num == 2:
+                elif self.players[0] and self.players[0].player_num == PlayerNum.P2:
                     self.side = 1
                 else:
                     self.side = min(2, self.side + 1)
@@ -98,15 +99,15 @@ class EntryScreen(Screen):
             for player in self.players:
                 if player:
                     player.handle_input()
-            if self.players[0] and self.players[0].player_num == 1 and is_l_don_pressed('2') or is_r_don_pressed('2'):
+            if self.players[0] and self.players[0].player_num == PlayerNum.P1 and is_l_don_pressed(PlayerNum.P2) or is_r_don_pressed(PlayerNum.P2):
                 audio.play_sound('don', 'sound')
                 self.state = State.SELECT_SIDE
                 plate_info = global_data.config['nameplate_2p']
-                self.nameplate = Nameplate(plate_info['name'], plate_info['title'], -1, -1, False, False, 1)
+                self.nameplate = Nameplate(plate_info['name'], plate_info['title'], PlayerNum.ALL, -1, False, False, 1)
                 self.chara = Chara2D(1, 100)
                 self.side_select_fade.restart()
                 self.side = 1
-            elif self.players[0] and self.players[0].player_num == 2 and is_l_don_pressed('1') or is_r_don_pressed('1'):
+            elif self.players[0] and self.players[0].player_num == PlayerNum.P2 and is_l_don_pressed(PlayerNum.P1) or is_r_don_pressed(PlayerNum.P1):
                 audio.play_sound('don', 'sound')
                 self.state = State.SELECT_SIDE
                 self.side_select_fade.restart()
@@ -198,9 +199,9 @@ class EntryScreen(Screen):
         elif not self.players[0]:
             tex.draw_texture('side_select', 'footer_left')
             tex.draw_texture('side_select', 'footer_right')
-        elif self.players[0] and self.players[0].player_num == 1:
+        elif self.players[0] and self.players[0].player_num == PlayerNum.P1:
             tex.draw_texture('side_select', 'footer_right')
-        elif self.players[0] and self.players[0].player_num == 2:
+        elif self.players[0] and self.players[0].player_num == PlayerNum.P2:
             tex.draw_texture('side_select', 'footer_left')
 
 
@@ -220,7 +221,7 @@ class EntryScreen(Screen):
 
 class EntryPlayer:
     """Player-specific state and rendering for the entry screen"""
-    def __init__(self, player_num: int, side: int, box_manager: 'BoxManager'):
+    def __init__(self, player_num: PlayerNum, side: int, box_manager: 'BoxManager'):
         """
         Initialize a player for the entry screen
         Args:
@@ -341,13 +342,13 @@ class EntryPlayer:
         if self.box_manager.is_box_selected():
             return
 
-        if is_l_don_pressed(str(self.player_num)) or is_r_don_pressed(str(self.player_num)):
+        if is_l_don_pressed(self.player_num) or is_r_don_pressed(self.player_num):
             audio.play_sound('don', 'sound')
             self.box_manager.select_box()
-        if is_l_kat_pressed(str(self.player_num)):
+        if is_l_kat_pressed(self.player_num):
             audio.play_sound('kat', 'sound')
             self.box_manager.move_left()
-        if is_r_kat_pressed(str(self.player_num)):
+        if is_r_kat_pressed(self.player_num):
             audio.play_sound('kat', 'sound')
             self.box_manager.move_right()
 

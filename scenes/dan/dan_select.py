@@ -3,7 +3,7 @@ import logging
 import pyray as ray
 
 from libs.audio import audio
-from libs.global_data import global_data
+from libs.global_data import PlayerNum, global_data
 from libs.texture import tex
 from libs.chara_2d import Chara2D
 from libs.global_objects import AllNetIcon, CoinOverlay, Indicator, Nameplate, Timer
@@ -24,7 +24,7 @@ class DanSelectScreen(Screen):
         self.allnet_indicator = AllNetIcon()
         self.timer = Timer(60, get_current_ms(), self.navigator.select_current_item)
         self.indicator = Indicator(Indicator.State.SELECT)
-        self.player = DanSelectPlayer(str(global_data.player_num))
+        self.player = DanSelectPlayer(global_data.player_num)
         self.state = State.BROWSING
         self.transition = Transition('', '')
         self.last_moved = 0
@@ -32,7 +32,7 @@ class DanSelectScreen(Screen):
         audio.play_sound('dan_select', 'voice')
 
     def on_screen_end(self, next_screen: str):
-        session_data = global_data.session_data[global_data.player_num-1]
+        session_data = global_data.session_data[global_data.player_num]
         current_item = self.navigator.get_current_item()
         if isinstance(current_item, DanCourse):
             session_data.selected_song = current_item.charts[0]
@@ -118,7 +118,7 @@ class DanSelectScreen(Screen):
         self.allnet_indicator.draw()
 
 class DanSelectPlayer:
-    def __init__(self, player_num: str):
+    def __init__(self, player_num: PlayerNum):
         self.player_num = player_num
         self.selected_difficulty = -3
         self.prev_diff = -3
@@ -135,7 +135,7 @@ class DanSelectPlayer:
         self.chara = Chara2D(int(self.player_num) - 1, 100)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'],
-            int(self.player_num), plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
+            self.player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
 
     def update(self, current_time):
         """Update player state"""
@@ -210,7 +210,7 @@ class DanSelectPlayer:
         return None
 
     def draw(self):
-        if self.player_num == '1':
+        if self.player_num == PlayerNum.P1:
             self.nameplate.draw(30, 640)
             self.chara.draw(x=-50, y=410)
         else:

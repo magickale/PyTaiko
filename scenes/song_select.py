@@ -9,7 +9,7 @@ from libs.file_navigator import DanCourse, navigator
 from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.file_navigator import Directory, SongBox, SongFile
-from libs.global_data import Difficulty, Modifiers
+from libs.global_data import Difficulty, Modifiers, PlayerNum
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, Timer
 from libs.screen import Screen
 from libs.texture import tex
@@ -67,8 +67,8 @@ class SongSelectScreen(Screen):
         self.ura_switch_animation = UraSwitchAnimation()
         self.dan_transition = DanTransition()
 
-        session_data = global_data.session_data[global_data.player_num-1]
-        self.player_1 = SongSelectPlayer(str(global_data.player_num), self.text_fade_in)
+        session_data = global_data.session_data[global_data.player_num]
+        self.player_1 = SongSelectPlayer(global_data.player_num, self.text_fade_in)
 
         if self.navigator.items == []:
             logger.warning("No navigator items found, returning to ENTRY screen")
@@ -84,9 +84,9 @@ class SongSelectScreen(Screen):
         self.navigator.add_recent()
 
     def finalize_song(self):
-        global_data.session_data[global_data.player_num-1].selected_song = self.navigator.get_current_item().path
-        global_data.session_data[global_data.player_num-1].selected_difficulty = self.player_1.selected_difficulty
-        global_data.session_data[global_data.player_num-1].genre_index = self.navigator.get_current_item().box.name_texture_index
+        global_data.session_data[global_data.player_num].selected_song = self.navigator.get_current_item().path
+        global_data.session_data[global_data.player_num].selected_difficulty = self.player_1.selected_difficulty
+        global_data.session_data[global_data.player_num].genre_index = self.navigator.get_current_item().box.name_texture_index
 
     def on_screen_end(self, next_screen):
         self.screen_init = False
@@ -374,7 +374,7 @@ class SongSelectScreen(Screen):
         self.allnet_indicator.draw()
 
 class SongSelectPlayer:
-    def __init__(self, player_num: str, text_fade_in):
+    def __init__(self, player_num: PlayerNum, text_fade_in):
         self.player_num = player_num
         self.selected_difficulty = -3
         self.prev_diff = -3
@@ -400,7 +400,7 @@ class SongSelectPlayer:
         self.chara = Chara2D(int(self.player_num) - 1, 100)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'],
-            int(self.player_num), plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
+            self.player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
 
     def update(self, current_time):
         """Update player state"""
@@ -681,7 +681,7 @@ class SongSelectPlayer:
 
     def draw_background_diffs(self, state: int):
         if (self.selected_song and state == State.SONG_SELECTED and self.selected_difficulty >= Difficulty.EASY):
-            if self.player_num == '2':
+            if self.player_num == PlayerNum.P2:
                 tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
                 if self.selected_diff_highlight_fade.is_reversing or self.selected_diff_highlight_fade.is_finished:
                     tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
@@ -713,7 +713,7 @@ class SongSelectPlayer:
                 offset += -370
             else:
                 offset *= -1
-        if self.player_num == '1':
+        if self.player_num == PlayerNum.P1:
             self.nameplate.draw(30, 640)
             self.chara.draw(x=-50, y=410 + (offset*0.6))
         else:
@@ -981,9 +981,9 @@ class DiffSortSelect:
 
 class NeiroSelector:
     """The menu for selecting the game hitsounds."""
-    def __init__(self, player_num: str):
+    def __init__(self, player_num: PlayerNum):
         self.player_num = player_num
-        self.selected_sound = global_data.hit_sound[int(self.player_num)-1]
+        self.selected_sound = global_data.hit_sound[self.player_num]
         with open(Path("Sounds") / 'hit_sounds' / 'neiro_list.txt', encoding='utf-8-sig') as neiro_list:
             self.sounds = neiro_list.readlines()
             self.sounds.append('無音')
@@ -1049,9 +1049,9 @@ class NeiroSelector:
         if self.move.is_started and not self.move.is_finished:
             return
         if self.selected_sound == len(self.sounds):
-            global_data.hit_sound[int(self.player_num)-1] = -1
+            global_data.hit_sound[self.player_num] = -1
         else:
-            global_data.hit_sound[int(self.player_num)-1] = self.selected_sound
+            global_data.hit_sound[self.player_num] = self.selected_sound
         self.is_confirmed = True
         self.move.restart()
 
@@ -1106,7 +1106,7 @@ class ModifierSelector:
         "inverse": "あべこべ",
         "random": "ランダム"
     }
-    def __init__(self, player_num: str):
+    def __init__(self, player_num: PlayerNum):
         self.player_num = player_num
         self.mods = fields(Modifiers)
         self.current_mod_index = 0
@@ -1123,14 +1123,14 @@ class ModifierSelector:
         self.text_name = [OutlinedText(ModifierSelector.NAME_MAP[mod.name], 30, ray.WHITE, outline_thickness=3.5) for mod in self.mods]
         self.text_true = OutlinedText('する', 30, ray.WHITE, outline_thickness=3.5)
         self.text_false = OutlinedText('しない', 30, ray.WHITE, outline_thickness=3.5)
-        self.text_speed = OutlinedText(str(global_data.modifiers[int(self.player_num)-1].speed), 30, ray.WHITE, outline_thickness=3.5)
+        self.text_speed = OutlinedText(str(global_data.modifiers[self.player_num].speed), 30, ray.WHITE, outline_thickness=3.5)
         self.text_kimagure = OutlinedText('きまぐれ', 30, ray.WHITE, outline_thickness=3.5)
         self.text_detarame = OutlinedText('でたらめ', 30, ray.WHITE, outline_thickness=3.5)
 
         # Secondary text objects for animation
         self.text_true_2 = OutlinedText('する', 30, ray.WHITE, outline_thickness=3.5)
         self.text_false_2 = OutlinedText('しない', 30, ray.WHITE, outline_thickness=3.5)
-        self.text_speed_2 = OutlinedText(str(global_data.modifiers[int(self.player_num)-1].speed), 30, ray.WHITE, outline_thickness=3.5)
+        self.text_speed_2 = OutlinedText(str(global_data.modifiers[self.player_num].speed), 30, ray.WHITE, outline_thickness=3.5)
         self.text_kimagure_2 = OutlinedText('きまぐれ', 30, ray.WHITE, outline_thickness=3.5)
         self.text_detarame_2 = OutlinedText('でたらめ', 30, ray.WHITE, outline_thickness=3.5)
 
@@ -1161,7 +1161,7 @@ class ModifierSelector:
 
         # Update primary text objects immediately
         current_mod = self.mods[self.current_mod_index]
-        current_value = getattr(global_data.modifiers[int(self.player_num)-1], current_mod.name)
+        current_value = getattr(global_data.modifiers[self.player_num], current_mod.name)
 
         if current_mod.name == 'speed':
             # text_speed_2 becomes the old value (fades out)
@@ -1192,34 +1192,34 @@ class ModifierSelector:
         if self.is_confirmed:
             return
         current_mod = self.mods[self.current_mod_index]
-        current_value = getattr(global_data.modifiers[int(self.player_num)-1], current_mod.name)
+        current_value = getattr(global_data.modifiers[self.player_num], current_mod.name)
         if current_mod.type is bool:
-            setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, not current_value)
+            setattr(global_data.modifiers[self.player_num], current_mod.name, not current_value)
             self._start_text_animation(-1, current_value)
         elif current_mod.name == 'speed':
             new_value = max(0.1, (current_value*10 - 1))/10
-            setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, new_value)
+            setattr(global_data.modifiers[self.player_num], current_mod.name, new_value)
             self._start_text_animation(-1, current_value)
         elif current_mod.name == 'random':
             new_value = max(0, current_value-1)
-            setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, new_value)
+            setattr(global_data.modifiers[self.player_num], current_mod.name, new_value)
             self._start_text_animation(-1, current_value)
 
     def right(self):
         if self.is_confirmed:
             return
         current_mod = self.mods[self.current_mod_index]
-        current_value = getattr(global_data.modifiers[int(self.player_num)-1], current_mod.name)
+        current_value = getattr(global_data.modifiers[self.player_num], current_mod.name)
         if current_mod.type is bool:
-            setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, not current_value)
+            setattr(global_data.modifiers[self.player_num], current_mod.name, not current_value)
             self._start_text_animation(1, current_value)
         elif current_mod.name == 'speed':
             new_value = (current_value*10 + 1)/10
-            setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, new_value)
+            setattr(global_data.modifiers[self.player_num], current_mod.name, new_value)
             self._start_text_animation(1, current_value)
         elif current_mod.name == 'random':
             new_value = (current_value+1) % 3
-            setattr(global_data.modifiers[int(self.player_num)-1], current_mod.name, new_value)
+            setattr(global_data.modifiers[self.player_num], current_mod.name, new_value)
             self._start_text_animation(1, current_value)
 
     def _draw_animated_text(self, text_primary: OutlinedText, text_secondary: OutlinedText, x: float, y: float, should_animate: bool):
@@ -1253,7 +1253,7 @@ class ModifierSelector:
             self.text_name[i].draw(outline_color=ray.BLACK, x=92 + x, y=819 + move + (i*50))
 
             current_mod = self.mods[i]
-            current_value = getattr(global_data.modifiers[int(self.player_num)-1], current_mod.name)
+            current_value = getattr(global_data.modifiers[self.player_num], current_mod.name)
             is_current_mod = (i == self.current_mod_index)
 
             if current_mod.type is bool:

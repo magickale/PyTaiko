@@ -3,7 +3,7 @@ import pyray as ray
 
 from libs.animation import Animation
 from libs.chara_2d import Chara2D
-from libs.global_data import reset_session
+from libs.global_data import PlayerNum, reset_session
 from libs.audio import audio
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate
 from libs.screen import Screen
@@ -28,11 +28,11 @@ class DanResultScreen(Screen):
         self.coin_overlay = CoinOverlay()
         self.allnet_indicator = AllNetIcon()
         self.start_ms = get_current_ms()
-        self.background = Background('4', 1280)
+        self.background = Background(PlayerNum.DAN, 1280)
         self.player = DanResultPlayer(global_data.player_num)
         self.is_result_2 = False
         self.result_2_fade_in = tex.get_animation(1)
-        self.gauge = DanGauge(str(global_data.player_num), global_data.session_data[global_data.player_num-1].dan_result_data.gauge_length)
+        self.gauge = DanGauge(global_data.player_num, global_data.session_data[global_data.player_num-1].dan_result_data.gauge_length)
         self.song_names = [OutlinedText(song.song_title, 40, ray.WHITE) for song in global_data.session_data[global_data.player_num-1].dan_result_data.songs]
         self.hori_name = OutlinedText(global_data.session_data[global_data.player_num-1].dan_result_data.dan_title, 40, ray.WHITE)
         self.exam_info = global_data.session_data[global_data.player_num-1].dan_result_data.exams
@@ -204,7 +204,7 @@ class DanResultScreen(Screen):
         self.draw_overlay()
 
 class DanResultPlayer:
-    def __init__(self, player_num: int):
+    def __init__(self, player_num: PlayerNum):
         plate_info = global_data.config[f'nameplate_{player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
         self.chara = Chara2D(player_num-1, 100)
@@ -219,7 +219,7 @@ class DanResultPlayer:
 
 class DanGauge(Gauge):
     """The player's gauge"""
-    def __init__(self, player_num: str, gauge_length: float):
+    def __init__(self, player_num: PlayerNum, gauge_length: float):
         self.player_num = player_num
         self.gauge_length = gauge_length
         self.visual_length = int(self.gauge_length * 8)
