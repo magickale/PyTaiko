@@ -166,7 +166,7 @@ class TextureWrapper:
         """Load textures for a screen."""
         screen_path = self.graphics_path / screen_name
         if not screen_path.exists():
-            logger.warning(f"Screen {screen_name} does not exist")
+            logger.warning(f"Textures for Screen {screen_name} do not exist")
             return
         if (screen_path / 'animation.json').exists():
             with open(screen_path / 'animation.json') as json_file:

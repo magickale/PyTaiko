@@ -9,7 +9,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.global_data import Modifiers, global_data
-from libs.tja import Balloon, Drumroll, Note, TJAParser, apply_modifiers
+from libs.tja import Balloon, Drumroll, Note, NoteType, TJAParser, apply_modifiers
 from libs.utils import get_current_ms, get_key_code
 from libs.texture import tex
 from scenes.game import DrumHitEffect, GameScreen, JudgeCounter, LaneHitEffect, Player, SCREEN_WIDTH
@@ -163,7 +163,7 @@ class PracticeGameScreen(GameScreen):
         """Draws a drumroll in the player's lane"""
         start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
         tail = next((note for note in self.scrobble_note_list if note.index == index+1), self.scrobble_note_list[index+1])
-        is_big = int(head.type == 6)
+        is_big = int(head.type == NoteType.ROLL_HEAD_L)
         end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
         length = end_position - start_position
         color = ray.Color(255, head.color, head.color, 255)
@@ -216,7 +216,7 @@ class PracticeGameScreen(GameScreen):
             tex.draw_texture('notes', bar_type, frame=frame, x=x, y=y)
 
         for note in reversed(self.scrobble_note_list):
-            if note.type == 8:
+            if note.type == NoteType.TAIL:
                 continue
 
             if isinstance(note, Drumroll):

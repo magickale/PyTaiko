@@ -1,4 +1,5 @@
 import bisect
+from enum import IntEnum
 import hashlib
 import math
 import logging
@@ -25,6 +26,18 @@ def get_ms_per_measure(bpm_val: float, time_sig: float):
 def get_pixels_per_ms(pixels_per_frame: float):
     """Calculate the number of pixels per millisecond."""
     return pixels_per_frame / (1000 / 60)
+
+class NoteType(IntEnum):
+    NONE = 0
+    DON = 1
+    KAT = 2
+    DON_L = 3
+    KAT_L = 4
+    ROLL_HEAD = 5
+    ROLL_HEAD_L = 6
+    BALLOON_HEAD = 7
+    TAIL = 8
+    KUSUDAMA = 9
 
 @dataclass()
 class Note:

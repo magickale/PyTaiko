@@ -7,6 +7,7 @@ import sys
 import time
 from pathlib import Path
 
+from libs.global_data import Crown
 from libs.tja import NoteList, TJAParser, test_encodings
 from libs.utils import get_config, global_data
 
@@ -179,13 +180,13 @@ def build_song_hashes(output_dir=Path("cache")):
                     continue
                 if imported_clears[i] == 2:
                     bads = 0
-                    clear = 2
+                    clear = Crown.FC
                 elif imported_clears[i] == 1:
                     bads = None
-                    clear = 1
+                    clear = Crown.CLEAR
                 else:
                     bads = None
-                    clear = 0
+                    clear = Crown.NONE
                 cursor.execute("""
                     INSERT OR REPLACE INTO scores (hash, en_name, jp_name, diff, score, clear, bad)
                     VALUES (?, ?, ?, ?, ?, ?, ?)

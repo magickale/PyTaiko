@@ -37,8 +37,8 @@ class TwoPlayerGameScreen(GameScreen):
             audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[0]) / "don.ogg", 'hitsound_don_1p')
             audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[0]) / "ka.ogg", 'hitsound_kat_1p')
             logger.info("Loaded ogg hit sounds for 1P")
-        audio.set_sound_pan('hitsound_don_1p', 1.0)
-        audio.set_sound_pan('hitsound_kat_1p', 1.0)
+        audio.set_sound_pan('hitsound_don_1p', 0.0)
+        audio.set_sound_pan('hitsound_kat_1p', 0.0)
 
         # Load hitsounds for 2P
         if global_data.hit_sound[1] == -1:
@@ -53,8 +53,8 @@ class TwoPlayerGameScreen(GameScreen):
             audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[1]) / "don.ogg", 'hitsound_don_2p')
             audio.load_sound(sounds_dir / "hit_sounds" / str(global_data.hit_sound[1]) / "ka.ogg", 'hitsound_kat_2p')
             logger.info("Loaded ogg hit sounds for 2P")
-        audio.set_sound_pan('hitsound_don_2p', 0.0)
-        audio.set_sound_pan('hitsound_kat_2p', 0.0)
+        audio.set_sound_pan('hitsound_don_2p', 1.0)
+        audio.set_sound_pan('hitsound_kat_2p', 1.0)
 
     def global_keys(self):
         if ray.is_key_pressed(ray.KeyboardKey.KEY_F1):

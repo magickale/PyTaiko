@@ -6,6 +6,7 @@ import random
 from typing import Optional, Union
 from libs.audio import audio
 from libs.animation import Animation, MoveAnimation
+from libs.global_data import Crown, Difficulty
 from libs.tja import TJAParser, test_encodings
 from libs.texture import tex
 from libs.utils import OutlinedText, get_current_ms, global_data
@@ -55,7 +56,7 @@ class SongBox:
         self.is_open = False
         self.is_back = self.texture_index == SongBox.BACK_INDEX
         if self.is_back:
-            for i in range(1, 16):
+            for i in range(1, SongBox.BACK_INDEX-1):
                 if audio.is_sound_playing(f'genre_voice_{i}'):
                     audio.stop_sound(f'genre_voice_{i}')
         self.name = None
@@ -209,20 +210,20 @@ class SongBox:
         if valid_scores:
             highest_key = max(valid_scores.keys())
             score = self.scores[highest_key]
-            if score and ((score[5] == 2 and score[2] == 0) or (score[2] == 0 and score[3] == 0)):
-                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(4, highest_key))
-            elif score and ((score[5] == 2) or (score[3] == 0)):
-                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(4, highest_key))
-            elif score and score[5] >= 1:
-                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(4, highest_key))
+            if score and score[5] == Crown.DFC:
+                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(Difficulty.URA, highest_key))
+            elif score and score[5] == Crown.FC:
+                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(Difficulty.URA, highest_key))
+            elif score and score[5] >= Crown.CLEAR:
+                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(Difficulty.URA, highest_key))
         if self.crown: #Folder lamp
             highest_crown = max(self.crown)
             if self.crown[highest_crown] == 'DFC':
-                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(4, highest_crown))
+                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(Difficulty.URA, highest_crown))
             elif self.crown[highest_crown] == 'FC':
-                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(4, highest_crown))
+                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(Difficulty.URA, highest_crown))
             else:
-                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(4, highest_crown))
+                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(Difficulty.URA, highest_crown))
 
     def _draw_open(self, x: int, y: int, fade_override: Optional[float]):
         color = ray.WHITE
@@ -371,13 +372,13 @@ class YellowBox:
         if self.tja is None:
             return
         for diff in self.tja.metadata.course_data:
-            if diff >= 4:
+            if diff >= Difficulty.URA:
                 continue
-            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == Crown.DFC:
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*60), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2) or (song_box.scores[diff][3] == 0)):
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == Crown.FC:
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*60), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] >= 1:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] >= Crown.CLEAR:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*60), color=color)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*60), fade=min(fade, 0.25))
 
@@ -398,7 +399,7 @@ class YellowBox:
                 tex.draw_texture('yellow_box', 'difficulty_bar_shadow', frame=i, x=(i*60), fade=min(fade, 0.25))
 
         for diff in self.tja.metadata.course_data:
-            if diff >= 4:
+            if diff >= Difficulty.URA:
                 continue
             for j in range(self.tja.metadata.course_data[diff].level):
                 tex.draw_texture('yellow_box', 'star', x=(diff*60), y=(j*-17), color=color)
@@ -415,7 +416,7 @@ class YellowBox:
         for diff in self.tja.metadata.course_data:
             if song_box is None:
                 continue
-            if diff >= 4:
+            if diff >= Difficulty.URA:
                 continue
             elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
@@ -426,7 +427,7 @@ class YellowBox:
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*115)+8, y=-120, fade=min(self.fade_in.attribute, 0.25))
 
         for i in range(4):
-            if i == 3 and is_ura:
+            if i == Difficulty.ONI and is_ura:
                 tex.draw_texture('diff_select', 'diff_tower', frame=4, x=(i*115), fade=self.fade_in.attribute)
                 tex.draw_texture('diff_select', 'ura_oni_plate', fade=self.fade_in.attribute)
             else:
@@ -435,16 +436,16 @@ class YellowBox:
                 tex.draw_texture('diff_select', 'diff_tower_shadow', frame=i, x=(i*115), fade=min(self.fade_in.attribute, 0.25))
 
         for course in self.tja.metadata.course_data:
-            if (course == 4 and not is_ura) or (course == 3 and is_ura):
+            if (course == Difficulty.URA and not is_ura) or (course == Difficulty.ONI and is_ura):
                 continue
             for j in range(self.tja.metadata.course_data[course].level):
-                tex.draw_texture('yellow_box', 'star_ura', x=min(course, 3)*115, y=(j*-20), fade=self.fade_in.attribute)
+                tex.draw_texture('yellow_box', 'star_ura', x=min(course, Difficulty.ONI)*115, y=(j*-20), fade=self.fade_in.attribute)
             if self.tja.metadata.course_data[course].is_branching and (get_current_ms() // 1000) % 2 == 0:
-                if course == 4:
+                if course == Difficulty.URA:
                     name = 'branch_indicator_ura'
                 else:
                     name = 'branch_indicator_diff'
-                tex.draw_texture('yellow_box', name, x=min(course, 3)*115, fade=self.fade_in.attribute)
+                tex.draw_texture('yellow_box', name, x=min(course, Difficulty.ONI)*115, fade=self.fade_in.attribute)
 
     def _draw_text(self, song_box):
         if not isinstance(self.right_out, MoveAnimation):
@@ -726,7 +727,7 @@ class ScoreHistory:
     def draw_long(self):
         tex.draw_texture('leaderboard','background_2')
         tex.draw_texture('leaderboard','title', index=self.long)
-        if self.curr_difficulty == 4:
+        if self.curr_difficulty == Difficulty.URA:
             tex.draw_texture('leaderboard', 'shinuchi_ura', index=self.long)
         else:
             tex.draw_texture('leaderboard', 'shinuchi', index=self.long)
@@ -743,7 +744,7 @@ class ScoreHistory:
         tex.draw_texture('leaderboard', 'judge_drumroll')
 
         for j, counter in enumerate(self.scores[self.curr_difficulty]):
-            if j == 5:
+            if j == Difficulty.TOWER:
                 continue
             counter = str(counter)
             margin = 24
@@ -760,7 +761,7 @@ class ScoreHistory:
         tex.draw_texture('leaderboard','background')
         tex.draw_texture('leaderboard','title')
 
-        if self.curr_difficulty == 4:
+        if self.curr_difficulty == Difficulty.URA:
             tex.draw_texture('leaderboard', 'normal_ura')
             tex.draw_texture('leaderboard', 'shinuchi_ura')
         else:
@@ -768,7 +769,7 @@ class ScoreHistory:
             tex.draw_texture('leaderboard', 'shinuchi')
 
         color = ray.BLACK
-        if self.curr_difficulty == 4:
+        if self.curr_difficulty == Difficulty.URA:
             color = ray.WHITE
             tex.draw_texture('leaderboard','ura')
 
@@ -944,7 +945,7 @@ class FileNavigator:
         self.favorite_folder: Optional[Directory] = None
         self.recent_folder: Optional[Directory] = None
         self.selected_index = 0
-        self.diff_sort_diff = 4
+        self.diff_sort_diff = Difficulty.URA
         self.diff_sort_level = 10
         self.diff_sort_statistics = dict()
         self.history = []
@@ -1105,8 +1106,8 @@ class FileNavigator:
 
                         scores = song_obj.box.scores.get(course)
                         if scores is not None:
-                            is_cleared = scores[4] >= 1
-                            is_full_combo = (scores[4] == 2) or (scores[3] == 0)
+                            is_cleared = scores[4] >= Crown.CLEAR
+                            is_full_combo = scores[4] == Crown.FC
                         else:
                             is_cleared = False
                             is_full_combo = False
@@ -1281,7 +1282,7 @@ class FileNavigator:
             if selected_item.collection == Directory.COLLECTIONS[3]:
                 diff_sort = self.diff_sort_level
                 diffs = ['かんたん', 'ふつう', 'むずかしい', 'おに']
-                hori_name = OutlinedText(diffs[min(3, self.diff_sort_diff)], 40, ray.WHITE, outline_thickness=5)
+                hori_name = OutlinedText(diffs[min(Difficulty.ONI, self.diff_sort_diff)], 40, ray.WHITE, outline_thickness=5)
             self.genre_bg = GenreBG(start_box, end_box, hori_name, diff_sort)
 
     def select_current_item(self):
@@ -1367,11 +1368,11 @@ class FileNavigator:
                     all_scores[diff].append(song_obj.box.scores[diff])
 
         for diff in all_scores:
-            if all(score is not None and ((score[5] == 2 and score[2] == 0) or (score[2] == 0 and score[3] == 0)) for score in all_scores[diff]):
+            if all(score is not None and score[5] == Crown.DFC for score in all_scores[diff]):
                 crowns[diff] = 'DFC'
-            elif all(score is not None and ((score[5] == 2) or (score[3] == 0)) for score in all_scores[diff]):
+            elif all(score is not None and score[5] == Crown.FC for score in all_scores[diff]):
                 crowns[diff] = 'FC'
-            elif all(score is not None and score[5] >= 1 for score in all_scores[diff]):
+            elif all(score is not None and score[5] >= Crown.CLEAR for score in all_scores[diff]):
                 crowns[diff] = 'CLEAR'
 
         self.directory_crowns[dir_key] = crowns

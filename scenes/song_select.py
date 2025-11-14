@@ -9,7 +9,7 @@ from libs.file_navigator import DanCourse, navigator
 from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.file_navigator import Directory, SongBox, SongFile
-from libs.global_data import Modifiers
+from libs.global_data import Difficulty, Modifiers
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, Timer
 from libs.screen import Screen
 from libs.texture import tex
@@ -559,7 +559,7 @@ class SongSelectPlayer:
             elif is_r_kat_pressed(self.player_num):
                 ret_val = self._navigate_difficulty_right(diffs)
 
-            if 0 <= self.selected_difficulty <= 4 and self.selected_difficulty != prev_diff:
+            if Difficulty.EASY <= self.selected_difficulty <= Difficulty.URA and self.selected_difficulty != prev_diff:
                 self.selected_diff_bounce.start()
                 self.selected_diff_fadein.start()
 
@@ -567,7 +567,7 @@ class SongSelectPlayer:
             return ret_val
 
         if (ray.is_key_pressed(ray.KeyboardKey.KEY_TAB) and
-            self.selected_difficulty in [3, 4]):
+            self.selected_difficulty in [Difficulty.ONI, Difficulty.URA]):
             return self._toggle_ura_mode()
 
         return None
@@ -575,7 +575,7 @@ class SongSelectPlayer:
     def _navigate_difficulty_left(self, diffs):
         """Navigate difficulty selection leftward"""
         self.diff_select_move_right = False
-        if self.is_ura and self.selected_difficulty == 4:
+        if self.is_ura and self.selected_difficulty == Difficulty.URA:
             self.diff_selector_move_1.start()
             self.prev_diff = self.selected_difficulty
             if len(diffs) == 1:
@@ -604,12 +604,12 @@ class SongSelectPlayer:
     def _navigate_difficulty_right(self, diffs):
         """Navigate difficulty selection rightward"""
         self.diff_select_move_right = True
-        if self.is_ura and self.selected_difficulty == 2:
+        if self.is_ura and self.selected_difficulty == Difficulty.HARD:
             self.prev_diff = self.selected_difficulty
-            self.selected_difficulty = 4
+            self.selected_difficulty = Difficulty.URA
             self.diff_selector_move_1.start()
 
-        if (self.selected_difficulty in [3, 4] and 4 in diffs and 3 in diffs):
+        if (self.selected_difficulty in [Difficulty.ONI, Difficulty.URA] and Difficulty.URA in diffs and Difficulty.ONI in diffs):
             self.ura_toggle = (self.ura_toggle + 1) % 10
             if self.ura_toggle == 0:
                 return self._toggle_ura_mode()
@@ -646,7 +646,7 @@ class SongSelectPlayer:
                     name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
                     tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
                 else:
-                    difficulty = min(3, self.selected_difficulty)
+                    difficulty = min(Difficulty.ONI, self.selected_difficulty)
                     name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
                     tex.draw_texture('diff_select', name, x=(difficulty * 115), fade=fade)
                     name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
@@ -667,34 +667,34 @@ class SongSelectPlayer:
             if self.prev_diff == -1:
                 return
             if not self.diff_selector_move_1.is_finished:
-                difficulty = min(3, self.prev_diff)
+                difficulty = min(Difficulty.ONI, self.prev_diff)
                 name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
                 tex.draw_texture('diff_select', name, x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction), fade=fade)
                 name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
                 tex.draw_texture('diff_select', name, x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction))
             else:
-                difficulty = min(3, self.selected_difficulty)
+                difficulty = min(Difficulty.ONI, self.selected_difficulty)
                 name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
                 tex.draw_texture('diff_select', name, x=(difficulty * 115), fade=fade)
                 name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
                 tex.draw_texture('diff_select', name, x=(difficulty * 115))
 
     def draw_background_diffs(self, state: int):
-        if (self.selected_song and state == State.SONG_SELECTED and self.selected_difficulty >= 0):
+        if (self.selected_song and state == State.SONG_SELECTED and self.selected_difficulty >= Difficulty.EASY):
             if self.player_num == '2':
                 tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
                 if self.selected_diff_highlight_fade.is_reversing or self.selected_diff_highlight_fade.is_finished:
                     tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, x=1025, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
-                tex.draw_texture('global', 'background_diff_highlight', frame=min(3, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute, x=1025)
+                tex.draw_texture('global', 'background_diff_highlight', frame=min(Difficulty.ONI, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute, x=1025)
                 tex.draw_texture('global', 'bg_diff_text_bg', x=1025, fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
-                tex.draw_texture('global', 'bg_diff_text', frame=min(3, self.selected_difficulty), x=1025, fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
+                tex.draw_texture('global', 'bg_diff_text', frame=min(Difficulty.ONI, self.selected_difficulty), x=1025, fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
             else:
                 tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, fade=min(0.5, self.selected_diff_fadein.attribute), y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
                 if self.selected_diff_highlight_fade.is_reversing or self.selected_diff_highlight_fade.is_finished:
                     tex.draw_texture('global', 'background_diff', frame=self.selected_difficulty, y=-self.selected_diff_bounce.attribute, y2=self.selected_diff_bounce.attribute)
-                tex.draw_texture('global', 'background_diff_highlight', frame=min(3, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute)
+                tex.draw_texture('global', 'background_diff_highlight', frame=min(Difficulty.ONI, self.selected_difficulty), fade=self.selected_diff_highlight_fade.attribute)
                 tex.draw_texture('global', 'bg_diff_text_bg', fade=min(0.5, self.selected_diff_text_fadein.attribute), scale=self.selected_diff_text_resize.attribute, center=True)
-                tex.draw_texture('global', 'bg_diff_text', frame=min(3, self.selected_difficulty), fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
+                tex.draw_texture('global', 'bg_diff_text', frame=min(Difficulty.ONI, self.selected_difficulty), fade=self.selected_diff_text_fadein.attribute, scale=self.selected_diff_text_resize.attribute, center=True)
 
     def draw(self, state: int, is_half: bool = False):
         if (self.selected_song and state == State.SONG_SELECTED):
@@ -792,13 +792,13 @@ class DiffSortSelect:
 
     def get_random_sort(self):
         diff = random.randint(0, 4)
-        if diff == 0:
+        if diff == Difficulty.EASY:
             level = random.randint(1, 5)
-        elif diff == 1:
+        elif diff == Difficulty.NORMAL:
             level = random.randint(1, 7)
-        elif diff == 2:
+        elif diff == Difficulty.HARD:
             level = random.randint(1, 8)
-        elif diff == 3:
+        elif diff == Difficulty.ONI:
             level = random.randint(1, 10)
         else:
             level = random.choice([1, 5, 6, 7, 8, 9, 10])
@@ -936,7 +936,7 @@ class DiffSortSelect:
             if i < 4:
                 tex.draw_texture('diff_sort', 'box_diff', x=(100*i), frame=i)
 
-        if 0 <= self.selected_box <= 3 or self.selected_box == 5:
+        if Difficulty.EASY <= self.selected_box <= Difficulty.ONI or self.selected_box == 5:
             self.draw_statistics()
 
     def draw_level_select(self):

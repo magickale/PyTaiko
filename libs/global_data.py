@@ -1,6 +1,22 @@
 from dataclasses import dataclass, field
+from enum import IntEnum
 from pathlib import Path
 from typing import Any, TypedDict
+
+class Difficulty(IntEnum):
+    EASY = 0
+    NORMAL = 1
+    HARD = 2
+    ONI = 3
+    URA = 4
+    TOWER = 5
+    DAN = 6
+
+class Crown(IntEnum):
+    NONE = 0
+    CLEAR = 1
+    FC = 2
+    DFC = 3
 
 class GeneralConfig(TypedDict):
     fps_counter: bool

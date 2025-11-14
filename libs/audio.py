@@ -245,7 +245,7 @@ class AudioEngine:
         """Load sounds for a given screen"""
         path = self.sounds_path / screen_name
         if not path.exists():
-            logger.warning(f"Sounds for {screen_name} not found")
+            logger.warning(f"Sounds for screen {screen_name} not found")
             return
         for sound in path.iterdir():
             if sound.is_dir():

@@ -1,7 +1,7 @@
 import logging
 import pyray as ray
 
-from libs.global_data import reset_session
+from libs.global_data import Difficulty, reset_session
 from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate
@@ -469,15 +469,15 @@ class Gauge:
     def __init__(self, player_num: str, gauge_length: float, is_2p: bool):
         self.is_2p = is_2p
         self.player_num = player_num
-        self.difficulty = min(2, global_data.session_data[int(player_num)-1].selected_difficulty)
+        self.difficulty = min(Difficulty.HARD, global_data.session_data[int(player_num)-1].selected_difficulty)
         self.gauge_length = gauge_length
         self.clear_start = [69, 69, 69]
         self.gauge_max = 87
-        if self.difficulty >= 2:
+        if self.difficulty >= Difficulty.HARD:
             self.string_diff = "_hard"
-        elif self.difficulty == 1:
+        elif self.difficulty == Difficulty.NORMAL:
             self.string_diff = "_normal"
-        elif self.difficulty == 0:
+        elif self.difficulty == Difficulty.EASY:
             self.string_diff = "_easy"
         self.rainbow_animation = tex.get_animation(16)
         self.gauge_fade_in = tex.get_animation(17)

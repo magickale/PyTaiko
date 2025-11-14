@@ -10,6 +10,7 @@ from libs.bg_objects.don_bg import DonBG
 from libs.bg_objects.fever import Fever
 from libs.bg_objects.footer import Footer
 from libs.bg_objects.renda import RendaController
+from libs.global_data import Difficulty
 from libs.texture import TextureWrapper
 
 logger = logging.getLogger(__name__)
@@ -124,7 +125,7 @@ class Background:
             gauge_2p (Gauge): The gauge object for player 2.
         """
         if self.dancer is not None and gauge_1p is not None:
-            clear_threshold = gauge_1p.clear_start[min(gauge_1p.difficulty, 3)]
+            clear_threshold = gauge_1p.clear_start[min(gauge_1p.difficulty, Difficulty.ONI)]
             if gauge_1p.gauge_length < clear_threshold:
                 current_milestone = min(self.max_dancers - 1, int(gauge_1p.gauge_length / (clear_threshold / self.max_dancers)))
             else:

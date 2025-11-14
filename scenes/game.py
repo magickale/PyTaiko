@@ -12,7 +12,7 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.chara_2d import Chara2D
-from libs.global_data import Modifiers
+from libs.global_data import Crown, Difficulty, Modifiers
 from libs.global_objects import AllNetIcon, Nameplate
 from libs.screen import Screen
 from libs.texture import tex
@@ -21,6 +21,7 @@ from libs.tja import (
     Drumroll,
     Note,
     NoteList,
+    NoteType,
     TJAParser,
     apply_modifiers,
     calculate_base_score,
@@ -168,13 +169,13 @@ class GameScreen(Screen):
             result = cursor.fetchone()
             existing_score = result[0] if result is not None else None
             existing_crown = result[1] if result is not None and len(result) > 1 and result[1] is not None else 0
-            crown = 0
+            crown = Crown.NONE
             if session_data.result_data.bad and session_data.result_data.ok == 0:
-                crown = 3
+                crown = Crown.DFC
             elif session_data.result_data.bad == 0:
-                crown = 2
+                crown = Crown.FC
             elif self.player_1.gauge.is_clear:
-                crown = 1
+                crown = Crown.CLEAR
             logger.info(f"Existing score: {existing_score}, Existing crown: {existing_crown}, New score: {session_data.result_data.score}, New crown: {crown}")
             if result is None or (existing_score is not None and session_data.result_data.score > existing_score):
                 insert_query = '''
@@ -383,9 +384,9 @@ class Player:
                 if section.play_notes:
                     self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
 
-        self.don_notes = deque([note for note in self.play_notes if note.type in {1, 3}])
-        self.kat_notes = deque([note for note in self.play_notes if note.type in {2, 4}])
-        self.other_notes = deque([note for note in self.play_notes if note.type not in {1, 2, 3, 4}])
+        self.don_notes = deque([note for note in self.play_notes if note.type in {NoteType.DON, NoteType.DON_L}])
+        self.kat_notes = deque([note for note in self.play_notes if note.type in {NoteType.KAT, NoteType.KAT_L}])
+        self.other_notes = deque([note for note in self.play_notes if note.type not in {NoteType.DON, NoteType.DON_L, NoteType.KAT, NoteType.KAT_L}])
         self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
         total_notes = notes
         if self.branch_m:
@@ -416,9 +417,9 @@ class Player:
         self.play_notes = deque(sorted(self.play_notes))
         self.draw_note_list = deque(sorted(self.draw_note_list, key=lambda x: x.load_ms))
         self.draw_bar_list = deque(sorted(self.draw_bar_list, key=lambda x: x.load_ms))
-        total_don = [note for note in self.play_notes if note.type in {1, 3}]
-        total_kat = [note for note in self.play_notes if note.type in {2, 4}]
-        total_other = [note for note in self.play_notes if note.type not in {1, 2, 3, 4}]
+        total_don = [note for note in self.play_notes if note.type in {NoteType.DON, NoteType.DON_L}]
+        total_kat = [note for note in self.play_notes if note.type in {NoteType.KAT, NoteType.KAT_L}]
+        total_other = [note for note in self.play_notes if note.type not in {NoteType.DON, NoteType.DON_L, NoteType.KAT, NoteType.KAT_L}]
 
         self.don_notes = deque([note for note in total_don if note.hit_ms > current_ms])
         self.kat_notes = deque([note for note in total_kat if note.hit_ms > current_ms])
@@ -493,7 +494,7 @@ class Player:
                     end_roll = -1
                     for notes in note_lists:
                         for i in range(len(notes)-1, -1, -1):
-                            if notes[i].type == 8 and notes[i].hit_ms <= end_time:
+                            if notes[i].type == NoteType.TAIL and notes[i].hit_ms <= end_time:
                                 end_roll = notes[i].hit_ms
                                 break
                         if end_roll != -1:
@@ -555,11 +556,11 @@ class Player:
 
         note = self.other_notes[0]
         if (note.hit_ms <= current_ms):
-            if note.type == 5 or note.type == 6:
+            if note.type == NoteType.ROLL_HEAD or note.type == NoteType.ROLL_HEAD_L:
                 self.is_drumroll = True
-            elif note.type == 7 or note.type == 9:
+            elif note.type == NoteType.BALLOON_HEAD or note.type == NoteType.KUSUDAMA:
                 self.is_balloon = True
-            elif note.type == 8:
+            elif note.type == NoteType.TAIL:
                 self.other_notes.popleft()
                 self.is_drumroll = False
                 self.is_balloon = False
@@ -582,7 +583,7 @@ class Player:
             if 5 <= current_note.type <= 7:
                 bisect.insort_left(self.current_notes_draw, current_note, key=lambda x: x.index)
                 try:
-                    tail_note = next((note for note in self.draw_note_list if note.type == 8))
+                    tail_note = next((note for note in self.draw_note_list if note.type == NoteType.TAIL))
                     bisect.insort_left(self.current_notes_draw, tail_note, key=lambda x: x.index)
                     self.draw_note_list.remove(tail_note)
                 except Exception as e:
@@ -597,7 +598,7 @@ class Player:
             self.current_notes_draw[0].color += 1
 
         note = self.current_notes_draw[0]
-        if note.type in {5, 6, 7, 9} and len(self.current_notes_draw) > 1:
+        if note.type in {NoteType.ROLL_HEAD, NoteType.ROLL_HEAD_L, NoteType.BALLOON_HEAD, NoteType.KUSUDAMA} and len(self.current_notes_draw) > 1:
             note = self.current_notes_draw[1]
         position = self.get_position_x(SCREEN_WIDTH, current_ms, note.hit_ms, note.pixels_per_frame_x)
         if position < GameScreen.JUDGE_X + 650:
@@ -610,15 +611,15 @@ class Player:
 
     def note_correct(self, note: Note, current_time: float):
         """Removes a note from the appropriate separated list"""
-        if note.type in {1, 3} and self.don_notes and self.don_notes[0] == note:
+        if note.type in {NoteType.DON, NoteType.DON_L} and self.don_notes and self.don_notes[0] == note:
             self.don_notes.popleft()
-        elif note.type in {2, 4} and self.kat_notes and self.kat_notes[0] == note:
+        elif note.type in {NoteType.KAT, NoteType.KAT_L} and self.kat_notes and self.kat_notes[0] == note:
             self.kat_notes.popleft()
-        elif note.type not in {1, 2, 3, 4} and self.other_notes and self.other_notes[0] == note:
+        elif note.type not in {NoteType.DON, NoteType.DON_L, NoteType.KAT, NoteType.KAT_L} and self.other_notes and self.other_notes[0] == note:
             self.other_notes.popleft()
 
         index = note.index
-        if note.type == 7:
+        if note.type == NoteType.BALLOON_HEAD:
             if self.other_notes:
                 self.other_notes.popleft()
 
@@ -631,8 +632,8 @@ class Player:
             if self.combo > self.max_combo:
                 self.max_combo = self.combo
 
-        if note.type != 9:
-            self.draw_arc_list.append(NoteArc(note.type, current_time, self.is_2p + 1, note.type == 3 or note.type == 4 or note.type == 7, note.type == 7))
+        if note.type != NoteType.KUSUDAMA:
+            self.draw_arc_list.append(NoteArc(note.type, current_time, self.is_2p + 1, note.type == NoteType.DON_L or note.type == NoteType.KAT_L or note.type == NoteType.BALLOON_HEAD, note.type == NoteType.BALLOON_HEAD))
 
         if note in self.current_notes_draw:
             index = self.current_notes_draw.index(note)
@@ -693,7 +694,7 @@ class Player:
         if len(self.don_notes) == 0 and len(self.kat_notes) == 0 and len(self.other_notes) == 0:
             return
 
-        if self.difficulty < 2:
+        if self.difficulty < Difficulty.NORMAL:
             good_window_ms = Player.TIMING_GOOD_EASY
             ok_window_ms = Player.TIMING_OK_EASY
             bad_window_ms = Player.TIMING_BAD_EASY
@@ -727,7 +728,7 @@ class Player:
             if ms_from_start > (curr_note.hit_ms + bad_window_ms):
                 return
 
-            big = curr_note.type == 3 or curr_note.type == 4
+            big = curr_note.type == NoteType.DON_L or curr_note.type == NoteType.KAT_L
             if (curr_note.hit_ms - good_window_ms) <= ms_from_start <= (curr_note.hit_ms + good_window_ms):
                 self.draw_judge_list.append(Judgement('GOOD', big, self.is_2p))
                 self.lane_hit_effect = LaneHitEffect('GOOD', self.is_2p)
@@ -846,7 +847,7 @@ class Player:
                 self.autoplay_hit_side = 'R' if self.autoplay_hit_side == 'L' else 'L'
                 self.spawn_hit_effects(hit_type, self.autoplay_hit_side)
                 audio.play_sound(f'hitsound_don_{self.player_number}p', 'hitsound')
-                note_type = 3 if note.type == 6 else 1
+                note_type = NoteType.DON_L if note.type == NoteType.ROLL_HEAD_L else NoteType.DON
                 self.check_note(ms_from_start, note_type, current_time, background)
         else:
             # Handle DON notes
@@ -971,8 +972,8 @@ class Player:
     def draw_drumroll(self, current_ms: float, head: Drumroll, current_eighth: int):
         """Draws a drumroll in the player's lane"""
         start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
-        tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), self.current_notes_draw[1])
-        is_big = int(head.type == 6)
+        tail = next((note for note in self.current_notes_draw[1:] if note.type == NoteType.TAIL and note.index > head.index), self.current_notes_draw[1])
+        is_big = int(head.type == NoteType.ROLL_HEAD_L)
         end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
         length = end_position - start_position
         color = ray.Color(255, head.color, head.color, 255)
@@ -993,7 +994,7 @@ class Player:
         """Draws a balloon in the player's lane"""
         offset = 12
         start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
-        tail = next((note for note in self.current_notes_draw[1:] if note.type == 8 and note.index > head.index), self.current_notes_draw[1])
+        tail = next((note for note in self.current_notes_draw[1:] if note.type == NoteType.TAIL and note.index > head.index), self.current_notes_draw[1])
         end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
         pause_position = 349
         if current_ms >= tail.hit_ms:
@@ -1041,7 +1042,7 @@ class Player:
         for note in reversed(self.current_notes_draw):
             if self.balloon_anim is not None and note == self.current_notes_draw[0]:
                 continue
-            if note.type == 8:
+            if note.type == NoteType.TAIL:
                 continue
 
             if isinstance(note, Drumroll):
@@ -2193,16 +2194,16 @@ class Gauge:
         self.gauge_length = 0
         self.previous_length = 0
         self.total_notes = total_notes
-        self.difficulty = min(3, difficulty)
+        self.difficulty = min(Difficulty.ONI, difficulty)
         self.clear_start = [52, 60, 69, 69]
         self.gauge_max = 87
         self.level = min(10, level)
         self.tamashii_fire_change = tex.get_animation(25)
-        if self.difficulty == 2:
+        if self.difficulty == Difficulty.HARD:
             self.string_diff = "_hard"
-        elif self.difficulty == 1:
+        elif self.difficulty == Difficulty.NORMAL:
             self.string_diff = "_normal"
-        elif self.difficulty == 0:
+        elif self.difficulty == Difficulty.EASY:
             self.string_diff = "_easy"
         self.is_clear = False
         self.is_rainbow = False
@@ -2274,7 +2275,7 @@ class Gauge:
             self.gauge_length = 0
 
     def update(self, current_ms: float):
-        self.is_clear = self.gauge_length > self.clear_start[min(self.difficulty, 2)]-1
+        self.is_clear = self.gauge_length > self.clear_start[min(self.difficulty, Difficulty.HARD)]-1
         self.is_rainbow = self.gauge_length == self.gauge_max
         if self.gauge_length == self.gauge_max and self.rainbow_fade_in is None:
             self.rainbow_fade_in = Animation.create_fade(450, initial_opacity=0.0, final_opacity=1.0)
