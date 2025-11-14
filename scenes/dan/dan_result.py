@@ -32,12 +32,12 @@ class DanResultScreen(Screen):
         self.player = DanResultPlayer(global_data.player_num)
         self.is_result_2 = False
         self.result_2_fade_in = tex.get_animation(1)
-        self.gauge = DanGauge(global_data.player_num, global_data.session_data[global_data.player_num-1].dan_result_data.gauge_length)
-        self.song_names = [OutlinedText(song.song_title, 40, ray.WHITE) for song in global_data.session_data[global_data.player_num-1].dan_result_data.songs]
-        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num-1].dan_result_data.dan_title, 40, ray.WHITE)
-        self.exam_info = global_data.session_data[global_data.player_num-1].dan_result_data.exams
-        self.exam_data = global_data.session_data[global_data.player_num-1].dan_result_data.exam_data
-        print(global_data.session_data[global_data.player_num-1].dan_result_data.songs)
+        self.gauge = DanGauge(global_data.player_num, global_data.session_data[global_data.player_num].dan_result_data.gauge_length)
+        self.song_names = [OutlinedText(song.song_title, 40, ray.WHITE) for song in global_data.session_data[global_data.player_num].dan_result_data.songs]
+        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num].dan_result_data.dan_title, 40, ray.WHITE)
+        self.exam_info = global_data.session_data[global_data.player_num].dan_result_data.exams
+        self.exam_data = global_data.session_data[global_data.player_num].dan_result_data.exam_data
+        print(global_data.session_data[global_data.player_num].dan_result_data.songs)
 
     def on_screen_end(self, next_screen: str):
         reset_session()
@@ -72,7 +72,7 @@ class DanResultScreen(Screen):
         self.allnet_indicator.draw()
 
     def draw_song_info_1(self):
-        result_data = global_data.session_data[global_data.player_num-1].dan_result_data
+        result_data = global_data.session_data[global_data.player_num].dan_result_data
         height = 191
         for i in range(len(result_data.songs)):
             song = result_data.songs[i]
@@ -107,7 +107,7 @@ class DanResultScreen(Screen):
                 tex.draw_texture('result_info', 'counter', index=3, frame=int(digit), x=-(j*margin), y=i*height)
 
     def draw_song_info_2(self, fade: float):
-        result_data = global_data.session_data[global_data.player_num-1].dan_result_data
+        result_data = global_data.session_data[global_data.player_num].dan_result_data
         tex.draw_texture('background', 'result_2_bg', fade=fade)
         for i in range(5):
             tex.draw_texture('background', 'result_2_divider', fade=fade, x=i*240)
