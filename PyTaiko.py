@@ -1,5 +1,7 @@
 import logging
 import os
+from pathlib import Path
+import sys
 
 import sqlite3
 
@@ -12,7 +14,9 @@ from raylib.defines import (
 )
 
 from libs.audio import audio
+from libs.global_data import PlayerNum
 from libs.screen import Screen
+from libs.tja import TJAParser
 from libs.utils import (
     force_dedicated_gpu,
     get_config,
@@ -143,6 +147,13 @@ def main():
         logger.info("Fullscreen enabled")
 
     current_screen = Screens.LOADING
+    if len(sys.argv) > 1 and Path(sys.argv[1]).exists():
+        current_screen = Screens.GAME
+        tja = TJAParser(Path(sys.argv[1]))
+        max_difficulty = max(tja.metadata.course_data.keys())
+        global_data.session_data[PlayerNum.P1].selected_song = Path(sys.argv[1])
+        global_data.session_data[PlayerNum.P1].selected_difficulty = max_difficulty
+        global_data.modifiers[PlayerNum.P1].auto = True
     logger.info(f"Initial screen: {current_screen}")
 
     audio.set_log_level((log_level-1)//10)

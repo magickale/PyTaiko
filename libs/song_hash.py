@@ -1,9 +1,7 @@
 import configparser
-import csv
 import logging
 import json
 import sqlite3
-import sys
 import time
 from pathlib import Path
 
@@ -270,6 +268,7 @@ def process_tja_file(tja_file):
     hash = tja.hash_note_data(all_notes)
     return hash
 
+'''
 def get_japanese_songs_for_version(csv_file_path, version_column):
     # Read CSV file and filter rows where the specified version column has 'YES'
     version_songs = []
@@ -383,3 +382,4 @@ def get_japanese_songs_for_version(csv_file_path, version_column):
 
 if len(sys.argv) > 1:
     get_japanese_songs_for_version(sys.argv[1], sys.argv[2])
+'''
