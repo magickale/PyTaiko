@@ -72,6 +72,8 @@ class Note:
     lyric: str = field(init=False)
     sudden_appear_ms: float = field(init=False)
     sudden_moving_ms: float = field(init=False)
+    judge_pos_x: float = field(init=False)
+    judge_pos_y: float = field(init=False)
 
     def __lt__(self, other):
         return self.hit_ms < other.hit_ms
@@ -627,6 +629,10 @@ class TJAParser:
         index = 0
         sudden_appear = 0
         sudden_moving = 0
+        judge_pos_x = 0  # Offset from default judgment position
+        judge_pos_y = 0
+        judge_target_x = 0  # Target position for interpolation
+        judge_target_y = 0
         time_signature = 4/4
         bpm = self.metadata.bpm
         x_scroll_modifier = 1
@@ -758,6 +764,67 @@ class TJAParser:
                     lyric = part[6:]
                     continue
                 if '#JPOSSCROLL' in part:
+                    parts = part.split()
+                    if len(parts) >= 4:
+                        duration_ms = float(parts[1]) * 1000
+                        distance_str = parts[2]
+                        direction_deg = float(parts[3])
+
+                        delta_x = 0
+                        delta_y = 0
+
+                        if 'i' in distance_str:
+                            normalized = distance_str.replace('.i', 'j').replace('i', 'j')
+                            normalized = normalized.replace(',', '')
+                            c = complex(normalized)
+                            direction_rad = math.radians(direction_deg)
+                            cos_dir = math.cos(direction_rad)
+                            sin_dir = math.sin(direction_rad)
+                            delta_x = c.real * cos_dir - c.imag * sin_dir
+                            delta_y = c.real * sin_dir + c.imag * cos_dir
+                        else:
+                            distance = float(distance_str)
+                            direction_rad = math.radians(direction_deg)
+                            delta_x = distance * math.cos(direction_rad)
+                            delta_y = distance * math.sin(direction_rad)
+
+                        judge_target_x = judge_pos_x + delta_x
+                        judge_target_y = judge_pos_y + delta_y
+                        interpolation_interval_ms = 8
+                        num_steps = int(duration_ms / interpolation_interval_ms)
+
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)  # Interpolation factor (0 to 1)
+                            interpolated_ms = self.current_ms + (step * interpolation_interval_ms)
+
+                            # Linear interpolation
+                            interp_x = judge_pos_x + (delta_x * t)
+                            interp_y = judge_pos_y + (delta_y * t)
+
+                            # Create invisible bar line to store position
+                            jpos_bar = Note()
+                            jpos_bar.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
+                            jpos_bar.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
+                            pixels_per_ms = get_pixels_per_ms(jpos_bar.pixels_per_frame_x)
+
+                            jpos_bar.hit_ms = interpolated_ms
+                            if pixels_per_ms == 0:
+                                jpos_bar.load_ms = jpos_bar.hit_ms
+                            else:
+                                jpos_bar.load_ms = jpos_bar.hit_ms - (self.distance / pixels_per_ms)
+                            jpos_bar.type = 0
+                            jpos_bar.display = False
+                            jpos_bar.gogo_time = gogo_time
+                            jpos_bar.bpm = bpm
+
+                            jpos_bar.judge_pos_x = interp_x
+                            jpos_bar.judge_pos_y = interp_y
+
+                            bisect.insort(curr_bar_list, jpos_bar, key=lambda x: x.load_ms)
+
+                        judge_pos_x = judge_target_x
+                        judge_pos_y = judge_target_y
+
                     continue
                 elif '#NMSCROLL' in part:
                     continue

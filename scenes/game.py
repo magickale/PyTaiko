@@ -336,6 +336,8 @@ class Player:
         self.total_drumroll = 0
 
         self.arc_points = 25
+        self.judge_x = 0
+        self.judge_y = 0
 
         self.draw_judge_list: list[Judgement] = []
         self.lane_hit_effect: Optional[LaneHitEffect] = None
@@ -441,6 +443,21 @@ class Player:
         """Calculates the y-coordinate of a note based on its load time and current time"""
         time_diff = load_ms - current_ms
         return int((pixels_per_frame * 0.06 * time_diff) + ((866 * pixels_per_frame) / pixels_per_frame_x))
+
+    def get_judge_position(self, current_ms: float):
+        """Get the current judgment circle position based on bar data"""
+        judge_x = 0
+        judge_y = 0
+
+        # Find the most recent bar with judge position data
+        for bar in self.current_bars:
+            if hasattr(bar, 'judge_pos_x') and bar.hit_ms <= current_ms:
+                judge_x = bar.judge_pos_x
+                judge_y = bar.judge_pos_y
+            elif bar.hit_ms > current_ms:
+                break
+
+        return judge_x, judge_y
 
     def animation_manager(self, animation_list: list, current_time: float):
         if not animation_list:
@@ -636,7 +653,9 @@ class Player:
                 self.max_combo = self.combo
 
         if note.type != NoteType.KUSUDAMA:
-            self.draw_arc_list.append(NoteArc(note.type, current_time, PlayerNum(self.is_2p + 1), note.type == NoteType.DON_L or note.type == NoteType.KAT_L or note.type == NoteType.BALLOON_HEAD, note.type == NoteType.BALLOON_HEAD))
+            is_big = note.type == NoteType.DON_L or note.type == NoteType.KAT_L or note.type == NoteType.BALLOON_HEAD
+            is_balloon = note.type == NoteType.BALLOON_HEAD
+            self.draw_arc_list.append(NoteArc(note.type, current_time, PlayerNum(self.is_2p + 1), is_big, is_balloon, start_x=self.judge_x, start_y=self.judge_y))
 
         if note in self.current_notes_draw:
             index = self.current_notes_draw.index(note)
@@ -915,6 +934,7 @@ class Player:
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.update(current_time)
         self.animation_manager(self.draw_drum_hit_list, current_time)
+        self.judge_x, self.judge_y = self.get_judge_position(ms_from_start)
 
         # More efficient arc management
         finished_arcs = []
@@ -975,31 +995,35 @@ class Player:
     def draw_drumroll(self, current_ms: float, head: Drumroll, current_eighth: int):
         """Draws a drumroll in the player's lane"""
         start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
+        start_position += self.judge_x
         tail = next((note for note in self.current_notes_draw[1:] if note.type == NoteType.TAIL and note.index > head.index), self.current_notes_draw[1])
         is_big = int(head.type == NoteType.ROLL_HEAD_L)
         end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
+        end_position += self.judge_x
         length = end_position - start_position
         color = ray.Color(255, head.color, head.color, 255)
         if head.display:
             if length > 0:
-                tex.draw_texture('notes', "8", frame=is_big, x=start_position+64, y=192+(self.is_2p*176), x2=length-47, color=color)
+                tex.draw_texture('notes', "8", frame=is_big, x=start_position+64, y=192+(self.is_2p*176)+self.judge_y, x2=length-47, color=color)
                 if is_big:
-                    tex.draw_texture('notes', "drumroll_big_tail", x=end_position+64, y=192+(self.is_2p*176), color=color)
+                    tex.draw_texture('notes', "drumroll_big_tail", x=end_position+64, y=192+(self.is_2p*176)+self.judge_y, color=color)
                 else:
-                    tex.draw_texture('notes', "drumroll_tail", x=end_position+64, y=192+(self.is_2p*176), color=color)
-            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=start_position, y=192+(self.is_2p*176), color=color)
+                    tex.draw_texture('notes', "drumroll_tail", x=end_position+64, y=192+(self.is_2p*176)+self.judge_y, color=color)
+            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=start_position, y=192+(self.is_2p*176)+self.judge_y, color=color)
 
-        tex.draw_texture('notes', 'moji_drumroll_mid', x=start_position + 60, y=323+(self.is_2p*176), x2=length)
-        tex.draw_texture('notes', 'moji', frame=head.moji, x=(start_position - (168//2)) + 64, y=323+(self.is_2p*176))
-        tex.draw_texture('notes', 'moji', frame=tail.moji, x=(end_position - (168//2)) + 32, y=323+(self.is_2p*176))
+        tex.draw_texture('notes', 'moji_drumroll_mid', x=start_position + 60, y=323+(self.is_2p*176)+self.judge_y, x2=length)
+        tex.draw_texture('notes', 'moji', frame=head.moji, x=(start_position - (168//2)) + 64, y=323+(self.is_2p*176)+self.judge_y, color=color)
+        tex.draw_texture('notes', 'moji', frame=tail.moji, x=(end_position - (168//2)) + 32, y=323+(self.is_2p*176)+self.judge_y, color=color)
 
     def draw_balloon(self, current_ms: float, head: Balloon, current_eighth: int):
         """Draws a balloon in the player's lane"""
         offset = 12
         start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
+        start_position += self.judge_x
         tail = next((note for note in self.current_notes_draw[1:] if note.type == NoteType.TAIL and note.index > head.index), self.current_notes_draw[1])
         end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
-        pause_position = 349
+        end_position += self.judge_x
+        pause_position = 349 + self.judge_x
         if current_ms >= tail.hit_ms:
             position = end_position
         elif current_ms >= head.hit_ms:
@@ -1007,8 +1031,8 @@ class Player:
         else:
             position = start_position
         if head.display:
-            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=position-offset, y=192+(self.is_2p*176))
-        tex.draw_texture('notes', '10', frame=current_eighth % 2, x=position-offset+128, y=192+(self.is_2p*176))
+            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=position-offset, y=192+(self.is_2p*176)+self.judge_y)
+        tex.draw_texture('notes', '10', frame=current_eighth % 2, x=position-offset+128, y=192+(self.is_2p*176)+self.judge_y)
 
     def draw_bars(self, current_ms: float):
         """Draw bars in the player's lane"""
@@ -1020,6 +1044,8 @@ class Player:
                 continue
             x_position = self.get_position_x(SCREEN_WIDTH, current_ms, bar.load_ms, bar.pixels_per_frame_x)
             y_position = self.get_position_y(current_ms, bar.load_ms, bar.pixels_per_frame_y, bar.pixels_per_frame_x)
+            x_position += self.judge_x
+            y_position += self.judge_y
             if hasattr(bar, 'is_branch_start'):
                 frame = 1
             else:
@@ -1063,7 +1089,8 @@ class Player:
             else:
                 x_position = self.get_position_x(SCREEN_WIDTH, current_ms, note.load_ms, note.pixels_per_frame_x)
                 y_position = self.get_position_y(current_ms, note.load_ms, note.pixels_per_frame_y, note.pixels_per_frame_x)
-
+            x_position += self.judge_x
+            y_position += self.judge_y
             if isinstance(note, Drumroll):
                 self.draw_drumroll(current_ms, note, current_eighth)
             elif isinstance(note, Balloon) and not note.is_kusudama:
@@ -1167,13 +1194,13 @@ class Player:
             self.gauge.draw()
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.draw()
-        tex.draw_texture('lane', 'lane_hit_circle', index=self.is_2p)
+        tex.draw_texture('lane', 'lane_hit_circle', x=self.judge_x, y=self.judge_y, index=self.is_2p)
 
         # Group 2: Judgement and hit effects
         if self.gogo_time is not None:
-            self.gogo_time.draw()
+            self.gogo_time.draw(self.judge_x, self.judge_y)
         for anim in self.draw_judge_list:
-            anim.draw()
+            anim.draw(self.judge_x, self.judge_y)
 
         # Group 3: Notes and bars (game content)
         self.draw_bars(ms_from_start)
@@ -1208,29 +1235,29 @@ class Judgement:
         if self.fade_animation_2.is_finished:
             self.is_finished = True
 
-    def draw(self):
+    def draw(self, judge_x: float, judge_y: float):
         y = self.move_animation.attribute
         index = self.texture_animation.attribute
         hit_fade = self.fade_animation_1.attribute
         fade = self.fade_animation_2.attribute
         if self.type == 'GOOD':
             if self.big:
-                tex.draw_texture('hit_effect', 'hit_effect_good_big', fade=fade, index=self.is_2p)
-                tex.draw_texture('hit_effect', 'outer_good_big', frame=index, fade=hit_fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'hit_effect_good_big', x=judge_x, y=judge_y, fade=fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'outer_good_big', x=judge_x, y=judge_y, frame=index, fade=hit_fade, index=self.is_2p)
             else:
-                tex.draw_texture('hit_effect', 'hit_effect_good', fade=fade, index=self.is_2p)
-                tex.draw_texture('hit_effect', 'outer_good', frame=index, fade=hit_fade, index=self.is_2p)
-            tex.draw_texture('hit_effect', 'judge_good', y=y, fade=fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'hit_effect_good', x=judge_x, y=judge_y, fade=fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'outer_good', x=judge_x, y=judge_y, frame=index, fade=hit_fade, index=self.is_2p)
+            tex.draw_texture('hit_effect', 'judge_good', y=y+judge_y, x=judge_x, fade=fade, index=self.is_2p)
         elif self.type == 'OK':
             if self.big:
-                tex.draw_texture('hit_effect', 'hit_effect_ok_big', fade=fade, index=self.is_2p)
-                tex.draw_texture('hit_effect', 'outer_ok_big', frame=index, fade=hit_fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'hit_effect_ok_big', x=judge_x, y=judge_y, fade=fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'outer_ok_big', x=judge_x, y=judge_y, frame=index, fade=hit_fade, index=self.is_2p)
             else:
-                tex.draw_texture('hit_effect', 'hit_effect_ok', fade=fade, index=self.is_2p)
-                tex.draw_texture('hit_effect', 'outer_ok', frame=index, fade=hit_fade, index=self.is_2p)
-            tex.draw_texture('hit_effect', 'judge_ok', y=y, fade=fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'hit_effect_ok', x=judge_x, y=judge_y, fade=fade, index=self.is_2p)
+                tex.draw_texture('hit_effect', 'outer_ok', x=judge_x, y=judge_y, frame=index, fade=hit_fade, index=self.is_2p)
+            tex.draw_texture('hit_effect', 'judge_ok', x=judge_x, y=y+judge_y, fade=fade, index=self.is_2p)
         elif self.type == 'BAD':
-            tex.draw_texture('hit_effect', 'judge_bad', y=y, fade=fade, index=self.is_2p)
+            tex.draw_texture('hit_effect', 'judge_bad', x=judge_x, y=y+judge_y, fade=fade, index=self.is_2p)
 
 class LaneHitEffect:
     """Display a gradient overlay when the player hits the drum"""
@@ -1389,7 +1416,7 @@ class GaugeHitEffect:
 
 class NoteArc:
     """Note arcing from the player to the gauge"""
-    def __init__(self, note_type: int, current_ms: float, player_num: PlayerNum, big: bool, is_balloon: bool):
+    def __init__(self, note_type: int, current_ms: float, player_num: PlayerNum, big: bool, is_balloon: bool, start_x: float = 0, start_y: float = 0):
         self.note_type = note_type
         self.is_big = big
         self.is_balloon = is_balloon
@@ -1403,7 +1430,7 @@ class NoteArc:
         self.points_per_explosion = 5
 
         curve_height = 425
-        self.start_x, self.start_y = 350, 192
+        self.start_x, self.start_y = start_x + 350, start_y + 192
         self.end_x, self.end_y = 1158, 101
         if self.player_num == PlayerNum.P2:
             self.start_y += 176
@@ -1882,8 +1909,8 @@ class GogoTime:
         self.fire_resize.update(current_time_ms)
         self.fire_change.update(current_time_ms)
 
-    def draw(self):
-        tex.draw_texture('gogo_time', 'fire', scale=self.fire_resize.attribute, frame=self.fire_change.attribute, fade=0.5, center=True, index=self.is_2p)
+    def draw(self, judge_x: float, judge_y: float):
+        tex.draw_texture('gogo_time', 'fire', scale=self.fire_resize.attribute, frame=self.fire_change.attribute, fade=0.5, center=True, x=judge_x, y=judge_y, index=self.is_2p)
         if not self.explosion_anim.is_finished and not self.is_2p:
             for i in range(5):
                 tex.draw_texture('gogo_time', 'explosion', frame=self.explosion_anim.attribute, index=i)
