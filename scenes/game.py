@@ -1012,8 +1012,8 @@ class Player:
             tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=start_position, y=192+(self.is_2p*176)+self.judge_y, color=color)
 
         tex.draw_texture('notes', 'moji_drumroll_mid', x=start_position + 60, y=323+(self.is_2p*176)+self.judge_y, x2=length)
-        tex.draw_texture('notes', 'moji', frame=head.moji, x=(start_position - (168//2)) + 64, y=323+(self.is_2p*176)+self.judge_y, color=color)
-        tex.draw_texture('notes', 'moji', frame=tail.moji, x=(end_position - (168//2)) + 32, y=323+(self.is_2p*176)+self.judge_y, color=color)
+        tex.draw_texture('notes', 'moji', frame=head.moji, x=(start_position - (168//2)) + 64, y=323+(self.is_2p*176)+self.judge_y)
+        tex.draw_texture('notes', 'moji', frame=tail.moji, x=(end_position - (168//2)) + 32, y=323+(self.is_2p*176)+self.judge_y)
 
     def draw_balloon(self, current_ms: float, head: Balloon, current_eighth: int):
         """Draws a balloon in the player's lane"""
