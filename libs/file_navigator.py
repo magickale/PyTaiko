@@ -374,11 +374,11 @@ class YellowBox:
         for diff in self.tja.metadata.course_data:
             if diff >= Difficulty.URA:
                 continue
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == Crown.DFC:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] == Crown.DFC:
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*60), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] == Crown.FC:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] == Crown.FC:
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*60), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] >= Crown.CLEAR:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] >= Crown.CLEAR:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*60), color=color)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*60), fade=min(fade, 0.25))
 
@@ -418,11 +418,11 @@ class YellowBox:
                 continue
             if diff >= Difficulty.URA:
                 continue
-            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
+            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] is not None and song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] == 2) or (song_box.scores[diff][3] == 0)):
+            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] is not None and song_box.scores[diff][4] == 2) or (song_box.scores[diff][3] == 0)):
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] >= 1:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] >= 1:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*115)+8, y=-120, fade=self.fade_in.attribute)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*115)+8, y=-120, fade=min(self.fade_in.attribute, 0.25))
 
@@ -745,6 +745,8 @@ class ScoreHistory:
 
         for j, counter in enumerate(self.scores[self.curr_difficulty]):
             if j == Difficulty.TOWER:
+                continue
+            if counter is None:
                 continue
             counter = str(counter)
             margin = 24
@@ -1106,8 +1108,8 @@ class FileNavigator:
 
                         scores = song_obj.box.scores.get(course)
                         if scores is not None:
-                            is_cleared = scores[4] >= Crown.CLEAR
-                            is_full_combo = scores[4] == Crown.FC
+                            is_cleared = scores[4] >= Crown.CLEAR if scores[4] is not None else False
+                            is_full_combo = scores[4] == Crown.FC if scores[4] is not None else False
                         else:
                             is_cleared = False
                             is_full_combo = False
