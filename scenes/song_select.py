@@ -12,7 +12,7 @@ from libs.file_navigator import Directory, SongBox, SongFile
 from libs.global_data import Difficulty, Modifiers, PlayerNum
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, Timer
 from libs.screen import Screen
-from libs.texture import tex
+from libs.texture import SCREEN_WIDTH, tex
 from libs.transition import Transition
 from libs.utils import (
     OutlinedText,
@@ -329,7 +329,7 @@ class SongSelectScreen(Screen):
 
         for item in self.navigator.items:
             box = item.box
-            if -156 <= box.position <= 1280 + 144:
+            if -156 <= box.position <= SCREEN_WIDTH + 144:
                 if box.position <= 500:
                     box.draw(box.position - int(self.move_away.attribute), 95, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
                 else:

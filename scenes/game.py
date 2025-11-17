@@ -15,7 +15,7 @@ from libs.chara_2d import Chara2D
 from libs.global_data import Crown, Difficulty, Modifiers, PlayerNum
 from libs.global_objects import AllNetIcon, Nameplate
 from libs.screen import Screen
-from libs.texture import tex
+from libs.texture import SCREEN_HEIGHT, SCREEN_WIDTH, tex
 from libs.tja import (
     Balloon,
     Drumroll,
@@ -40,9 +40,6 @@ from libs.utils import (
     rounded,
 )
 from libs.video import VideoPlayer
-
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
 
 logger = logging.getLogger(__name__)
 

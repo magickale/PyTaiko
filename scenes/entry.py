@@ -6,7 +6,7 @@ from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.global_data import PlayerNum
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, EntryOverlay, Timer
-from libs.texture import tex
+from libs.texture import SCREEN_HEIGHT, SCREEN_WIDTH, tex
 from libs.screen import Screen
 from libs.utils import (
     OutlinedText,
@@ -45,7 +45,7 @@ class EntryScreen(Screen):
         self.side_select_fade = tex.get_animation(0)
         self.bg_flicker = tex.get_animation(1)
         self.side_select_fade.start()
-        self.chara = Chara2D(0, 100)
+        self.chara = Chara2D(0)
         self.announce_played = False
         self.players: list[Optional[EntryPlayer]] = [None, None]
         audio.play_sound('bgm', 'music')
@@ -158,7 +158,7 @@ class EntryScreen(Screen):
 
         tex.draw_texture('side_select', 'question', fade=fade)
 
-        self.chara.draw(480, 240)
+        self.chara.draw(tex.skin_config["chara_entry"].x, tex.skin_config["chara_entry"].y)
 
         tex.draw_texture('side_select', '1P', fade=fade)
         tex.draw_texture('side_select', 'cancel', fade=fade)
@@ -173,7 +173,7 @@ class EntryScreen(Screen):
             tex.draw_texture('side_select', '2P_highlight', fade=fade)
             tex.draw_texture('side_select', '1P2P_outline', index=1, fade=fade)
         tex.draw_texture('side_select', 'cancel_text', fade=fade)
-        self.nameplate.draw(500, 185)
+        self.nameplate.draw(tex.skin_config["nameplate_entry"].x, tex.skin_config["nameplate_entry"].y)
 
     def draw_player_drum(self):
         for player in self.players:
@@ -212,10 +212,10 @@ class EntryScreen(Screen):
         tex.draw_texture('global', 'player_entry')
 
         if self.box_manager.is_finished():
-            ray.draw_rectangle(0, 0, 1280, 720, ray.BLACK)
+            ray.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ray.BLACK)
 
         self.timer.draw()
-        self.entry_overlay.draw(y=-10)
+        self.entry_overlay.draw(y=tex.skin_config['entry_overlay_entry'].y)
         self.coin_overlay.draw()
         self.allnet_indicator.draw()
 
@@ -248,7 +248,7 @@ class EntryPlayer:
 
         # Character (0 for red/1P, 1 for blue/2P)
         chara_id = 0 if side == 0 else 1
-        self.chara = Chara2D(chara_id, 100)
+        self.chara = Chara2D(chara_id)
 
         # Animations
         self.drum_move_1 = tex.get_animation(2)
@@ -283,7 +283,7 @@ class EntryPlayer:
         self.nameplate_fadein.update(current_time)
         self.nameplate.update(current_time)
         self.indicator.update(current_time)
-        self.chara.update(current_time, 100, False, False)
+        self.chara.update(current_time)
 
     def draw_drum(self):
         """Draw the player's drum with animations"""
@@ -323,11 +323,11 @@ class EntryPlayer:
     def draw_nameplate_and_indicator(self, fade: float = 1.0):
         """Draw nameplate and indicator at player-specific position"""
         if self.side == 0:  # Left side
-            self.nameplate.draw(30, 640, fade=fade)
-            self.indicator.draw(50, 575, fade=fade)
+            self.nameplate.draw(tex.skin_config['nameplate_entry_left'].x, tex.skin_config['nameplate_entry_left'].y, fade=fade)
+            self.indicator.draw(tex.skin_config['indicator_entry_left'].x, tex.skin_config['indicator_entry_left'].y, fade=fade)
         else:  # Right side
-            self.nameplate.draw(950, 640, fade=fade)
-            self.indicator.draw(770, 575, fade=fade)
+            self.nameplate.draw(tex.skin_config['nameplate_entry_right'].x, tex.skin_config['nameplate_entry_right'].y, fade=fade)
+            self.indicator.draw(tex.skin_config['indicator_entry_right'].x, tex.skin_config['indicator_entry_right'].y, fade=fade)
 
     def is_cloud_animation_finished(self) -> bool:
         """Check if cloud texture change animation is finished"""
@@ -368,6 +368,7 @@ class Box:
         self.is_selected = False
         self.moving_left = False
         self.moving_right = False
+        self.outline_color = ray.Color(109, 68, 24, 255)
 
     def set_positions(self, x: int):
         """Set the positions of the box"""
@@ -425,7 +426,7 @@ class Box:
         if self.is_selected:
             self.text.draw(outline_color=ray.BLACK, x=text_x, y=text_y, color=color)
         else:
-            self.text.draw(outline_color=ray.Color(109, 68, 24, 255), x=text_x, y=text_y, color=color)
+            self.text.draw(outline_color=self.outline_color, x=text_x, y=text_y, color=color)
 
     def draw(self, fade: float):
         color = ray.fade(ray.WHITE, fade)
@@ -451,7 +452,7 @@ class BoxManager:
         spacing = 80
         box_width = self.boxes[0].texture.width
         total_width = self.num_boxes * box_width + (self.num_boxes - 1) * spacing
-        start_x = 640 - total_width//2
+        start_x = SCREEN_WIDTH//2 - total_width//2
         for i, box in enumerate(self.boxes):
             box.set_positions(start_x + i * (box_width + spacing))
             if i > 0:

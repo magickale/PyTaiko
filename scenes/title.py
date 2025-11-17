@@ -119,7 +119,7 @@ class TitleScreen(Screen):
         tex.draw_texture('movie', 'background', fade=self.fade_out.attribute)
         self.coin_overlay.draw()
         self.allnet_indicator.draw()
-        self.entry_overlay.draw(x=155, y=-10)
+        self.entry_overlay.draw(tex.skin_config["entry_overlay_title"].x, y=tex.skin_config["entry_overlay_title"].y)
 
         global_tex.draw_texture('overlay', 'hit_taiko_to_start', index=0, fade=self.text_overlay_fade.attribute)
         global_tex.draw_texture('overlay', 'hit_taiko_to_start', index=1, fade=self.text_overlay_fade.attribute)
@@ -252,6 +252,7 @@ class WarningScreen:
         self.fade_in.update(current_ms)
         self.fade_out.update(current_ms)
         delay = 566.67
+        fade_out_delay = 500
         elapsed_time = current_ms - self.start_ms
         self.warning_x.update(current_ms)
         self.characters.update(current_ms)
@@ -259,7 +260,7 @@ class WarningScreen:
         if self.characters.is_finished:
             self.warning_bachi_hit.update(current_ms)
         else:
-            self.fade_out.delay = elapsed_time + 500
+            self.fade_out.delay = elapsed_time + fade_out_delay
             if delay <= elapsed_time and not audio.is_sound_playing('bachi_swipe'):
                 audio.play_sound('warning_voiceover', 'attract_mode')
                 audio.play_sound('bachi_swipe', 'attract_mode')

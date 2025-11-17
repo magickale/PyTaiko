@@ -16,6 +16,11 @@ SCREEN_HEIGHT = 720
 
 logger = logging.getLogger(__name__)
 
+class Coordinates:
+    def __init__(self, x: float, y: float):
+        self.x = x
+        self.y = y
+
 class Texture:
     """Texture class for managing textures and animations."""
     def __init__(self, name: str, texture: Union[ray.Texture, list[ray.Texture]], init_vals: dict[str, int]):
@@ -41,7 +46,13 @@ class TextureWrapper:
     def __init__(self):
         self.textures: dict[str, dict[str, Texture]] = dict()
         self.animations: dict[int, BaseAnimation] = dict()
+        self.skin_config: dict[str, Coordinates] = dict()
         self.graphics_path = Path("Graphics")
+        if (self.graphics_path / "skin_config.json").exists():
+            data = json.loads((self.graphics_path / "skin_config.json").read_text())
+            self.skin_config: dict[str, Coordinates] = {
+                k: Coordinates(v['x'], v['y']) for k, v in data.items()
+            }
 
     def unload_textures(self):
         """Unload all textures and animations."""

@@ -11,13 +11,10 @@ from libs.global_objects import AllNetIcon
 from libs.tja import TJAParser
 from libs.transition import Transition
 from libs.utils import OutlinedText, get_current_ms
-from libs.texture import tex
+from libs.texture import SCREEN_WIDTH, tex
 from scenes.game import ClearAnimation, FCAnimation, FailAnimation, GameScreen, Gauge, ResultTransition, SongInfo
 
 logger = logging.getLogger(__name__)
-
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
 
 class DanGameScreen(GameScreen):
     JUDGE_X = 414

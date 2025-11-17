@@ -336,9 +336,9 @@ class PracticePlayer(Player):
 
         # Group 2: Judgement and hit effects
         if self.gogo_time is not None:
-            self.gogo_time.draw()
+            self.gogo_time.draw(self.judge_x, self.judge_y)
         for anim in self.draw_judge_list:
-            anim.draw()
+            anim.draw(self.judge_x, self.judge_y)
 
         # Group 3: Notes and bars (game content)
         if not self.paused:

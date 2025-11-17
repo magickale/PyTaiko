@@ -5,7 +5,7 @@ from libs.utils import global_tex
 logger = logging.getLogger(__name__)
 
 class Chara2D:
-    def __init__(self, index: int, bpm: float, path: str = 'chara'):
+    def __init__(self, index: int, bpm: float = 100, path: str = 'chara'):
         """
         Initialize a Chara2D object.
 
@@ -67,7 +67,7 @@ class Chara2D:
         self.current_anim = name
         self.anims[name].start()
         logger.debug(f"Animation set: {name}")
-    def update(self, current_time_ms: float, bpm: float, is_clear: bool, is_rainbow: bool):
+    def update(self, current_time_ms: float, bpm: float = 100, is_clear: bool = False, is_rainbow: bool = False):
         """
         Update the character's animation state and appearance.
 

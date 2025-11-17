@@ -45,12 +45,12 @@ class Nameplate:
         """Unload the Nameplate object."""
         self.name.unload()
         self.title.unload()
-    def draw(self, x: int, y: int, fade: float = 1.0):
+    def draw(self, x: float, y: float, fade: float = 1.0):
         """Draw the Nameplate object.
 
         Args:
-            x (int): The x-coordinate of the Nameplate object.
-            y (int): The y-coordinate of the Nameplate object.
+            x (float): The x-coordinate of the Nameplate object.
+            y (float): The y-coordinate of the Nameplate object.
             fade (float): The fade value of the Nameplate object.
         """
         tex = global_tex
@@ -103,7 +103,7 @@ class Indicator:
         self.blue_arrow_move.update(current_time_ms)
         self.blue_arrow_fade.update(current_time_ms)
 
-    def draw(self, x: int, y: int, fade=1.0):
+    def draw(self, x: float, y: float, fade=1.0):
         """Draw the indicator at the given position with the given fade."""
         tex = global_tex
         tex.draw_texture('indicator', 'background', x=x, y=y, fade=fade)
@@ -156,7 +156,7 @@ class EntryOverlay:
     def update(self, current_time_ms: float):
         """Update the Banapass and Camera status icons."""
         pass
-    def draw(self, x: int = 0, y: int = 0):
+    def draw(self, x: float = 0, y: float = 0):
         """Draw the Banapass and Camera status icons."""
         tex = global_tex
         tex.draw_texture('overlay', 'banapass_or', x=x, y=y, frame=self.online)
