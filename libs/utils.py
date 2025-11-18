@@ -97,12 +97,36 @@ def get_config() -> Config:
 
 def save_config(config: Config) -> None:
     """Save the configuration to the TOML file"""
-    if Path('dev-config.toml').exists():
-        with open(Path('dev-config.toml'), "w", encoding="utf-8") as f:
-            tomlkit.dump(config, f)
-            return
-    with open(Path('config.toml'), "w", encoding="utf-8") as f:
-        tomlkit.dump(config, f)
+    config_to_save = json.loads(json.dumps(config))
+
+    for key in config_to_save['keys']:
+        config_to_save['keys'][key] = get_key_string(config_to_save['keys'][key])
+    for key in config_to_save['keys_1p']:
+        bindings = config_to_save['keys_1p'][key]
+        for i, bind in enumerate(bindings):
+            config_to_save['keys_1p'][key][i] = get_key_string(bind)
+    for key in config_to_save['keys_2p']:
+        bindings = config_to_save['keys_2p'][key]
+        for i, bind in enumerate(bindings):
+            config_to_save['keys_2p'][key][i] = get_key_string(bind)
+
+    config_path = Path('dev-config.toml') if Path('dev-config.toml').exists() else Path('config.toml')
+    with open(config_path, "w", encoding="utf-8") as f:
+        tomlkit.dump(config_to_save, f)
+
+def get_key_string(key_code: int) -> str:
+    """Convert a key code back to its string representation"""
+    if 65 <= key_code <= 90:
+        return chr(key_code)
+    if 48 <= key_code <= 57:
+        return chr(key_code)
+
+    for attr_name in dir(ray):
+        if attr_name.startswith('KEY_'):
+            if getattr(ray, attr_name) == key_code:
+                return attr_name[4:].lower()
+
+    raise ValueError(f"Unknown key code: {key_code}")
 
 def get_key_code(key: str) -> int:
     if len(key) == 1 and key.isalnum():
