@@ -1895,13 +1895,13 @@ class ResultTransition:
             if self.player_num == PlayerNum.TWO_PLAYER:
                 global_tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-tex.screen_height + self.move.attribute)
                 global_tex.draw_texture('result_transition', '2p_shutter', frame=0, x=x, y=tex.screen_height - self.move.attribute)
-                global_tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-tex_height + self.move.attribute)
-                global_tex.draw_texture('result_transition', '2p_shutter_footer', x=x, y=tex.screen_height + tex_height - self.move.attribute)
+                global_tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-(tex_height*3) + self.move.attribute)
+                global_tex.draw_texture('result_transition', '2p_shutter_footer', x=x, y=tex.screen_height + (tex_height*2) - self.move.attribute)
             else:
                 global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=-tex.screen_height + self.move.attribute)
                 global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=tex.screen_height - self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=-tex_height + self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=tex.screen_height + tex_height - self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=-(tex_height*3) + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=tex.screen_height + (tex_height*2) - self.move.attribute)
             x += tex.screen_width // 5
 
 class GogoTime:

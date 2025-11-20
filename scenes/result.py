@@ -87,20 +87,20 @@ class Background:
         self.width = width
     def draw(self):
         x = 0
-        footer_height = tex.textures["background"]["footer_1p"].height
+        footer_height = tex.textures["background"][f"footer_{self.player_num}p"].height
         if self.player_num == PlayerNum.TWO_PLAYER:
             while x < self.width:
                 tex.draw_texture('background', 'background_1p', x=x, y=-(tex.screen_height//2))
                 tex.draw_texture('background', 'background_2p', x=x, y=tex.screen_height//2)
-                tex.draw_texture('background', 'footer_1p', x=x, y=-footer_height)
-                tex.draw_texture('background', 'footer_2p', x=x, y=tex.screen_height-footer_height)
+                tex.draw_texture('background', 'footer_1p', x=x, y=-(footer_height//2))
+                tex.draw_texture('background', 'footer_2p', x=x, y=tex.screen_height-(footer_height//2))
                 x += tex.screen_width // 5
         else:
             while x < self.width:
                 tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=-(tex.screen_height//2))
                 tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=(tex.screen_height//2))
-                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=-footer_height)
-                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=tex.screen_height-footer_height)
+                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=-(footer_height//2))
+                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=tex.screen_height-(footer_height//2))
                 x += tex.screen_width // 5
         tex.draw_texture('background', 'result_text')
 

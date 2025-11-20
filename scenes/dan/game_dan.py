@@ -42,7 +42,7 @@ class DanGameScreen(GameScreen):
             logger.info("Loaded nijiiro notes textures")
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture0"), tex.textures['balloon']['rainbow_mask'].texture)
         ray.set_shader_value_texture(self.mask_shader, ray.get_shader_location(self.mask_shader, "texture1"), tex.textures['balloon']['rainbow'].texture)
-        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num].song_title, 40, ray.WHITE)
+        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num].song_title, tex.skin_config["dan_title"].font_size, ray.WHITE)
         self.init_dan()
         self.background = Background(global_data.player_num, self.bpm, scene_preset='DAN')
         self.transition = Transition('', '', is_second=True)
@@ -297,7 +297,7 @@ class DanGameScreen(GameScreen):
             # Draw exam type and red value counter
             red_counter = str(exam_info['red_value'])
             self._draw_counter(red_counter, margin=tex.skin_config["dan_score_box_margin"].x, texture='value_counter', index=0, y=y_offset)
-            tex.draw_texture('dan_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*20)
+            tex.draw_texture('dan_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*(20 * tex.screen_scale))
 
             # Draw range indicator
             if exam.range == 'less':
@@ -383,7 +383,7 @@ class DanGauge(Gauge):
             self.gauge_length = self.gauge_max
 
         if int(self.gauge_length * 8) % 8 == 0:
-            self.visual_length = int(self.gauge_length * 8)
+            self.visual_length = int(self.gauge_length * tex.textures["gauge_dan"][f'{self.player_num}p_bar'].width)
 
     def add_ok(self):
         """Adds an ok note to the gauge"""
@@ -394,7 +394,7 @@ class DanGauge(Gauge):
             self.gauge_length = self.gauge_max
 
         if int(self.gauge_length * 8) % 8 == 0:
-            self.visual_length = int(self.gauge_length * 8)
+            self.visual_length = int(self.gauge_length * tex.textures["gauge_dan"][f'{self.player_num}p_bar'].width)
 
     def add_bad(self):
         """Adds a bad note to the gauge"""
@@ -404,7 +404,7 @@ class DanGauge(Gauge):
             self.gauge_length = 0
 
         if int(self.gauge_length * 8) % 8 == 0:
-            self.visual_length = int(self.gauge_length * 8)
+            self.visual_length = int(self.gauge_length * tex.textures["gauge_dan"][f'{self.player_num}p_bar'].width)
 
     def update(self, current_ms: float):
         self.is_rainbow = self.gauge_length == self.gauge_max

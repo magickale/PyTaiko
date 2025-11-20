@@ -107,7 +107,7 @@ class Chibi2(BaseChibi):
             self.rotate.restart()
 
     def draw(self, tex: TextureWrapper):
-        origin = ray.Vector2(64, 64)
+        origin = ray.Vector2(tex.textures[self.name][str(self.index)].width//2, tex.textures[self.name][str(self.index)].height//2)
         tex.draw_texture(self.name, str(self.index), x=self.hori_move.attribute+origin.x, y=origin.y+(self.is_2p*tex.skin_config["game_2p_offset"].y), origin=origin, rotation=self.rotate.attribute)
 
 class Chibi4(BaseChibi):

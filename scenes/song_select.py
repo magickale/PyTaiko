@@ -958,7 +958,7 @@ class DiffSortSelect:
         tex.draw_texture('diff_sort', 'diff', frame=self.selected_box, fade=self.diff_fade_in.attribute)
         tex.draw_texture('diff_sort', 'star_num', frame=self.selected_level, fade=self.diff_fade_in.attribute)
         for i in range(self.selected_level):
-            tex.draw_texture('diff_sort', 'star', x=(i*40.5 * tex.screen_scale), fade=self.diff_fade_in.attribute)
+            tex.draw_texture('diff_sort', 'star', x=(i*(40.5 * tex.screen_scale)), fade=self.diff_fade_in.attribute)
 
         if self.confirmation:
             texture = tex.textures['diff_sort']['level_box']

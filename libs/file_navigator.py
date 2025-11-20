@@ -597,7 +597,7 @@ class DanBox(BaseBox):
     def _draw_closed(self, x: float, y: float):
         tex.draw_texture('box', 'folder', frame=self.texture_index, x=x)
         if self.name is not None:
-            self.name.draw(outline_color=ray.BLACK, x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+tex.skin_config["song_box_name"].height, y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height)
+            self.name.draw(outline_color=ray.BLACK, x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+(tex.skin_config["song_box_name"].height//2), y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height)
 
     def _draw_open(self, x: float, y: float, fade_override: Optional[float], is_ura: bool):
         if fade_override is not None:
