@@ -175,6 +175,8 @@ class OutlinedText:
                 self.texture = self._create_text_vertical(text, font_size, color, ray.BLANK, self.font)
             else:
                 self.texture = self._create_text_horizontal(text, font_size, color, ray.BLANK, self.font)
+        ray.gen_texture_mipmaps(self.texture)
+        ray.set_texture_filter(self.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
         outline_size = ray.ffi.new('float*', self.outline_thickness)
         texture_size = ray.ffi.new("float[2]", [self.texture.width, self.texture.height])
 

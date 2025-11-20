@@ -66,6 +66,7 @@ class VideoPlayer:
                     'format': ray.PIXELFORMAT_UNCOMPRESSED_R8G8B8
                 })
                 self.texture = ray.LoadTextureFromImage(image[0])
+                ray.SetTextureFilter(self.texture, ray.TEXTURE_FILTER_TRILINEAR)
             else:
                 if frame_data is not None:
                     frame_bytes = frame_data.tobytes()

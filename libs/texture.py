@@ -37,6 +37,16 @@ class Texture:
             self.width = self.texture.width
             self.height = self.texture.height
         self.is_frames = isinstance(self.texture, list)
+        if isinstance(self.texture, list):
+            pass
+            for texture_data in self.texture:
+                ray.GenTextureMipmaps(ray.ffi.addressof(texture_data))
+                ray.SetTextureFilter(texture_data, ray.TEXTURE_FILTER_TRILINEAR)
+                ray.SetTextureWrap(texture_data, ray.TEXTURE_WRAP_CLAMP)
+        else:
+            ray.GenTextureMipmaps(ray.ffi.addressof(self.texture))
+            ray.SetTextureFilter(self.texture, ray.TEXTURE_FILTER_TRILINEAR)
+            ray.SetTextureWrap(self.texture, ray.TEXTURE_WRAP_CLAMP)
 
         self.x: list[int] = [0]
         self.y: list[int] = [0]

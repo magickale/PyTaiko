@@ -17,8 +17,8 @@ void main()
 
     // Calculate outline
     float outline = 0.0;
-    int ringSamples = 64;
-    int rings = 4;
+    int ringSamples = 16;
+    int rings = 2;
     for(int ring = 1; ring <= rings; ring++) {
         float ringRadius = float(ring) / float(rings);
         for(int i = 0; i < ringSamples; i++) {
@@ -28,7 +28,7 @@ void main()
         }
     }
     outline = min(outline, 1.0);
-    outline = smoothstep(0.1, 0.6, outline);
+    outline = smoothstep(0.3, 0.7, outline);
 
     float edgeStart = 0.5 - smoothness * 0.3;
     float edgeEnd = 0.5 + smoothness * 0.3;

@@ -58,6 +58,7 @@ class BaseChibi:
 
 class ChibiBad(BaseChibi):
     def __init__(self, index: int, bpm: float, tex: TextureWrapper, is_2p: bool):
+        self.tex = tex
         self.is_2p = is_2p
         self.bpm = bpm
         self.index = random.randint(0, 2)
