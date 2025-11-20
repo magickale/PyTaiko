@@ -16,7 +16,7 @@ from libs.chara_2d import Chara2D
 from libs.global_data import Crown, Difficulty, Modifiers, PlayerNum
 from libs.global_objects import AllNetIcon, Nameplate
 from libs.screen import Screen
-from libs.texture import SCREEN_HEIGHT, SCREEN_WIDTH, tex
+from libs.texture import tex
 from libs.tja import (
     Balloon,
     Drumroll,
@@ -57,7 +57,7 @@ class Judgments(IntEnum):
     BAD = 2
 
 class GameScreen(Screen):
-    JUDGE_X = 414
+    JUDGE_X = 414 * tex.screen_scale
     def on_screen_start(self):
         super().on_screen_start()
         self.mask_shader = ray.load_shader("shader/outline.vs", "shader/mask.fs")
@@ -133,7 +133,7 @@ class GameScreen(Screen):
 
     def init_tja(self, song: Path):
         """Initialize the TJA file"""
-        self.tja = TJAParser(song, start_delay=self.start_delay, distance=SCREEN_WIDTH - GameScreen.JUDGE_X)
+        self.tja = TJAParser(song, start_delay=self.start_delay, distance=tex.screen_width - GameScreen.JUDGE_X)
         if self.tja.metadata.bgmovie != Path() and self.tja.metadata.bgmovie.exists():
             self.movie = VideoPlayer(self.tja.metadata.bgmovie)
             self.movie.set_volume(0.0)
@@ -447,12 +447,12 @@ class Player:
     def get_position_x(self, width: int, current_ms: float, load_ms: float, pixels_per_frame: float) -> int:
         """Calculates the x-coordinate of a note based on its load time and current time"""
         time_diff = load_ms - current_ms
-        return int(width + pixels_per_frame * 0.06 * time_diff - 64) - self.visual_offset
+        return int(width + pixels_per_frame * 0.06 * time_diff - (tex.textures["notes"]["1"].width//2)) - self.visual_offset
 
     def get_position_y(self, current_ms: float, load_ms: float, pixels_per_frame: float, pixels_per_frame_x) -> int:
         """Calculates the y-coordinate of a note based on its load time and current time"""
         time_diff = load_ms - current_ms
-        return int((pixels_per_frame * 0.06 * time_diff) + ((866 * pixels_per_frame) / pixels_per_frame_x))
+        return int((pixels_per_frame * 0.06 * time_diff) + ((self.tja.distance * pixels_per_frame) / pixels_per_frame_x))
 
     def get_judge_position(self, current_ms: float):
         """Get the current judgment circle position based on bar data"""
@@ -462,8 +462,8 @@ class Player:
         # Find the most recent bar with judge position data
         for bar in self.current_bars:
             if hasattr(bar, 'judge_pos_x') and bar.hit_ms <= current_ms:
-                judge_x = bar.judge_pos_x
-                judge_y = bar.judge_pos_y
+                judge_x = bar.judge_pos_x * tex.screen_scale
+                judge_y = bar.judge_pos_y * tex.screen_scale
             elif bar.hit_ms > current_ms:
                 break
 
@@ -495,10 +495,10 @@ class Player:
             return
 
         # More efficient removal with early exit
-        removal_threshold = GameScreen.JUDGE_X + 650
+        removal_threshold = GameScreen.JUDGE_X + (650 * tex.screen_scale)
         bars_to_keep = []
         for bar in self.current_bars:
-            position = self.get_position_x(SCREEN_WIDTH, current_ms, bar.hit_ms, bar.pixels_per_frame_x)
+            position = self.get_position_x(tex.screen_width, current_ms, bar.hit_ms, bar.pixels_per_frame_x)
             if position >= removal_threshold:
                 bars_to_keep.append(bar)
         self.current_bars = bars_to_keep
@@ -630,8 +630,8 @@ class Player:
         note = self.current_notes_draw[0]
         if note.type in {NoteType.ROLL_HEAD, NoteType.ROLL_HEAD_L, NoteType.BALLOON_HEAD, NoteType.KUSUDAMA} and len(self.current_notes_draw) > 1:
             note = self.current_notes_draw[1]
-        position = self.get_position_x(SCREEN_WIDTH, current_ms, note.hit_ms, note.pixels_per_frame_x)
-        if position < GameScreen.JUDGE_X + 650:
+        position = self.get_position_x(tex.screen_width, current_ms, note.hit_ms, note.pixels_per_frame_x)
+        if position < GameScreen.JUDGE_X + (650 * tex.screen_scale):
             self.current_notes_draw.pop(0)
 
     def note_manager(self, current_ms: float, background: Optional[Background]):
@@ -1000,36 +1000,39 @@ class Player:
 
     def draw_drumroll(self, current_ms: float, head: Drumroll, current_eighth: int):
         """Draws a drumroll in the player's lane"""
-        start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
+        start_position = self.get_position_x(tex.screen_width, current_ms, head.load_ms, head.pixels_per_frame_x)
         start_position += self.judge_x
         tail = next((note for note in self.current_notes_draw[1:] if note.type == NoteType.TAIL and note.index > head.index), self.current_notes_draw[1])
         is_big = int(head.type == NoteType.ROLL_HEAD_L)
-        end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
+        end_position = self.get_position_x(tex.screen_width, current_ms, tail.load_ms, tail.pixels_per_frame_x)
         end_position += self.judge_x
         length = end_position - start_position
         color = ray.Color(255, head.color, head.color, 255)
+        y = tex.skin_config["notes"].y
+        moji_y = tex.skin_config["moji"].y
+        moji_x = tex.skin_config["moji"].x
         if head.display:
             if length > 0:
-                tex.draw_texture('notes', "8", frame=is_big, x=start_position+64, y=192+(self.is_2p*176)+self.judge_y, x2=length-47, color=color)
+                tex.draw_texture('notes', "8", frame=is_big, x=start_position+(tex.textures["notes"]["8"].width//2), y=y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y, x2=length+tex.skin_config["drumroll_width_offset"].width, color=color)
                 if is_big:
-                    tex.draw_texture('notes', "drumroll_big_tail", x=end_position+64, y=192+(self.is_2p*176)+self.judge_y, color=color)
+                    tex.draw_texture('notes', "drumroll_big_tail", x=end_position+tex.textures["notes"]["drumroll_big_tail"].width//2, y=y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y, color=color)
                 else:
-                    tex.draw_texture('notes', "drumroll_tail", x=end_position+64, y=192+(self.is_2p*176)+self.judge_y, color=color)
-            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=start_position, y=192+(self.is_2p*176)+self.judge_y, color=color)
+                    tex.draw_texture('notes', "drumroll_tail", x=end_position+tex.textures["notes"]["drumroll_tail"].width//2, y=y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y, color=color)
+            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=start_position, y=y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y, color=color)
 
-        tex.draw_texture('notes', 'moji_drumroll_mid', x=start_position + 60, y=323+(self.is_2p*176)+self.judge_y, x2=length)
-        tex.draw_texture('notes', 'moji', frame=head.moji, x=(start_position - (168//2)) + 64, y=323+(self.is_2p*176)+self.judge_y)
-        tex.draw_texture('notes', 'moji', frame=tail.moji, x=(end_position - (168//2)) + 32, y=323+(self.is_2p*176)+self.judge_y)
+        tex.draw_texture('notes', 'moji_drumroll_mid', x=start_position + tex.skin_config["moji_drumroll"].x, y=moji_y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y, x2=length)
+        tex.draw_texture('notes', 'moji', frame=head.moji, x=start_position - moji_x, y=moji_y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y)
+        tex.draw_texture('notes', 'moji', frame=tail.moji, x=end_position - tex.skin_config["moji_drumroll"].width, y=moji_y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y)
 
     def draw_balloon(self, current_ms: float, head: Balloon, current_eighth: int):
         """Draws a balloon in the player's lane"""
-        offset = 12
-        start_position = self.get_position_x(SCREEN_WIDTH, current_ms, head.load_ms, head.pixels_per_frame_x)
+        offset = tex.skin_config["balloon_offset"].x
+        start_position = self.get_position_x(tex.screen_width, current_ms, head.load_ms, head.pixels_per_frame_x)
         start_position += self.judge_x
         tail = next((note for note in self.current_notes_draw[1:] if note.type == NoteType.TAIL and note.index > head.index), self.current_notes_draw[1])
-        end_position = self.get_position_x(SCREEN_WIDTH, current_ms, tail.load_ms, tail.pixels_per_frame_x)
+        end_position = self.get_position_x(tex.screen_width, current_ms, tail.load_ms, tail.pixels_per_frame_x)
         end_position += self.judge_x
-        pause_position = 349 + self.judge_x
+        pause_position = tex.skin_config["balloon_pause_position"].x + self.judge_x
         if current_ms >= tail.hit_ms:
             position = end_position
         elif current_ms >= head.hit_ms:
@@ -1037,8 +1040,8 @@ class Player:
         else:
             position = start_position
         if head.display:
-            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=position-offset, y=192+(self.is_2p*176)+self.judge_y)
-        tex.draw_texture('notes', '10', frame=current_eighth % 2, x=position-offset+128, y=192+(self.is_2p*176)+self.judge_y)
+            tex.draw_texture('notes', str(head.type), frame=current_eighth % 2, x=position-offset, y=tex.skin_config["notes"].y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y)
+        tex.draw_texture('notes', '10', frame=current_eighth % 2, x=position-offset+tex.textures["notes"]["10"].width, y=tex.skin_config["notes"].y+(self.is_2p*tex.skin_config["2p_offset"].y)+self.judge_y)
 
     def draw_bars(self, current_ms: float):
         """Draw bars in the player's lane"""
@@ -1048,7 +1051,7 @@ class Player:
         for bar in reversed(self.current_bars):
             if not bar.display:
                 continue
-            x_position = self.get_position_x(SCREEN_WIDTH, current_ms, bar.load_ms, bar.pixels_per_frame_x)
+            x_position = self.get_position_x(tex.screen_width, current_ms, bar.load_ms, bar.pixels_per_frame_x)
             y_position = self.get_position_y(current_ms, bar.load_ms, bar.pixels_per_frame_y, bar.pixels_per_frame_x)
             x_position += self.judge_x
             y_position += self.judge_y
@@ -1060,7 +1063,7 @@ class Player:
                 angle = math.degrees(math.atan2(bar.pixels_per_frame_y, bar.pixels_per_frame_x))
             else:
                 angle = 0
-            tex.draw_texture('notes', str(bar.type), frame=frame, x=x_position+60, y=y_position+190+(self.is_2p*176), rotation=angle)
+            tex.draw_texture('notes', str(bar.type), frame=frame, x=x_position+tex.skin_config["moji_drumroll"].x, y=y_position+tex.skin_config["moji_drumroll"].y+(self.is_2p*tex.skin_config["2p_offset"].y), rotation=angle)
 
 
     def draw_notes(self, current_ms: float, start_ms: float):
@@ -1090,10 +1093,10 @@ class Player:
                 else:
                     effective_ms = current_ms
 
-                x_position = self.get_position_x(SCREEN_WIDTH, effective_ms, note.load_ms, note.pixels_per_frame_x)
+                x_position = self.get_position_x(tex.screen_width, effective_ms, note.load_ms, note.pixels_per_frame_x)
                 y_position = self.get_position_y(effective_ms, note.load_ms, note.pixels_per_frame_y, note.pixels_per_frame_x)
             else:
-                x_position = self.get_position_x(SCREEN_WIDTH, current_ms, note.load_ms, note.pixels_per_frame_x)
+                x_position = self.get_position_x(tex.screen_width, current_ms, note.load_ms, note.pixels_per_frame_x)
                 y_position = self.get_position_y(current_ms, note.load_ms, note.pixels_per_frame_y, note.pixels_per_frame_x)
             x_position += self.judge_x
             y_position += self.judge_y
@@ -1101,13 +1104,13 @@ class Player:
                 self.draw_drumroll(current_ms, note, current_eighth)
             elif isinstance(note, Balloon) and not note.is_kusudama:
                 self.draw_balloon(current_ms, note, current_eighth)
-                tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position - (168//2) + 64, y=323 + y_position+(self.is_2p*176))
+                tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position, y=tex.skin_config["moji"].y + y_position+(self.is_2p*tex.skin_config["2p_offset"].y))
             else:
                 if note.display:
-                    tex.draw_texture('notes', str(note.type), frame=current_eighth % 2, x=x_position, y=y_position+192+(self.is_2p*176), center=True)
-                tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position - (168//2) + 64, y=323 + y_position+(self.is_2p*176))
+                    tex.draw_texture('notes', str(note.type), frame=current_eighth % 2, x=x_position, y=y_position+tex.skin_config["notes"].y+(self.is_2p*tex.skin_config["2p_offset"].y), center=True)
+                tex.draw_texture('notes', 'moji', frame=note.moji, x=x_position - (tex.textures["notes"]["moji"].width//2) + (tex.textures["notes"]["1"].width//2), y=tex.skin_config["moji"].y + y_position+(self.is_2p*tex.skin_config["2p_offset"].y))
 
-        ray.draw_text(self.current_notes_draw[0].lyric, SCREEN_WIDTH//2 - (ray.measure_text(self.current_notes_draw[0].lyric, 40)//2), SCREEN_HEIGHT - 50, 40, ray.BLUE)
+        ray.draw_text(self.current_notes_draw[0].lyric, tex.screen_width//2 - (ray.measure_text(self.current_notes_draw[0].lyric, int(40 * tex.screen_scale))//2), tex.screen_height - int(50 * tex.screen_scale), int(40 * tex.screen_scale), ray.BLUE)
 
 
     def draw_modifiers(self):
@@ -1171,13 +1174,13 @@ class Player:
         # Group 7: Player-specific elements
         if not self.modifiers.auto:
             if self.is_2p:
-                self.nameplate.draw(-62, 371)
+                self.nameplate.draw(tex.skin_config["game_nameplate_1p"].x, tex.skin_config["game_nameplate_1p"].y)
             else:
-                self.nameplate.draw(-62, 285)
+                self.nameplate.draw(tex.skin_config["game_nameplate_2p"].x, tex.skin_config["game_nameplate_2p"].y)
         else:
             tex.draw_texture('lane', 'auto_icon', index=self.is_2p)
         self.draw_modifiers()
-        self.chara.draw(y=(self.is_2p*536))
+        self.chara.draw(y=(self.is_2p*tex.skin_config["game_2p_offset"].y))
 
         # Group 8: Special animations and counters
         if self.drumroll_counter is not None:
@@ -1334,13 +1337,15 @@ class GaugeHitEffect:
         self.color = ray.fade(ray.YELLOW, self.circle_fadein.attribute)
         self.is_finished = False
 
+        self.width = tex.textures["gauge"]["hit_effect"].width
+
         self.texture_color = ray.WHITE
-        self.dest_width = 152
-        self.dest_height = 152
-        self.origin = ray.Vector2(76, 76)  # 152/2
+        self.dest_width = self.width * tex.screen_scale
+        self.dest_height = self.width * tex.screen_scale
+        self.origin = ray.Vector2(self.width//2, self.width//2)
         self.rotation_angle = 0
-        self.x2_pos = -152
-        self.y2_pos = -152
+        self.x2_pos = -self.width
+        self.y2_pos = -self.width
 
         # Cache for texture selection
         self.circle_texture = 'hit_effect_circle_big' if self.is_big else 'hit_effect_circle'
@@ -1385,11 +1390,11 @@ class GaugeHitEffect:
         if abs(resize_val - getattr(self, '_last_resize_calc', -1)) > 0.005:
             self._last_resize_calc = resize_val
             self.texture_color = self._get_texture_color_for_resize(resize_val)
-            self.dest_width = 152 * resize_val
-            self.dest_height = 152 * resize_val
+            self.dest_width = self.width * resize_val
+            self.dest_height = self.width * resize_val
             self.origin = ray.Vector2(self.dest_width / 2, self.dest_height / 2)
-            self.x2_pos = -152 + (152 * resize_val)
-            self.y2_pos = -152 + (152 * resize_val)
+            self.x2_pos = -self.width + (self.width * resize_val)
+            self.y2_pos = -self.width + (self.width * resize_val)
 
         self.rotation_angle = self.rotation.attribute * 100
 
@@ -1412,8 +1417,9 @@ class GaugeHitEffect:
                         center=True)
 
         # Note type texture
+        pos_data = tex.skin_config["gauge_hit_effect_note"]
         tex.draw_texture('notes', str(self.note_type),
-            x=1158, y=101+(self.is_2p*(435-32)),
+            x=pos_data.x, y=pos_data.y+(self.is_2p*(pos_data.height)),
                         fade=fade_value)
 
         # Circle effect texture (use cached texture name)
@@ -1434,12 +1440,12 @@ class NoteArc:
         self.explosion_point_index = 0
         self.points_per_explosion = 5
 
-        curve_height = 425
-        self.start_x, self.start_y = start_x + 350, start_y + 192
-        self.end_x, self.end_y = 1158, 101
+        curve_height = 425 * tex.screen_scale
+        self.start_x, self.start_y = start_x + (350 * tex.screen_scale), start_y + (192 * tex.screen_scale)
+        self.end_x, self.end_y = 1158 * tex.screen_scale, 101 * tex.screen_scale
         if self.player_num == PlayerNum.P2:
-            self.start_y += 176
-            self.end_y += 372
+            self.start_y += (176 * tex.screen_scale)
+            self.end_y += (372 * tex.screen_scale)
         self.explosion_x = self.start_x
         self.explosion_y = self.start_y
 
@@ -1511,12 +1517,12 @@ class NoteArc:
                 if crop_width > 0:
                     src = ray.Rectangle(crop_start_x, 0, crop_width, rainbow_height)
                     mirror = 'vertical' if self.player_num == PlayerNum.P2 else ''
-                    y = 435 if self.player_num == PlayerNum.P2 else 0
+                    y = (435 * tex.screen_scale) if self.player_num == PlayerNum.P2 else 0
                     ray.begin_shader_mode(mask_shader)
                     tex.draw_texture('balloon', 'rainbow_mask', src=src, x=crop_start_x, x2=-rainbow.width + crop_width, mirror=mirror, y=y)
                     ray.end_shader_mode()
 
-                    tex.draw_texture('balloon', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
+                    tex.draw_texture('balloon', 'explosion', x=self.explosion_x, y=self.explosion_y-(30 * tex.screen_scale), frame=self.explosion_anim.attribute)
         '''
         elif self.is_big:
             tex.draw_texture('hit_effect', 'explosion', x=self.explosion_x, y=self.explosion_y-30, frame=self.explosion_anim.attribute)
@@ -1552,9 +1558,9 @@ class DrumrollCounter:
         color = ray.fade(ray.WHITE, self.fade_animation.attribute)
         tex.draw_texture('drumroll_counter', 'bubble', color=color, index=self.is_2p)
         counter = str(self.drumroll_count)
-        total_width = len(counter) * 52
+        total_width = len(counter) * tex.skin_config["drumroll_counter_margin"].x
         for i, digit in enumerate(counter):
-            tex.draw_texture('drumroll_counter', 'counter', color=color, index=self.is_2p, frame=int(digit), x=-(total_width//2)+(i*52), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
+            tex.draw_texture('drumroll_counter', 'counter', color=color, index=self.is_2p, frame=int(digit), x=-(total_width//2)+(i*tex.skin_config["drumroll_counter_margin"].x), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
 
 class BalloonAnimation:
     """Draws a Balloon"""
@@ -1594,16 +1600,16 @@ class BalloonAnimation:
 
     def draw(self):
         if self.is_popped:
-            tex.draw_texture('balloon', 'pop', frame=7, color=self.color, y=self.is_2p*176)
+            tex.draw_texture('balloon', 'pop', frame=7, color=self.color, y=self.is_2p*tex.skin_config["2p_offset"].y)
         elif self.balloon_count >= 1:
             balloon_index = min(6, (self.balloon_count - 1) * 6 // self.balloon_total)
-            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color, index=self.player_num-1, y=self.is_2p*176)
+            tex.draw_texture('balloon', 'pop', frame=balloon_index, color=self.color, index=self.player_num-1, y=self.is_2p*tex.skin_config["2p_offset"].y)
         if self.balloon_count > 0:
-            tex.draw_texture('balloon', 'bubble', y=self.is_2p*410, mirror='vertical' if self.is_2p else '')
+            tex.draw_texture('balloon', 'bubble', y=self.is_2p*(410 * tex.screen_scale), mirror='vertical' if self.is_2p else '')
             counter = str(max(0, self.balloon_total - self.balloon_count + 1))
-            total_width = len(counter) * 52
+            total_width = len(counter) * tex.skin_config["drumroll_counter_margin"].x
             for i, digit in enumerate(counter):
-                tex.draw_texture('balloon', 'counter', frame=int(digit), color=self.color, x=-(total_width // 2) + (i * 52), y=-self.stretch_animation.attribute+(self.is_2p*435), y2=self.stretch_animation.attribute)
+                tex.draw_texture('balloon', 'counter', frame=int(digit), color=self.color, x=-(total_width // 2) + (i * tex.skin_config["drumroll_counter_margin"].x), y=-self.stretch_animation.attribute+(self.is_2p*435), y2=self.stretch_animation.attribute)
 
 class KusudamaAnimation:
     """Draws a Kusudama"""
@@ -1667,9 +1673,9 @@ class KusudamaAnimation:
             counter = str(max(0, self.balloon_total - self.balloon_count))
             if counter == '0':
                 return
-            total_width = len(counter) * 150
+            total_width = len(counter) * tex.skin_config["kusudama_counter_margin"].x
             for i, digit in enumerate(counter):
-                tex.draw_texture('kusudama', 'counter', frame=int(digit), x=-(total_width // 2) + (i * 150), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
+                tex.draw_texture('kusudama', 'counter', frame=int(digit), x=-(total_width // 2) + (i * tex.skin_config["kusudama_counter_margin"].x), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute)
 
 class Combo:
     """Displays the current combo"""
@@ -1725,21 +1731,21 @@ class Combo:
         counter = self._cached_combo_str
 
         if self.combo < 100:
-            margin = 30
+            margin = tex.skin_config["combo_margin"].x
             total_width = len(counter) * margin
             tex.draw_texture('combo', 'combo', index=self.is_2p)
             for i, digit in enumerate(counter):
                 tex.draw_texture('combo', 'counter', frame=int(digit), x=-(total_width // 2) + (i * margin), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute, index=self.is_2p)
         else:
-            margin = 35
+            margin = tex.skin_config["combo_margin"].y
             total_width = len(counter) * margin
             tex.draw_texture('combo', 'combo_100', index=self.is_2p)
             for i, digit in enumerate(counter):
                 tex.draw_texture('combo', 'counter_100', frame=int(digit), x=-(total_width // 2) + (i * margin), y=-self.stretch_animation.attribute, y2=self.stretch_animation.attribute, index=self.is_2p)
-            glimmer_positions = [(225, 210), (200, 230), (250, 230)]
+            glimmer_positions = [(225 * tex.screen_scale, 210 * tex.screen_scale), (200 * tex.screen_scale, 230 * tex.screen_scale), (250 * tex.screen_scale, 230 * tex.screen_scale)]
             for j, (x, y) in enumerate(glimmer_positions):
                 for i in range(3):
-                    tex.draw_texture('combo', 'gleam', x=x+(i*30), y=y+self.glimmer_dict[j] + (self.is_2p*176), color=self.color[j])
+                    tex.draw_texture('combo', 'gleam', x=x+(i*tex.skin_config["combo_margin"].x), y=y+self.glimmer_dict[j] + (self.is_2p*tex.skin_config["2p_offset"].y), color=self.color[j])
 
 class ScoreCounter:
     """Displays the total score"""
@@ -1765,8 +1771,8 @@ class ScoreCounter:
             self._cached_score_str = str(self.score)
         counter = self._cached_score_str
 
-        x, y = 150, 185 + (self.is_2p*310)
-        margin = 20
+        x, y = 150 * tex.screen_scale, (185 * tex.screen_scale) + (self.is_2p*310*tex.screen_scale)
+        margin = tex.skin_config["score_counter_margin"].x
         total_width = len(counter) * margin
         start_x = x - total_width
         for i, digit in enumerate(counter):
@@ -1800,7 +1806,7 @@ class ScoreCounterAnimation:
 
         # Cache string and layout calculations
         self.counter_str = str(counter)
-        self.margin = 20
+        self.margin = tex.skin_config["score_counter_margin"].x
         self.total_width = len(self.counter_str) * self.margin
         self.y_pos_list = []
 
@@ -1834,14 +1840,14 @@ class ScoreCounterAnimation:
             elif self.move_animation_2.is_finished:
                 y = self.move_animation_3.attribute
             else:
-                y = 148
+                y = 148 * tex.screen_scale
 
             y_offset = y * self.direction
 
             tex.draw_texture('lane', 'score_number',
                            frame=int(digit),
                            x=start_x + (i * self.margin),
-                           y=y_offset + (self.is_2p * 680),
+                           y=y_offset + (self.is_2p * 680 * tex.screen_scale),
                            color=self.color)
 
 class SongInfo:
@@ -1849,7 +1855,7 @@ class SongInfo:
     def __init__(self, song_name: str, genre: int):
         self.song_name = song_name
         self.genre = genre
-        self.song_title = OutlinedText(song_name, 40, ray.WHITE, outline_thickness=5)
+        self.song_title = OutlinedText(song_name, tex.skin_config["song_info"].font_size, ray.WHITE, outline_thickness=5)
         self.fade = tex.get_animation(3)
 
     def update(self, current_ms: float):
@@ -1858,8 +1864,8 @@ class SongInfo:
     def draw(self):
         tex.draw_texture('song_info', 'song_num', fade=self.fade.attribute, frame=global_data.songs_played % 4)
 
-        text_x = 1252 - self.song_title.texture.width
-        text_y = 50 - self.song_title.texture.height//2
+        text_x = tex.skin_config["song_info"].x - self.song_title.texture.width
+        text_y = tex.skin_config["song_info"].y - self.song_title.texture.height//2
         self.song_title.draw(outline_color=ray.BLACK, x=text_x, y=text_y, color=ray.fade(ray.WHITE, 1 - self.fade.attribute))
 
         if self.genre < 9:
@@ -1884,19 +1890,19 @@ class ResultTransition:
 
     def draw(self):
         x = 0
-        screen_width = 1280
-        while x < screen_width:
+        while x < tex.screen_width:
+            tex_height = global_tex.textures['result_transition']['1p_shutter_footer'].height
             if self.player_num == PlayerNum.TWO_PLAYER:
-                global_tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
-                global_tex.draw_texture('result_transition', '2p_shutter', frame=0, x=x, y=720 - self.move.attribute)
-                global_tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-432 + self.move.attribute)
-                global_tex.draw_texture('result_transition', '2p_shutter_footer', x=x, y=1008 - self.move.attribute)
+                global_tex.draw_texture('result_transition', '1p_shutter', frame=0, x=x, y=-tex.screen_height + self.move.attribute)
+                global_tex.draw_texture('result_transition', '2p_shutter', frame=0, x=x, y=tex.screen_height - self.move.attribute)
+                global_tex.draw_texture('result_transition', '1p_shutter_footer', x=x, y=-tex_height + self.move.attribute)
+                global_tex.draw_texture('result_transition', '2p_shutter_footer', x=x, y=tex.screen_height + tex_height - self.move.attribute)
             else:
-                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=-720 + self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=720 - self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=-432 + self.move.attribute)
-                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=1008 - self.move.attribute)
-            x += 256
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=-tex.screen_height + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter', frame=0, x=x, y=tex.screen_height - self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=-tex_height + self.move.attribute)
+                global_tex.draw_texture('result_transition', f'{self.player_num}p_shutter_footer', x=x, y=tex.screen_height + tex_height - self.move.attribute)
+            x += tex.screen_width // 5
 
 class GogoTime:
     """Displays the Gogo Time fire and fireworks"""
@@ -1957,14 +1963,14 @@ class ComboAnnounce:
             thousands_offset = -110
             hundreds_offset = 20
             if self.combo % 1000 == 0:
-                tex.draw_texture('combo', 'announce_number', frame=thousands-1, x=-23, fade=fade, index=self.is_2p)
-                tex.draw_texture('combo', 'announce_add', frame=0, x=435, fade=fade, index=self.is_2p)
+                tex.draw_texture('combo', 'announce_number', frame=thousands-1, x=-23 * tex.screen_scale, fade=fade, index=self.is_2p)
+                tex.draw_texture('combo', 'announce_add', frame=0, x=435 * tex.screen_scale, fade=fade, index=self.is_2p)
             else:
                 if thousands <= 5:
-                    tex.draw_texture('combo', 'announce_add', frame=thousands, x=429 + thousands_offset, fade=fade, index=self.is_2p)
+                    tex.draw_texture('combo', 'announce_add', frame=thousands, x=429 * tex.screen_scale + thousands_offset, fade=fade, index=self.is_2p)
                 if remaining_hundreds > 0:
                     tex.draw_texture('combo', 'announce_number', frame=remaining_hundreds-1, x=hundreds_offset, fade=fade, index=self.is_2p)
-            text_offset = -30
+            text_offset = -30 * tex.screen_scale
         else:
             text_offset = 0
             tex.draw_texture('combo', 'announce_number', frame=self.combo // 100 - 1, x=0, fade=fade, index=self.is_2p)
@@ -2016,7 +2022,7 @@ class BranchIndicator:
         else:
             tex.draw_texture('branch', 'level_up', scale=self.level_scale.attribute, fade=self.level_fade.attribute, center=True, index=self.is_2p)
         tex.draw_texture('branch', self.diff_2, y=(self.diff_down.attribute - self.diff_up.attribute) * self.direction, fade=self.diff_fade.attribute, index=self.is_2p)
-        tex.draw_texture('branch', self.difficulty, y=(self.diff_up.attribute * (self.direction*-1)) - (70*self.direction*-1), fade=1 - self.diff_fade.attribute, index=self.is_2p)
+        tex.draw_texture('branch', self.difficulty, y=(self.diff_up.attribute * (self.direction*-1)) - ((70 * tex.screen_scale)*self.direction*-1), fade=1 - self.diff_fade.attribute, index=self.is_2p)
 
 class FailAnimation:
     """Animates the fail effect"""
@@ -2062,8 +2068,8 @@ class FailAnimation:
         tex.draw_texture('ending_anim', 'fail', fade=self.text_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=-self.bachio_move_out.attribute - (self.bachio_up.attribute/2), y=self.bachio_down.attribute - self.bachio_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=self.bachio_move_out.attribute + (self.bachio_up.attribute/2), y=self.bachio_down.attribute - self.bachio_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
-        tex.draw_texture('ending_anim', 'bachio_boom', index=0, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute, y=(self.is_2p*176))
-        tex.draw_texture('ending_anim', 'bachio_boom', index=1, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute, y=(self.is_2p*176))
+        tex.draw_texture('ending_anim', 'bachio_boom', index=0, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute, y=(self.is_2p*tex.skin_config["2p_offset"].y))
+        tex.draw_texture('ending_anim', 'bachio_boom', index=1, fade=self.bachio_boom_fade_in.attribute, center=True, scale=self.bachio_boom_scale.attribute, y=(self.is_2p*tex.skin_config["2p_offset"].y))
 
 class ClearAnimation:
     """Animates the clear effect"""
@@ -2112,7 +2118,7 @@ class ClearAnimation:
             tex.draw_texture('ending_anim', 'clear', index=self.is_2p)
         else:
             for i in range(4, -1, -1):
-                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute, index=self.is_2p)
+                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60 * tex.screen_scale, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'clear_highlight', fade=self.clear_highlight_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=-self.bachio_move_out.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=self.bachio_move_out.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
@@ -2188,7 +2194,7 @@ class FCAnimation:
             tex.draw_texture('ending_anim', 'fan_r', frame=self.fan_texture_change.attribute, fade=self.fan_fade_in.attribute, index=self.is_2p)
         else:
             for i in range(4, -1, -1):
-                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute, index=self.is_2p)
+                tex.draw_texture('ending_anim', 'clear_separated', frame=i, fade=self.clear_separate_fade_in[i].attribute, x=i*60 * tex.screen_scale, y=-self.clear_separate_stretch[i].attribute, y2=self.clear_separate_stretch[i].attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'clear_highlight', fade=self.clear_highlight_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'bachio_l_' + self.name, x=(-self.bachio_move_out.attribute - self.bachio_move_out_2.attribute)*1.15, y=-self.bachio_move_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('ending_anim', 'bachio_r_' + self.name, x=(self.bachio_move_out.attribute + self.bachio_move_out_2.attribute)*1.15, y=-self.bachio_move_up.attribute, frame=self.frame, fade=self.bachio_fade_in.attribute, index=self.is_2p)
@@ -2207,7 +2213,7 @@ class JudgeCounter:
         self.ok = ok
         self.bad = bad
         self.drumrolls = drumrolls
-    def draw_counter(self, counter: float, x: int, y: int, margin: int, color: ray.Color):
+    def draw_counter(self, counter: float, x: float, y: float, margin: float, color: ray.Color):
         counter_str = str(rounded(counter))
         counter_len = len(counter_str)
         for i, digit in enumerate(counter_str):
@@ -2224,14 +2230,15 @@ class JudgeCounter:
         total_notes = self.good + self.ok + self.bad
         if total_notes == 0:
             total_notes = 1
-        self.draw_counter(self.good / total_notes * 100, 260, 440, 23, self.orange)
-        self.draw_counter(self.ok / total_notes * 100, 260, 477, 23, self.orange)
-        self.draw_counter(self.bad / total_notes * 100, 260, 515, 23, self.orange)
-        self.draw_counter((self.good + self.ok) / total_notes * 100, 270, 388, 23, self.orange)
-        self.draw_counter(self.good, 180, 440, 23, self.white)
-        self.draw_counter(self.ok, 180, 477, 23, self.white)
-        self.draw_counter(self.bad, 180, 515, 23, self.white)
-        self.draw_counter(self.drumrolls, 180, 577, 23, self.white)
+        margin = tex.skin_config["judge_counter_margin"].x
+        self.draw_counter(self.good / total_notes * 100, tex.skin_config["judge_counter_1"].x, tex.skin_config["judge_counter_1"].y, margin, self.orange)
+        self.draw_counter(self.ok / total_notes * 100, tex.skin_config["judge_counter_1"].x, tex.skin_config["judge_counter_3"].y, margin, self.orange)
+        self.draw_counter(self.bad / total_notes * 100, tex.skin_config["judge_counter_1"].x, tex.skin_config["judge_counter_4"].x, margin, self.orange)
+        self.draw_counter((self.good + self.ok) / total_notes * 100, tex.skin_config["judge_counter_3"].x, tex.skin_config["judge_counter_4"].y, margin, self.orange)
+        self.draw_counter(self.good, tex.skin_config["judge_counter_2"].x, tex.skin_config["judge_counter_1"].y, margin, self.white)
+        self.draw_counter(self.ok, tex.skin_config["judge_counter_2"].x, tex.skin_config["judge_counter_3"].y, margin, self.white)
+        self.draw_counter(self.bad, tex.skin_config["judge_counter_2"].x, tex.skin_config["judge_counter_4"].x, margin, self.white)
+        self.draw_counter(self.drumrolls, tex.skin_config["judge_counter_2"].x, tex.skin_config["judge_counter_4"].width, margin, self.white)
 
 class Gauge:
     """The player's gauge"""
@@ -2342,12 +2349,13 @@ class Gauge:
         tex.draw_texture('gauge', f'{self.player_num}p_unfilled' + self.string_diff, index=self.is_2p, mirror=mirror)
         gauge_length = int(self.gauge_length)
         clear_point = self.clear_start[self.difficulty]
-        tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=min(gauge_length*8, (clear_point - 1)*8)-8, index=self.is_2p)
+        bar_width = tex.textures["gauge"][f"{self.player_num}p_bar"].width
+        tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=min(gauge_length*bar_width, (clear_point - 1)*bar_width)-bar_width, index=self.is_2p)
         if gauge_length >= clear_point - 1:
-            tex.draw_texture('gauge', 'bar_clear_transition', x=(clear_point - 1)*8, index=self.is_2p, mirror=mirror)
+            tex.draw_texture('gauge', 'bar_clear_transition', x=(clear_point - 1)*bar_width, index=self.is_2p, mirror=mirror)
         if gauge_length > clear_point:
-            tex.draw_texture('gauge', 'bar_clear_top', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8, index=self.is_2p, mirror=mirror)
-            tex.draw_texture('gauge', 'bar_clear_bottom', x=(clear_point) * 8, x2=(gauge_length-clear_point)*8, index=self.is_2p)
+            tex.draw_texture('gauge', 'bar_clear_top', x=(clear_point) * bar_width, x2=(gauge_length-clear_point)*bar_width, index=self.is_2p, mirror=mirror)
+            tex.draw_texture('gauge', 'bar_clear_bottom', x=(clear_point) * bar_width, x2=(gauge_length-clear_point)*bar_width, index=self.is_2p)
 
         # Rainbow effect for full gauge
         if gauge_length == self.gauge_max and self.rainbow_fade_in is not None:
@@ -2356,11 +2364,11 @@ class Gauge:
             tex.draw_texture('gauge', 'rainbow' + self.string_diff, frame=self.rainbow_animation.attribute, fade=self.rainbow_fade_in.attribute, index=self.is_2p, mirror=mirror)
         if self.gauge_update_anim is not None and gauge_length <= self.gauge_max and gauge_length > self.previous_length:
             if gauge_length == self.clear_start[self.difficulty]:
-                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute, index=self.is_2p, mirror=mirror)
+                tex.draw_texture('gauge', 'bar_clear_transition_fade', x=gauge_length*bar_width, fade=self.gauge_update_anim.attribute, index=self.is_2p, mirror=mirror)
             elif gauge_length > self.clear_start[self.difficulty]:
-                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute, index=self.is_2p)
+                tex.draw_texture('gauge', 'bar_clear_fade', x=gauge_length*bar_width, fade=self.gauge_update_anim.attribute, index=self.is_2p)
             else:
-                tex.draw_texture('gauge', f'{self.player_num}p_bar_fade', x=gauge_length*8, fade=self.gauge_update_anim.attribute, index=self.is_2p)
+                tex.draw_texture('gauge', f'{self.player_num}p_bar_fade', x=gauge_length*bar_width, fade=self.gauge_update_anim.attribute, index=self.is_2p)
         tex.draw_texture('gauge', 'overlay' + self.string_diff, fade=0.15, index=self.is_2p, mirror=mirror)
 
         # Draw clear status indicators

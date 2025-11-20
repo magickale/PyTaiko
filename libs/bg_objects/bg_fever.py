@@ -17,6 +17,7 @@ class BGFever:
 class BGFeverBase:
     def __init__(self, tex: TextureWrapper, index: int, path: str):
         self.name = 'bg_fever_' + str(index)
+        self.tex = tex
         tex.load_zip(path, f'bg_fever/{self.name}')
         self.transitioned = False
     def start(self):
@@ -28,13 +29,13 @@ class BGFeverBase:
 
 class BGFever1(BGFeverBase):
     class Tile:
-        def __init__(self):
-            self.expansion = Animation.create_move(166, total_distance=360)
+        def __init__(self, tex):
+            self.expansion = Animation.create_move(166, total_distance=tex.screen_height//2)
             self.expansion.start()
         def update(self, current_time_ms):
             self.expansion.update(current_time_ms)
         def draw(self, tex: TextureWrapper, name: str, x: int, frame: int):
-            tex.draw_texture(name, 'background', frame=frame, x=x, y2=-360+self.expansion.attribute, y=360+(180-self.expansion.attribute/2))
+            tex.draw_texture(name, 'background', frame=frame, x=x, y2=-tex.screen_height//2+self.expansion.attribute, y=tex.screen_height//2+(tex.screen_height//4-self.expansion.attribute/2))
     def __init__(self, tex: TextureWrapper, index: int, path):
         super().__init__(tex, index, path)
         self.wait = 0
@@ -89,7 +90,7 @@ class BGFever1(BGFeverBase):
 
     def update(self, current_time_ms: float):
         if len(self.bg_tiles) < 20 and current_time_ms >= self.wait + 66:
-            self.bg_tiles.append(BGFever1.Tile())
+            self.bg_tiles.append(BGFever1.Tile(self.tex))
             self.wait = current_time_ms
         for tile in self.bg_tiles:
             tile.update(current_time_ms)

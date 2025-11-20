@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from libs.global_data import Modifiers
-from libs.utils import get_pixels_per_frame, strip_comments
+from libs.utils import get_pixels_per_frame, strip_comments, global_tex
 
 
 @lru_cache(maxsize=64)
@@ -321,7 +321,7 @@ class TJAParser:
         data (list): The data extracted from the TJA file.
     """
     DIFFS = {0: "easy", 1: "normal", 2: "hard", 3: "oni", 4: "edit", 5: "tower", 6: "dan"}
-    def __init__(self, path: Path, start_delay: int = 0, distance: int = 866):
+    def __init__(self, path: Path, start_delay: int = 0, distance: float = 866):
         """
         Initialize a TJA object.
 
@@ -1012,10 +1012,10 @@ def modifier_speed(notes: NoteList, value: float):
     modded_bars = notes.bars.copy()
     for note in modded_notes:
         note.pixels_per_frame_x *= value
-        note.load_ms = note.hit_ms - (866 / get_pixels_per_ms(note.pixels_per_frame_x))
+        note.load_ms = note.hit_ms - (866 * global_tex.screen_scale / get_pixels_per_ms(note.pixels_per_frame_x))
     for bar in modded_bars:
         bar.pixels_per_frame_x *= value
-        bar.load_ms = bar.hit_ms - (866 / get_pixels_per_ms(bar.pixels_per_frame_x))
+        bar.load_ms = bar.hit_ms - (866 * global_tex.screen_scale / get_pixels_per_ms(bar.pixels_per_frame_x))
     return modded_notes, modded_bars
 
 def modifier_display(notes: NoteList):

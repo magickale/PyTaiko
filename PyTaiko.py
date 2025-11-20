@@ -19,10 +19,10 @@ from libs.screen import Screen
 from libs.tja import TJAParser
 from libs.utils import (
     force_dedicated_gpu,
-    get_config,
     global_data,
     global_tex
 )
+from libs.config import get_config
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
@@ -119,8 +119,8 @@ def main():
     logger.info("Starting PyTaiko")
 
     logger.debug(f"Loaded config: {global_data.config}")
-    screen_width = global_data.config["video"]["screen_width"]
-    screen_height = global_data.config["video"]["screen_height"]
+    screen_width = global_tex.screen_width
+    screen_height = global_tex.screen_height
 
     if global_data.config["video"]["vsync"]:
         ray.set_config_flags(ray.ConfigFlags.FLAG_VSYNC_HINT)

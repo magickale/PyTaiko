@@ -1,5 +1,5 @@
 import copy
-from typing import override
+from typing import Optional, override
 import pyray as ray
 import logging
 from libs.animation import Animation
@@ -11,7 +11,7 @@ from libs.global_objects import AllNetIcon
 from libs.tja import TJAParser
 from libs.transition import Transition
 from libs.utils import OutlinedText, get_current_ms
-from libs.texture import SCREEN_WIDTH, tex
+from libs.texture import tex
 from scenes.game import ClearAnimation, FCAnimation, FailAnimation, GameScreen, Gauge, ResultTransition, SongInfo
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class DanGameScreen(GameScreen):
         song, genre_index, difficulty, level = songs[self.song_index]
         session_data.selected_difficulty = difficulty
         self.player_1.difficulty = difficulty
-        self.tja = TJAParser(song.file_path, start_delay=self.start_delay, distance=SCREEN_WIDTH - GameScreen.JUDGE_X)
+        self.tja = TJAParser(song.file_path, start_delay=self.start_delay, distance=tex.screen_width - GameScreen.JUDGE_X)
         if self.song_music is not None:
             audio.unload_music_stream(self.song_music)
         self.song_music = None
@@ -281,22 +281,22 @@ class DanGameScreen(GameScreen):
         # Draw total notes counter
         tex.draw_texture('dan_info', 'total_notes')
         counter = str(cache['remaining_notes'])
-        self._draw_counter(counter, margin=45, texture='total_notes_counter')
+        self._draw_counter(counter, margin=tex.skin_config["dan_total_notes_margin"].x, texture='total_notes_counter')
 
         # Draw exam info
         for i, exam_info in enumerate(cache['exam_data']):
-            y_offset = i * 94
+            y_offset = i * tex.skin_config["dan_exam_info"].y
             exam = exam_info['exam']
 
             tex.draw_texture('dan_info', 'exam_bg', y=y_offset)
             tex.draw_texture('dan_info', 'exam_overlay_1', y=y_offset)
 
             # Draw progress bar
-            tex.draw_texture('dan_info', exam_info['bar_texture'], x2=940*exam_info['progress'], y=y_offset)
+            tex.draw_texture('dan_info', exam_info['bar_texture'], x2=tex.skin_config["dan_exam_info"].width*exam_info['progress'], y=y_offset)
 
             # Draw exam type and red value counter
             red_counter = str(exam_info['red_value'])
-            self._draw_counter(red_counter, margin=22, texture='value_counter', index=0, y=y_offset)
+            self._draw_counter(red_counter, margin=tex.skin_config["dan_score_box_margin"].x, texture='value_counter', index=0, y=y_offset)
             tex.draw_texture('dan_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*20)
 
             # Draw range indicator
@@ -308,7 +308,7 @@ class DanGameScreen(GameScreen):
             # Draw current value counter
             tex.draw_texture('dan_info', 'exam_overlay_2', y=y_offset)
             value_counter = str(exam_info['counter_value'])
-            self._draw_counter(value_counter, margin=22, texture='value_counter', index=1, y=y_offset)
+            self._draw_counter(value_counter, margin=tex.skin_config["dan_score_box_margin"].x, texture='value_counter', index=1, y=y_offset)
 
             if exam.type == 'gauge':
                 tex.draw_texture('dan_info', 'exam_percent', y=y_offset, index=1)
@@ -320,10 +320,10 @@ class DanGameScreen(GameScreen):
         # Draw frame and title
         tex.draw_texture('dan_info', 'frame', frame=self.color)
         if self.hori_name is not None:
-            self.hori_name.draw(outline_color=ray.BLACK, x=154 - (self.hori_name.texture.width//2),
-                               y=392, x2=min(self.hori_name.texture.width, 275)-self.hori_name.texture.width)
+            self.hori_name.draw(outline_color=ray.BLACK, x=tex.skin_config["dan_game_hori_name"].x - (self.hori_name.texture.width//2),
+                               y=tex.skin_config["dan_game_hori_name"].y, x2=min(self.hori_name.texture.width, tex.skin_config["dan_game_hori_name"].width)-self.hori_name.texture.width)
 
-    def _draw_counter(self, counter, margin, texture, index=None, y=0):
+    def _draw_counter(self, counter: str, margin: float, texture: str, index: Optional[int] = None, y: float = 0):
         """Helper to draw digit counters"""
         for j in range(len(counter)):
             kwargs = {'frame': int(counter[j]), 'x': -(len(counter) - j) * margin, 'y': y}

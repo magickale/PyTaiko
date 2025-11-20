@@ -3,7 +3,8 @@ from typing import Callable
 import pyray as ray
 
 from libs.global_data import PlayerNum
-from libs.utils import OutlinedText, get_config, global_tex
+from libs.utils import OutlinedText, global_tex
+from libs.config import get_config
 from libs.audio import audio
 
 

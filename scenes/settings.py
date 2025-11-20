@@ -9,8 +9,8 @@ from libs.utils import (
     is_l_kat_pressed,
     is_r_don_pressed,
     is_r_kat_pressed,
-    save_config,
 )
+from libs.config import save_config
 
 logger = logging.getLogger(__name__)
 

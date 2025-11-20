@@ -6,7 +6,7 @@ from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.global_data import PlayerNum
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, EntryOverlay, Timer
-from libs.texture import SCREEN_HEIGHT, SCREEN_WIDTH, tex
+from libs.texture import tex
 from libs.screen import Screen
 from libs.utils import (
     OutlinedText,
@@ -212,7 +212,7 @@ class EntryScreen(Screen):
         tex.draw_texture('global', 'player_entry')
 
         if self.box_manager.is_finished():
-            ray.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ray.BLACK)
+            ray.draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray.BLACK)
 
         self.timer.draw()
         self.entry_overlay.draw(y=tex.skin_config['entry_overlay_entry'].y)
@@ -452,7 +452,7 @@ class BoxManager:
         spacing = tex.skin_config["entry_box_spacing"].x
         box_width = self.boxes[0].texture.width
         total_width = self.num_boxes * box_width + (self.num_boxes - 1) * spacing
-        start_x = SCREEN_WIDTH//2 - total_width//2
+        start_x = tex.screen_width//2 - total_width//2
         for i, box in enumerate(self.boxes):
             box.set_positions(start_x + i * (box_width + spacing))
             if i > 0:

@@ -26,7 +26,7 @@ class State:
 class ResultScreen(Screen):
     def on_screen_start(self):
         super().on_screen_start()
-        self.song_info = OutlinedText(global_data.session_data[global_data.player_num].song_title, 40, ray.WHITE, outline_thickness=5)
+        self.song_info = OutlinedText(global_data.session_data[global_data.player_num].song_title, tex.skin_config["song_info_result"].font_size, ray.WHITE, outline_thickness=5)
         audio.play_sound('bgm', 'music')
         self.fade_in = FadeIn(global_data.player_num)
         self.fade_out = tex.get_animation(0)
@@ -34,7 +34,7 @@ class ResultScreen(Screen):
         self.allnet_indicator = AllNetIcon()
         self.start_ms = get_current_ms()
         self.is_skipped = False
-        self.background = Background(global_data.player_num, 1280)
+        self.background = Background(global_data.player_num, tex.screen_width)
         self.player_1 = ResultPlayer(global_data.player_num, False, False)
 
     def on_screen_end(self, next_screen: str):
@@ -66,13 +66,13 @@ class ResultScreen(Screen):
 
     def draw_overlay(self):
         self.fade_in.draw()
-        ray.draw_rectangle(0, 0, 1280, 720, ray.fade(ray.BLACK, self.fade_out.attribute))
+        ray.draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray.fade(ray.BLACK, self.fade_out.attribute))
         self.coin_overlay.draw()
         self.allnet_indicator.draw()
 
     def draw_song_info(self):
         tex.draw_texture('song_info', 'song_num', frame=global_data.songs_played%4)
-        self.song_info.draw(outline_color=ray.BLACK, x=1252 - self.song_info.texture.width, y=35 - self.song_info.texture.height / 2)
+        self.song_info.draw(outline_color=ray.BLACK, x=tex.skin_config["song_info_result"].x - self.song_info.texture.width, y=tex.skin_config["song_info_result"].y - self.song_info.texture.height / 2)
 
     def draw(self):
         self.background.draw()
@@ -82,25 +82,26 @@ class ResultScreen(Screen):
 
 
 class Background:
-    def __init__(self, player_num: PlayerNum, width: int):
+    def __init__(self, player_num: PlayerNum, width: float):
         self.player_num = player_num
         self.width = width
     def draw(self):
         x = 0
+        footer_height = tex.textures["background"]["footer_1p"].height
         if self.player_num == PlayerNum.TWO_PLAYER:
             while x < self.width:
-                tex.draw_texture('background', 'background_1p', x=x, y=-360)
-                tex.draw_texture('background', 'background_2p', x=x, y=360)
-                tex.draw_texture('background', 'footer_1p', x=x, y=-72)
-                tex.draw_texture('background', 'footer_2p', x=x, y=648)
-                x += 256
+                tex.draw_texture('background', 'background_1p', x=x, y=-(tex.screen_height//2))
+                tex.draw_texture('background', 'background_2p', x=x, y=tex.screen_height//2)
+                tex.draw_texture('background', 'footer_1p', x=x, y=-footer_height)
+                tex.draw_texture('background', 'footer_2p', x=x, y=tex.screen_height-footer_height)
+                x += tex.screen_width // 5
         else:
             while x < self.width:
-                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=-360)
-                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=360)
-                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=-72)
-                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=648)
-                x += 256
+                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=-(tex.screen_height//2))
+                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=(tex.screen_height//2))
+                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=-footer_height)
+                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=tex.screen_height-footer_height)
+                x += tex.screen_width // 5
         tex.draw_texture('background', 'result_text')
 
 class ResultPlayer:
@@ -116,7 +117,7 @@ class ResultPlayer:
         self.crown = None
         self.state = None
         self.high_score_indicator = None
-        self.chara = Chara2D(int(self.player_num) - 1, 100)
+        self.chara = Chara2D(int(self.player_num) - 1)
         session_data = global_data.session_data[self.player_num]
         self.score_animator = ScoreAnimator(session_data.result_data.score)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
@@ -206,7 +207,7 @@ class ResultPlayer:
                 continue
             score_str = str(score)[::-1]
             for i, digit in enumerate(score_str):
-                tex.draw_texture('score', 'judge_num', frame=int(digit), x=-(i*24), index=j+(self.is_2p*5))
+                tex.draw_texture('score', 'judge_num', frame=int(digit), x=-(i*tex.skin_config["score_info_counter_margin"].x), index=j+(self.is_2p*5))
 
     def draw_total_score(self):
         """
@@ -217,7 +218,7 @@ class ResultPlayer:
         tex.draw_texture('score', 'score_shinuchi', index=self.is_2p)
         if self.score != '':
             for i in range(len(str(self.score))):
-                tex.draw_texture('score', 'score_num', x=-(i*21), frame=int(str(self.score)[::-1][i]), index=self.is_2p)
+                tex.draw_texture('score', 'score_num', x=-(i*tex.skin_config["result_score_margin"].x), frame=int(str(self.score)[::-1][i]), index=self.is_2p)
 
     def draw_modifiers(self):
         """Draw the modifiers if enabled."""
@@ -243,7 +244,7 @@ class ResultPlayer:
             elif self.state == State.CLEAR:
                 tex.draw_texture('background', 'gradient_clear', fade=min(0.4, self.fade_in_bottom.attribute))
         else:
-            y = -288 if self.has_2p else 0
+            y = tex.skin_config["result_2p_offset"].y if self.has_2p else 0
             if self.state == State.FAIL:
                 tex.draw_texture('background', 'gradient_fail', fade=min(0.4, self.fade_in_bottom.attribute), y=y)
             elif self.state == State.CLEAR:
@@ -270,10 +271,10 @@ class ResultPlayer:
         if self.high_score_indicator is not None:
             self.high_score_indicator.draw()
 
-        self.chara.draw(y=100+(self.is_2p*360))
+        self.chara.draw(y=tex.skin_config["result_chara"].y+(self.is_2p*tex.screen_height//2))
         if self.gauge is not None:
             self.gauge.draw()
-        self.nameplate.draw(265, 80+(self.is_2p*300))
+        self.nameplate.draw(tex.skin_config["result_nameplate"].x, tex.skin_config["result_nameplate"].y+(self.is_2p*tex.skin_config["result_nameplate"].height))
 
 class Crown:
     """Represents a crown animation"""
@@ -375,7 +376,7 @@ class BottomCharacters:
 
     def draw_flowers(self):
         tex.draw_texture('bottom','flowers', y=-self.flower_up.attribute, frame=self.flower_index)
-        tex.draw_texture('bottom','flowers', y=-self.flower_up.attribute, frame=self.flower_index, x=792, mirror='horizontal')
+        tex.draw_texture('bottom','flowers', y=-self.flower_up.attribute, frame=self.flower_index, x=tex.skin_config["result_flowers_offset"].x, mirror='horizontal')
 
     def draw(self):
         self.draw_flowers()
@@ -402,20 +403,21 @@ class FadeIn:
 
     def draw(self):
         x = 0
+        footer_height = tex.textures["background"]["footer_1p"].height
         if self.player_num == PlayerNum.TWO_PLAYER:
-            while x < 1280:
-                tex.draw_texture('background', 'background_1p', x=x, y=-360, fade=self.fadein.attribute)
-                tex.draw_texture('background', 'background_2p', x=x, y=360, fade=self.fadein.attribute)
-                tex.draw_texture('background', 'footer_1p', x=x, y=-72, fade=self.fadein.attribute)
-                tex.draw_texture('background', 'footer_2p', x=x, y=648, fade=self.fadein.attribute)
-                x += 256
+            while x < tex.screen_width:
+                tex.draw_texture('background', 'background_1p', x=x, y=-tex.screen_height//2, fade=self.fadein.attribute)
+                tex.draw_texture('background', 'background_2p', x=x, y=tex.screen_height//2, fade=self.fadein.attribute)
+                tex.draw_texture('background', 'footer_1p', x=x, y=-footer_height, fade=self.fadein.attribute)
+                tex.draw_texture('background', 'footer_2p', x=x, y=tex.screen_height - footer_height, fade=self.fadein.attribute)
+                x += tex.screen_width // 5
         else:
-            while x < 1280:
-                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=-360, fade=self.fadein.attribute)
-                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=360, fade=self.fadein.attribute)
-                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=-72, fade=self.fadein.attribute)
-                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=648, fade=self.fadein.attribute)
-                x += 256
+            while x < tex.screen_width:
+                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=-tex.screen_height//2, fade=self.fadein.attribute)
+                tex.draw_texture('background', f'background_{self.player_num}p', x=x, y=tex.screen_height//2, fade=self.fadein.attribute)
+                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=-footer_height, fade=self.fadein.attribute)
+                tex.draw_texture('background', f'footer_{self.player_num}p', x=x, y=tex.screen_height - footer_height, fade=self.fadein.attribute)
+                x += tex.screen_width // 5
 
 class ScoreAnimator:
     """Animates a number from left to right"""
@@ -461,7 +463,7 @@ class HighScoreIndicator:
     def draw(self):
         tex.draw_texture('score', 'high_score', y=self.move.attribute, fade=self.fade.attribute, index=self.is_2p)
         for i in range(len(str(self.score_diff))):
-            tex.draw_texture('score', 'high_score_num', x=-(i*14), frame=int(str(self.score_diff)[::-1][i]), y=self.move.attribute, fade=self.fade.attribute, index=self.is_2p)
+            tex.draw_texture('score', 'high_score_num', x=-(i*tex.skin_config['high_score_indicator_margin'].x), frame=int(str(self.score_diff)[::-1][i]), y=self.move.attribute, fade=self.fade.attribute, index=self.is_2p)
 
 
 class Gauge:
@@ -504,16 +506,17 @@ class Gauge:
         scale = 10/11
         tex.draw_texture('gauge', f'{self.player_num}p_unfilled' + self.string_diff, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
         gauge_length = int(self.gauge_length)
+        bar_width = tex.textures["gauge"][f"{self.player_num}p_bar"].width
         if gauge_length == self.gauge_max:
             if 0 < self.rainbow_animation.attribute < 8:
                 tex.draw_texture('gauge', 'rainbow'  + self.string_diff, frame=self.rainbow_animation.attribute-1, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
             tex.draw_texture('gauge', 'rainbow'  + self.string_diff, frame=self.rainbow_animation.attribute, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
         else:
-            tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=(gauge_length*8)-48, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
+            tex.draw_texture('gauge', f'{self.player_num}p_bar', x2=(gauge_length*bar_width)-(bar_width*6), scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
             if gauge_length >= self.clear_start[self.difficulty] - 1:
-                tex.draw_texture('gauge', 'bar_clear_transition', x=(self.clear_start[self.difficulty]*8)-56, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
-                tex.draw_texture('gauge', 'bar_clear_top', x=(self.clear_start[self.difficulty]*8)-48, x2=(gauge_length - self.clear_start[self.difficulty])*8, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
-                tex.draw_texture('gauge', 'bar_clear_bottom', x=(self.clear_start[self.difficulty]*8)-48, x2=(gauge_length - self.clear_start[self.difficulty])*8, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
+                tex.draw_texture('gauge', 'bar_clear_transition', x=(self.clear_start[self.difficulty]*bar_width)-(bar_width*7), scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
+                tex.draw_texture('gauge', 'bar_clear_top', x=(self.clear_start[self.difficulty]*bar_width)-(bar_width*6), x2=(gauge_length - self.clear_start[self.difficulty])*bar_width, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
+                tex.draw_texture('gauge', 'bar_clear_bottom', x=(self.clear_start[self.difficulty]*bar_width)-(bar_width*6), x2=(gauge_length - self.clear_start[self.difficulty])*bar_width, scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
         tex.draw_texture('gauge', 'overlay' + self.string_diff, scale=scale, fade=min(0.15, self.gauge_fade_in.attribute), index=self.is_2p)
         tex.draw_texture('gauge', 'footer', scale=scale, fade=self.gauge_fade_in.attribute, index=self.is_2p)
 

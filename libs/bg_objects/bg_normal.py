@@ -15,6 +15,7 @@ class BGNormal:
 class BGNormalBase:
     def __init__(self, tex: TextureWrapper, index: int, path: str):
         self.name = "bg_" + str(index)
+        self.tex = tex
         tex.load_zip(path, f'bg_normal/{self.name}')
     def update(self, current_time_ms: float):
         pass
@@ -69,29 +70,29 @@ class BGNormal3(BGNormalBase):
 
 class BGNormal4(BGNormalBase):
     class Petal:
-        def __init__(self):
-            self.spawn_point = self.random_excluding_range()
+        def __init__(self, tex: TextureWrapper):
+            self.spawn_point = self.random_excluding_range(tex.screen_width)
             duration = random.randint(1400, 2000)
             self.move_x = Animation.create_move(duration, total_distance=random.randint(-300, 300))
-            self.move_y = Animation.create_move(duration, total_distance=360)
+            self.move_y = Animation.create_move(duration, total_distance=tex.screen_height//2)
             self.move_x.start()
             self.move_y.start()
-        def random_excluding_range(self):
+        def random_excluding_range(self, screen_width):
             while True:
-                num = random.randint(0, 1280)
+                num = random.randint(0, screen_width)
                 if num < 260 or num > 540:
                     return num
         def update(self, current_time_ms):
             self.move_x.update(current_time_ms)
             self.move_y.update(current_time_ms)
         def draw(self, name: str, tex: TextureWrapper):
-            tex.draw_texture(name, 'petal', x=self.spawn_point + self.move_x.attribute, y=360+self.move_y.attribute, fade=0.75)
+            tex.draw_texture(name, 'petal', x=self.spawn_point + self.move_x.attribute, y=tex.screen_height//2+self.move_y.attribute, fade=0.75)
     def __init__(self, tex: TextureWrapper, index: int, path: str):
         super().__init__(tex, index, path)
         self.flicker = tex.get_animation(11)
         self.turtle_move = tex.get_animation(12)
         self.turtle_change = tex.get_animation(13)
-        self.petals = {self.Petal(), self.Petal(), self.Petal(), self.Petal(), self.Petal()}
+        self.petals = {self.Petal(tex), self.Petal(tex), self.Petal(tex), self.Petal(tex), self.Petal(tex)}
     def update(self, current_time_ms: float):
         self.flicker.update(current_time_ms)
         self.turtle_move.update(current_time_ms)
@@ -100,7 +101,7 @@ class BGNormal4(BGNormalBase):
             petal.update(current_time_ms)
             if petal.move_y.is_finished:
                 self.petals.remove(petal)
-                self.petals.add(self.Petal())
+                self.petals.add(self.Petal(self.tex))
     def draw(self, tex: TextureWrapper):
         tex.draw_texture(self.name, 'background')
         tex.draw_texture(self.name, 'chara')

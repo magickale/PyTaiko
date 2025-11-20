@@ -165,7 +165,7 @@ class BaseDancerGroup():
             dancer.update(current_time_ms, bpm)
 
     def draw(self, tex: TextureWrapper):
-        total_width = 1280
+        total_width = tex.screen_width
         num_dancers = len(self.active_dancers)
 
         first_dancer = next((dancer for dancer in self.active_dancers if dancer is not None), None)

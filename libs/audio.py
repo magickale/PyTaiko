@@ -4,8 +4,8 @@ import platform
 import logging
 from pathlib import Path
 
-from libs.global_data import VolumeConfig
-from libs.utils import get_config
+from libs.config import VolumeConfig
+from libs.config import get_config
 
 ffi = cffi.FFI()
 

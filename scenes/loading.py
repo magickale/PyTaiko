@@ -7,7 +7,7 @@ from libs.animation import Animation
 from libs.global_objects import AllNetIcon
 from libs.screen import Screen
 from libs.song_hash import build_song_hashes
-from libs.texture import SCREEN_HEIGHT, SCREEN_WIDTH, tex
+from libs.texture import tex
 from libs.utils import get_current_ms, global_data
 from libs.file_navigator import navigator
 
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class LoadScreen(Screen):
     def __init__(self, name: str):
         super().__init__(name)
-        self.width = SCREEN_WIDTH
-        self.height = SCREEN_HEIGHT
+        self.width = tex.screen_width
+        self.height = tex.screen_height
         self.songs_loaded = False
         self.navigator_started = False
         self.loading_complete = False

@@ -12,7 +12,7 @@ from libs.file_navigator import Directory, SongBox, SongFile
 from libs.global_data import Difficulty, Modifiers, PlayerNum
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, Timer
 from libs.screen import Screen
-from libs.texture import SCREEN_WIDTH, tex
+from libs.texture import tex
 from libs.transition import Transition
 from libs.utils import (
     OutlinedText,
@@ -329,15 +329,15 @@ class SongSelectScreen(Screen):
         self.draw_background_diffs()
 
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
-            self.navigator.genre_bg.draw(95)
+            self.navigator.genre_bg.draw(tex.skin_config["boxes"].y)
 
         for i, item in enumerate(self.navigator.items):
             box = item.box
-            if -156 <= box.position <= SCREEN_WIDTH + 144:
-                if box.position <= 500:
-                    box.draw(box.position - int(self.move_away.attribute), 95, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
+            if (-156 * tex.screen_scale) <= box.position <= (tex.screen_width + 144) * tex.screen_scale:
+                if box.position <= (500 * tex.screen_scale):
+                    box.draw(box.position - int(self.move_away.attribute), tex.skin_config["boxes"].y, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
                 else:
-                    box.draw(box.position + int(self.move_away.attribute), 95, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
+                    box.draw(box.position + int(self.move_away.attribute), tex.skin_config["boxes"].y, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
 
         if self.state == State.BROWSING:
             tex.draw_texture('global', 'arrow', index=0, x=-(self.blue_arrow_move.attribute*2), fade=self.blue_arrow_fade.attribute)
@@ -363,7 +363,7 @@ class SongSelectScreen(Screen):
             if isinstance(curr_item, SongFile):
                 curr_item.box.draw_score_history()
 
-        self.indicator.draw(410, 575)
+        self.indicator.draw(tex.skin_config['song_select_indicator'].x, tex.skin_config['song_select_indicator'].y)
 
         tex.draw_texture('global', 'song_num_bg', fade=0.75)
         tex.draw_texture('global', 'song_num', frame=global_data.songs_played % 4)
@@ -403,7 +403,7 @@ class SongSelectPlayer:
         self.selected_diff_text_fadein = tex.get_animation(37, is_copy=True)
 
         # Player-specific objects
-        self.chara = Chara2D(int(self.player_num) - 1, 100)
+        self.chara = Chara2D(int(self.player_num) - 1)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'],
             self.player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
@@ -436,10 +436,10 @@ class SongSelectPlayer:
 
     def on_song_selected(self, selected_song):
         """Called when a song is selected"""
-        if 4 not in selected_song.tja.metadata.course_data:
+        if Difficulty.URA not in selected_song.tja.metadata.course_data:
             self.is_ura = False
-        elif (4 in selected_song.tja.metadata.course_data and
-              3 not in selected_song.tja.metadata.course_data):
+        elif (Difficulty.URA in selected_song.tja.metadata.course_data and
+              Difficulty.ONI not in selected_song.tja.metadata.course_data):
             self.is_ura = True
 
     def handle_input_browsing(self, last_moved, selected_item):
@@ -644,46 +644,47 @@ class SongSelectPlayer:
     def draw_selector(self, is_half: bool):
         fade = 0.5 if (self.neiro_selector is not None or self.modifier_selector is not None) else self.text_fade_in.attribute
         direction = 1 if self.diff_select_move_right else -1
+        offset = tex.skin_config["selector_offset"].x
         if self.selected_difficulty <= -1 or self.prev_diff == -1:
             if self.prev_diff == -1 and self.selected_difficulty >= 0:
                 if not self.diff_selector_move_2.is_finished:
                     name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
-                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
+                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * tex.skin_config["selector_balloon_offset_2"].x) + tex.skin_config["selector_balloon_offset_1"].x + (self.diff_selector_move_2.attribute * direction), fade=fade)
                     name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
-                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
+                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * tex.skin_config["selector_balloon_offset_2"].x) + (self.diff_selector_move_2.attribute * direction))
                 else:
                     difficulty = min(Difficulty.ONI, self.selected_difficulty)
                     name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
-                    tex.draw_texture('diff_select', name, x=(difficulty * 115), fade=fade)
+                    tex.draw_texture('diff_select', name, x=(difficulty * offset), fade=fade)
                     name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
-                    tex.draw_texture('diff_select', name, x=(difficulty * 115))
+                    tex.draw_texture('diff_select', name, x=(difficulty * offset))
             elif not self.diff_selector_move_2.is_finished:
                 name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
-                tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) + (self.diff_selector_move_2.attribute * direction))
+                tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * tex.skin_config["selector_balloon_offset_2"].x) + (self.diff_selector_move_2.attribute * direction))
                 if self.selected_difficulty != -3:
                     name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
-                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * 70) - 220 + (self.diff_selector_move_2.attribute * direction), fade=fade)
+                    tex.draw_texture('diff_select', name, x=((self.prev_diff+3) * tex.skin_config["selector_balloon_offset_2"].x) + tex.skin_config["selector_balloon_offset_1"].x + (self.diff_selector_move_2.attribute * direction), fade=fade)
             else:
                 name = f'{self.player_num}p_outline_back_half' if is_half else f'{self.player_num}p_outline_back'
-                tex.draw_texture('diff_select', name, x=((self.selected_difficulty+3) * 70))
+                tex.draw_texture('diff_select', name, x=((self.selected_difficulty+3) * tex.skin_config["selector_balloon_offset_2"].x))
                 if self.selected_difficulty != -3:
                     name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
-                    tex.draw_texture('diff_select', name, x=((self.selected_difficulty+3) * 70) - 220, fade=fade)
+                    tex.draw_texture('diff_select', name, x=((self.selected_difficulty+3) * tex.skin_config["selector_balloon_offset_2"].x) + tex.skin_config["selector_balloon_offset_1"].x, fade=fade)
         else:
             if self.prev_diff == -1:
                 return
             if not self.diff_selector_move_1.is_finished:
                 difficulty = min(Difficulty.ONI, self.prev_diff)
                 name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
-                tex.draw_texture('diff_select', name, x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction), fade=fade)
+                tex.draw_texture('diff_select', name, x=(difficulty * offset) + (self.diff_selector_move_1.attribute * direction), fade=fade)
                 name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
-                tex.draw_texture('diff_select', name, x=(difficulty * 115) + (self.diff_selector_move_1.attribute * direction))
+                tex.draw_texture('diff_select', name, x=(difficulty * offset) + (self.diff_selector_move_1.attribute * direction))
             else:
                 difficulty = min(Difficulty.ONI, self.selected_difficulty)
                 name = f'{self.player_num}p_balloon_half' if is_half else f'{self.player_num}p_balloon'
-                tex.draw_texture('diff_select', name, x=(difficulty * 115), fade=fade)
+                tex.draw_texture('diff_select', name, x=(difficulty * offset), fade=fade)
                 name = f'{self.player_num}p_outline_half' if is_half else f'{self.player_num}p_outline'
-                tex.draw_texture('diff_select', name, x=(difficulty * 115))
+                tex.draw_texture('diff_select', name, x=(difficulty * offset))
 
     def draw_background_diffs(self, state: int):
         if (self.selected_song and state == State.SONG_SELECTED and self.selected_difficulty >= Difficulty.EASY):
@@ -710,21 +711,21 @@ class SongSelectPlayer:
         if self.neiro_selector is not None:
             offset = self.neiro_selector.move.attribute
             if self.neiro_selector.is_confirmed:
-                offset += -370
+                offset += tex.skin_config["song_select_offset"].x
             else:
                 offset *= -1
         if self.modifier_selector is not None:
             offset = self.modifier_selector.move.attribute
             if self.modifier_selector.is_confirmed:
-                offset += -370
+                offset += tex.skin_config["song_select_offset"].x
             else:
                 offset *= -1
         if self.player_num == PlayerNum.P1:
-            self.nameplate.draw(30, 640)
-            self.chara.draw(x=-50, y=410 + (offset*0.6))
+            self.nameplate.draw(tex.skin_config["song_select_nameplate_1p"].x, tex.skin_config["song_select_nameplate_1p"].y)
+            self.chara.draw(x=tex.skin_config["song_select_chara_1p"].x, y=tex.skin_config["song_select_chara_1p"].y + (offset*0.6))
         else:
-            self.nameplate.draw(950, 640)
-            self.chara.draw(mirror=True, x=950, y=410 + (offset*0.6))
+            self.nameplate.draw(tex.skin_config["song_select_nameplate_2p"].x, tex.skin_config["song_select_nameplate_2p"].y)
+            self.chara.draw(mirror=True, x=tex.skin_config["song_select_chara_2p"].x, y=tex.skin_config["song_select_chara_2p"].y + (offset*0.6))
 
         if self.neiro_selector is not None:
             self.neiro_selector.draw()

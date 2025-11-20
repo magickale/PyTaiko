@@ -3,22 +3,20 @@ import hashlib
 import sys
 import logging
 import time
-import json
-from libs.global_data import Config, PlayerNum, global_data
+from libs.global_data import PlayerNum, global_data
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
 import pyray as ray
 import raylib as rl
-import tomlkit
 from raylib import (
     SHADER_UNIFORM_FLOAT,
     SHADER_UNIFORM_VEC2,
     SHADER_UNIFORM_VEC4,
 )
 
-from libs.texture import SCREEN_WIDTH, TextureWrapper
+from libs.texture import TextureWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -74,68 +72,6 @@ def get_pixels_per_frame(bpm: float, time_signature: float, distance: float) -> 
     total_time = time_signature * beat_duration
     total_frames = 60 * total_time
     return (distance / total_frames)
-
-def get_config() -> Config:
-    """Get the configuration from the TOML file"""
-    config_path = Path('dev-config.toml') if Path('dev-config.toml').exists() else Path('config.toml')
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config_file = tomlkit.load(f)
-
-    config: Config = json.loads(json.dumps(config_file))
-    for key in config['keys']:
-        config['keys'][key] = get_key_code(config['keys'][key])
-    for key in config['keys_1p']:
-        bindings = config['keys_1p'][key]
-        for i, bind in enumerate(bindings):
-            config['keys_1p'][key][i] = get_key_code(bind)
-    for key in config['keys_2p']:
-        bindings = config['keys_2p'][key]
-        for i, bind in enumerate(bindings):
-            config['keys_2p'][key][i] = get_key_code(bind)
-    return config
-
-def save_config(config: Config) -> None:
-    """Save the configuration to the TOML file"""
-    config_to_save = json.loads(json.dumps(config))
-
-    for key in config_to_save['keys']:
-        config_to_save['keys'][key] = get_key_string(config_to_save['keys'][key])
-    for key in config_to_save['keys_1p']:
-        bindings = config_to_save['keys_1p'][key]
-        for i, bind in enumerate(bindings):
-            config_to_save['keys_1p'][key][i] = get_key_string(bind)
-    for key in config_to_save['keys_2p']:
-        bindings = config_to_save['keys_2p'][key]
-        for i, bind in enumerate(bindings):
-            config_to_save['keys_2p'][key][i] = get_key_string(bind)
-
-    config_path = Path('dev-config.toml') if Path('dev-config.toml').exists() else Path('config.toml')
-    with open(config_path, "w", encoding="utf-8") as f:
-        tomlkit.dump(config_to_save, f)
-
-def get_key_string(key_code: int) -> str:
-    """Convert a key code back to its string representation"""
-    if 65 <= key_code <= 90:
-        return chr(key_code)
-    if 48 <= key_code <= 57:
-        return chr(key_code)
-
-    for attr_name in dir(ray):
-        if attr_name.startswith('KEY_'):
-            if getattr(ray, attr_name) == key_code:
-                return attr_name[4:].lower()
-
-    raise ValueError(f"Unknown key code: {key_code}")
-
-def get_key_code(key: str) -> int:
-    if len(key) == 1 and key.isalnum():
-        return ord(key.upper())
-    else:
-        key_code = getattr(ray, f"KEY_{key.upper()}", None)
-        if key_code is None:
-            raise ValueError(f"Invalid key: {key}")
-        return key_code
 
 def is_input_key_pressed(keys: list[int], gamepad_buttons: list[int]):
     if global_data.input_locked:
@@ -230,7 +166,7 @@ class OutlinedText:
         """
         self.text = text
         self.hash = self._hash_text(text, font_size, color, vertical)
-        self.outline_thickness = outline_thickness * (SCREEN_WIDTH/1280)
+        self.outline_thickness = outline_thickness * global_tex.screen_scale
         if self.hash in text_cache:
             self.texture = ray.load_texture(f'cache/image/{self.hash}.png')
         else:
@@ -496,7 +432,7 @@ class OutlinedText:
             final_color = ray.fade(color, fade)
         else:
             final_color = color
-        dest_rect = ray.Rectangle(x, y, self.texture.width+x2, self.texture.height+y2)
+        dest_rect = ray.Rectangle(x, y+((10 * global_tex.screen_scale)-10), self.texture.width+x2, self.texture.height+y2)
         if self.outline_thickness > 0:
             ray.begin_shader_mode(self.shader)
         ray.draw_texture_pro(self.texture, self.default_src, dest_rect, origin, rotation, final_color)

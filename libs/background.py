@@ -177,7 +177,7 @@ class Background:
                 self.bg_normal.draw(self.tex_wrapper)
         self.don_bg.draw(self.tex_wrapper)
         if self.don_bg_2 is not None:
-            self.don_bg_2.draw(self.tex_wrapper, y=536)
+            self.don_bg_2.draw(self.tex_wrapper, y=self.tex_wrapper.skin_config["game_2p_offset"].y)
         if self.renda is not None:
             self.renda.draw()
         if self.dancer is not None:

@@ -28,13 +28,13 @@ class DanResultScreen(Screen):
         self.coin_overlay = CoinOverlay()
         self.allnet_indicator = AllNetIcon()
         self.start_ms = get_current_ms()
-        self.background = Background(PlayerNum.DAN, 1280)
+        self.background = Background(PlayerNum.DAN, tex.screen_width)
         self.player = DanResultPlayer(global_data.player_num)
         self.is_result_2 = False
         self.result_2_fade_in = tex.get_animation(1)
         self.gauge = DanGauge(global_data.player_num, global_data.session_data[global_data.player_num].dan_result_data.gauge_length)
-        self.song_names = [OutlinedText(song.song_title, 40, ray.WHITE) for song in global_data.session_data[global_data.player_num].dan_result_data.songs]
-        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num].dan_result_data.dan_title, 40, ray.WHITE)
+        self.song_names = [OutlinedText(song.song_title, tex.skin_config["dan_title"].font_size, ray.WHITE) for song in global_data.session_data[global_data.player_num].dan_result_data.songs]
+        self.hori_name = OutlinedText(global_data.session_data[global_data.player_num].dan_result_data.dan_title, tex.skin_config["dan_title"].font_size, ray.WHITE)
         self.exam_info = global_data.session_data[global_data.player_num].dan_result_data.exams
         self.exam_data = global_data.session_data[global_data.player_num].dan_result_data.exam_data
         print(global_data.session_data[global_data.player_num].dan_result_data.songs)
@@ -67,29 +67,29 @@ class DanResultScreen(Screen):
             return self.on_screen_end("DAN_SELECT")
 
     def draw_overlay(self):
-        ray.draw_rectangle(0, 0, 1280, 720, ray.fade(ray.BLACK, self.fade_out.attribute))
+        ray.draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray.fade(ray.BLACK, self.fade_out.attribute))
         self.coin_overlay.draw()
         self.allnet_indicator.draw()
 
     def draw_song_info_1(self):
         result_data = global_data.session_data[global_data.player_num].dan_result_data
-        height = 191
+        height = tex.skin_config["dan_result_info_height"].y
         for i in range(len(result_data.songs)):
             song = result_data.songs[i]
             tex.draw_texture('background', 'genre_banner', y=i*height, frame=song.genre_index)
-            self.song_names[i].draw(x=1230 - self.song_names[i].texture.width, y=i*height + 90)
+            self.song_names[i].draw(x=tex.skin_config["dan_result_song_name"].x - self.song_names[i].texture.width, y=i*height + tex.skin_config["dan_result_song_name"].y)
             tex.draw_texture('result_info', 'song_num', frame=i, y=i*height)
             tex.draw_texture('result_info', 'difficulty', frame=song.selected_difficulty, y=i*height)
 
             tex.draw_texture('result_info', 'diff_star', y=i*height)
             tex.draw_texture('result_info', 'diff_x', y=i*height)
             counter = str(song.diff_level)[::-1]
-            margin = 12
+            margin = tex.skin_config["dan_result_diff_num_margin"].x
             for j, digit in enumerate(counter):
                 tex.draw_texture('result_info', 'diff_num', frame=int(digit), x=-(j*margin), y=i*height)
 
             tex.draw_texture('result_info', 'good', y=i*height)
-            margin = 24
+            margin = tex.skin_config["score_info_counter_margin"].x
             counter = str(song.good)[::-1]
             for j, digit in enumerate(counter):
                 tex.draw_texture('result_info', 'counter', index=0, frame=int(digit), x=-(j*margin), y=i*height)
@@ -113,11 +113,11 @@ class DanResultScreen(Screen):
             tex.draw_texture('background', 'result_2_divider', fade=fade, x=i*240)
         tex.draw_texture('background', 'result_2_pullout', fade=fade)
         tex.draw_texture('result_info', 'dan_emblem', fade=fade, frame=result_data.dan_color)
-        self.hori_name.draw(outline_color=ray.BLACK, x=276 - (self.hori_name.texture.width//2),
-                           y=123, x2=min(self.hori_name.texture.width, 275)-self.hori_name.texture.width, color=ray.fade(ray.WHITE, fade))
+        self.hori_name.draw(outline_color=ray.BLACK, x=tex.skin_config["dan_result_hori_name"].x - (self.hori_name.texture.width//2),
+                           y=tex.skin_config["dan_result_hori_name"].y, x2=min(self.hori_name.texture.width, tex.skin_config["dan_result_hori_name"].width)-self.hori_name.texture.width, color=ray.fade(ray.WHITE, fade))
 
         tex.draw_texture('result_info', 'good', index=1, fade=fade)
-        margin = 24
+        margin = tex.skin_config["score_info_counter_margin"].x
         counter = str(sum(song.good for song in result_data.songs))[::-1]
         for j, digit in enumerate(counter):
             tex.draw_texture('result_info', 'counter', index=4, frame=int(digit), x=-(j*margin), fade=fade)
@@ -144,7 +144,7 @@ class DanResultScreen(Screen):
         tex.draw_texture('result_info', 'exam_header', fade=fade)
 
         tex.draw_texture('result_info', 'score_box', fade=fade)
-        margin = 22
+        margin = tex.skin_config['dan_score_box_margin'].x
         counter = str(result_data.score)[::-1]
         for j, digit in enumerate(counter):
             tex.draw_texture('result_info', 'score_counter', frame=int(digit), x=-(j*margin), fade=fade)
@@ -164,14 +164,14 @@ class DanResultScreen(Screen):
         # Draw exam info
         for i, exam in enumerate(self.exam_info):
             exam_data = self.exam_data[i]
-            y_offset = i * 94 * scale  # Scale the y offset
+            y_offset = i * tex.skin_config["dan_exam_info"].y * scale  # Scale the y offset
             tex.draw_texture('exam_info', 'exam_bg', y=y_offset, fade=fade, scale=scale)
             tex.draw_texture('exam_info', 'exam_overlay_1', y=y_offset, fade=fade, scale=scale)
             # Draw progress bar
-            tex.draw_texture('exam_info', exam_data.bar_texture, x2=940*exam_data.progress*scale, y=y_offset, fade=fade, scale=scale)
+            tex.draw_texture('exam_info', exam_data.bar_texture, x2=tex.skin_config["dan_exam_info"].width *exam_data.progress*scale, y=y_offset, fade=fade, scale=scale)
             # Draw exam type and red value counter
             red_counter = str(exam.red)
-            self._draw_counter(red_counter, margin=22*scale, texture='value_counter', index=0, y=y_offset, fade=fade, scale=scale)
+            self._draw_counter(red_counter, margin=tex.skin_config["dan_exam_info"].x*scale, texture='value_counter', index=0, y=y_offset, fade=fade, scale=scale)
             tex.draw_texture('exam_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*20*scale, fade=fade, scale=scale)
             # Draw range indicator
             if exam.range == 'less':
@@ -181,7 +181,7 @@ class DanResultScreen(Screen):
             # Draw current value counter
             tex.draw_texture('exam_info', 'exam_overlay_2', y=y_offset, fade=fade, scale=scale)
             value_counter = str(exam_data.counter_value)
-            self._draw_counter(value_counter, margin=22*scale, texture='value_counter', index=1, y=y_offset, fade=fade, scale=scale)
+            self._draw_counter(value_counter, margin=tex.skin_config["dan_exam_info"].x*scale, texture='value_counter', index=1, y=y_offset, fade=fade, scale=scale)
             if exam.type == 'gauge':
                 tex.draw_texture('exam_info', 'exam_percent', y=y_offset, index=1, fade=fade, scale=scale)
             if exam_data.failed:
@@ -207,15 +207,15 @@ class DanResultPlayer:
     def __init__(self, player_num: PlayerNum):
         plate_info = global_data.config[f'nameplate_{player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'], player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
-        self.chara = Chara2D(player_num-1, 100)
+        self.chara = Chara2D(player_num-1)
 
     def update(self, current_time_ms: float):
         self.nameplate.update(current_time_ms)
         self.chara.update(current_time_ms, 100, False, False)
 
     def draw(self):
-        self.nameplate.draw(10, 585)
-        self.chara.draw(0, 405)
+        self.nameplate.draw(tex.skin_config['dan_result_nameplate'].x, tex.skin_config['dan_result_nameplate'].y)
+        self.chara.draw(tex.skin_config['dan_result_chara'].x, tex.skin_config['dan_result_chara'].y)
 
 class DanGauge(Gauge):
     """The player's gauge"""

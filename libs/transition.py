@@ -20,8 +20,8 @@ class Transition:
             self.title = ''
             self.subtitle = ''
         else:
-            self.title = OutlinedText(title, 40, ray.WHITE)
-            self.subtitle = OutlinedText(subtitle, 30, ray.WHITE)
+            self.title = OutlinedText(title, global_tex.skin_config['transition_title'].font_size, ray.WHITE)
+            self.subtitle = OutlinedText(subtitle, global_tex.skin_config['transition_subtitle'].font_size, ray.WHITE)
         self.is_second = is_second
 
     def start(self):
@@ -48,26 +48,26 @@ class Transition:
         if self.is_second:
             color_1 = ray.fade(ray.WHITE, self.song_info_fade_out.attribute)
             color_2 = ray.fade(ray.WHITE, min(0.70, self.song_info_fade_out.attribute))
-            offset = 816 - self.rainbow_up.attribute
+            offset = global_tex.skin_config['transition_offset'].y - self.rainbow_up.attribute
         global_tex.draw_texture('rainbow_transition', 'text_bg', y=-self.rainbow_up.attribute - offset, color=color_2)
 
         if isinstance(self.title, OutlinedText):
             texture = self.title.texture
-            x = 1280//2 - texture.width//2
-            y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset - 20
+            x = global_tex.screen_width//2 - texture.width//2
+            y = global_tex.skin_config['transition_title'].y - texture.height//2 - int(self.rainbow_up.attribute) - offset
             self.title.draw(outline_color=ray.BLACK, x=x, y=y, color=color_1)
 
         if isinstance(self.subtitle, OutlinedText):
             texture = self.subtitle.texture
-            x = 1280//2 - texture.width//2
-            y = 1176 - texture.height//2 - int(self.rainbow_up.attribute) - offset - 20
-            self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y + 50, color=color_1)
+            x = global_tex.screen_width//2 - texture.width//2
+            y = global_tex.skin_config['transition_subtitle'].y - texture.height//2 - int(self.rainbow_up.attribute) - offset
+            self.subtitle.draw(outline_color=ray.BLACK, x=x, y=y, color=color_1)
 
     def draw(self):
         """Draw the transition effect."""
         total_offset = 0
         if self.is_second:
-            total_offset = 816
+            total_offset = global_tex.skin_config['transition_offset'].y
         global_tex.draw_texture('rainbow_transition', 'rainbow_bg_bottom', y=-self.rainbow_up.attribute - total_offset)
         global_tex.draw_texture('rainbow_transition', 'rainbow_bg_top', y=-self.rainbow_up.attribute - total_offset)
         global_tex.draw_texture('rainbow_transition', 'rainbow_bg', y=-self.rainbow_up.attribute - total_offset)
@@ -75,7 +75,7 @@ class Transition:
         chara_offset = 0
         if self.is_second:
             offset = self.chara_down.attribute - self.mini_up.attribute//3
-            chara_offset = 408
+            chara_offset = global_tex.skin_config['transition_chara_offset'].y
         if self.title == '' and self.subtitle == '':
             return
         global_tex.draw_texture('rainbow_transition', 'chara_left', x=-self.mini_up.attribute//2 - chara_offset, y=-self.mini_up.attribute + offset - total_offset)

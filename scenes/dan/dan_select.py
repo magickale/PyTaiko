@@ -4,7 +4,7 @@ import pyray as ray
 
 from libs.audio import audio
 from libs.global_data import PlayerNum, global_data
-from libs.texture import SCREEN_HEIGHT, SCREEN_WIDTH, tex
+from libs.texture import tex
 from libs.chara_2d import Chara2D
 from libs.global_objects import AllNetIcon, CoinOverlay, Indicator, Nameplate, Timer
 from libs.screen import Screen
@@ -103,15 +103,15 @@ class DanSelectScreen(Screen):
         tex.draw_texture('global', 'footer')
         for item in self.navigator.items:
             box = item.box
-            if -156 <= box.position <= SCREEN_WIDTH + 144:
-                if box.position <= 500:
-                    box.draw(box.position, 95, False)
+            if (-156 * tex.screen_scale) <= box.position <= tex.screen_width + (144 * tex.screen_scale):
+                if box.position <= (500 * tex.screen_scale):
+                    box.draw(box.position, tex.skin_config["boxes"].y, False)
                 else:
-                    box.draw(box.position, 95, False)
+                    box.draw(box.position, tex.skin_config["boxes"].y, False)
         if self.state == State.SONG_SELECTED:
-            ray.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ray.fade(ray.BLACK, min(0.5, self.player.confirmation_window.fade_in.attribute)))
+            ray.draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray.fade(ray.BLACK, min(0.5, self.player.confirmation_window.fade_in.attribute)))
         self.player.draw()
-        self.indicator.draw(410, 575)
+        self.indicator.draw(tex.skin_config["dan_select_indicator"].x, tex.skin_config["dan_select_indicator"].y)
         self.timer.draw()
         self.coin_overlay.draw()
         tex.draw_texture('global', 'dan_select')
@@ -133,7 +133,7 @@ class DanSelectPlayer:
         self.confirmation_window = ConfirmationWindow()
 
         # Player-specific objects
-        self.chara = Chara2D(int(self.player_num) - 1, 100)
+        self.chara = Chara2D(int(self.player_num) - 1)
         plate_info = global_data.config[f'nameplate_{self.player_num}p']
         self.nameplate = Nameplate(plate_info['name'], plate_info['title'],
             self.player_num, plate_info['dan'], plate_info['gold'], plate_info['rainbow'], plate_info['title_bg'])
@@ -212,11 +212,11 @@ class DanSelectPlayer:
 
     def draw(self):
         if self.player_num == PlayerNum.P1:
-            self.nameplate.draw(30, 640)
-            self.chara.draw(x=-50, y=410)
+            self.nameplate.draw(tex.skin_config["dan_select_nameplate_1p"].x, tex.skin_config["dan_select_nameplate_1p"].y)
+            self.chara.draw(x=tex.skin_config["dan_select_chara_1p"].x, y=tex.skin_config["dan_select_chara_1p"].y)
         else:
-            self.nameplate.draw(950, 640)
-            self.chara.draw(mirror=True, x=950, y=410)
+            self.nameplate.draw(tex.skin_config["dan_select_nameplate_2p"].x, tex.skin_config["dan_select_nameplate_2p"].y)
+            self.chara.draw(mirror=True, x=tex.skin_config["dan_select_chara_2p"].x, y=tex.skin_config["dan_select_chara_2p"].y)
 
         self.confirmation_window.draw()
 

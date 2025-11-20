@@ -1,5 +1,6 @@
 import logging
 from libs.global_data import PlayerNum
+from libs.texture import tex
 from libs.utils import get_current_ms
 from scenes.result import Background, FadeIn, ResultPlayer, ResultScreen
 
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 class TwoPlayerResultScreen(ResultScreen):
     def on_screen_start(self):
         super().on_screen_start()
-        self.background = Background(PlayerNum.TWO_PLAYER, 1280)
+        self.background = Background(PlayerNum.TWO_PLAYER, tex.screen_width)
         self.fade_in = FadeIn(PlayerNum.TWO_PLAYER)
         self.player_1 = ResultPlayer(PlayerNum.P1, True, False)
         self.player_2 = ResultPlayer(PlayerNum.P2, True, True)

@@ -30,6 +30,7 @@ rainbow = false
 [paths]
 tja_path = ['Songs']
 video_path = ['Videos']
+graphics_path = 'Graphics/GreenVer'
 
 [keys]
 exit_key = 'Q'

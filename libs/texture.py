@@ -12,9 +12,7 @@ from pyray import Vector2, Rectangle, Color
 
 from libs.animation import BaseAnimation, parse_animations
 
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
-SCREEN_SCALE = SCREEN_WIDTH / 1280
+from libs.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +50,15 @@ class TextureWrapper:
         self.textures: dict[str, dict[str, Texture]] = dict()
         self.animations: dict[int, BaseAnimation] = dict()
         self.skin_config: dict[str, SkinInfo] = dict()
-        self.graphics_path = Path("Graphics")
+        self.graphics_path = Path(get_config()['paths']['graphics_path'])
         if (self.graphics_path / "skin_config.json").exists():
             data = json.loads((self.graphics_path / "skin_config.json").read_text())
             self.skin_config: dict[str, SkinInfo] = {
                 k: SkinInfo(v.get('x', 0), v.get('y', 0), v.get('font_size', 0), v.get('width', 0), v.get('height', 0)) for k, v in data.items()
             }
+        self.screen_width = int(self.skin_config["screen"].width)
+        self.screen_height = int(self.skin_config["screen"].height)
+        self.screen_scale = self.screen_width / 1280
 
     def unload_textures(self):
         """Unload all textures and animations."""

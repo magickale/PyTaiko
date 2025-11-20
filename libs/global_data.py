@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any
+
+from libs.config import Config
 
 class PlayerNum(IntEnum):
     ALL = 0
@@ -25,90 +27,6 @@ class Crown(IntEnum):
     CLEAR = 1
     FC = 2
     DFC = 3
-
-class GeneralConfig(TypedDict):
-    fps_counter: bool
-    audio_offset: int
-    visual_offset: int
-    language: str
-    hard_judge: int
-    touch_enabled: bool
-    timer_frozen: bool
-    judge_counter: bool
-    nijiiro_notes: bool
-    log_level: int
-    fake_online: bool
-
-class NameplateConfig(TypedDict):
-    name: str
-    title: str
-    title_bg: int
-    dan: int
-    gold: bool
-    rainbow: bool
-
-class PathsConfig(TypedDict):
-    tja_path: list[Path]
-    video_path: list[Path]
-
-class KeysConfig(TypedDict):
-    exit_key: int
-    fullscreen_key: int
-    borderless_key: int
-    pause_key: int
-    back_key: int
-    restart_key: int
-
-class Keys1PConfig(TypedDict):
-    left_kat: list[int]
-    left_don: list[int]
-    right_don: list[int]
-    right_kat: list[int]
-
-class Keys2PConfig(TypedDict):
-    left_kat: list[int]
-    left_don: list[int]
-    right_don: list[int]
-    right_kat: list[int]
-
-class GamepadConfig(TypedDict):
-    left_kat: list[int]
-    left_don: list[int]
-    right_don: list[int]
-    right_kat: list[int]
-
-class AudioConfig(TypedDict):
-    device_type: int
-    sample_rate: int
-    buffer_size: int
-
-class VolumeConfig(TypedDict):
-    sound: float
-    music: float
-    voice: float
-    hitsound: float
-    attract_mode: float
-
-class VideoConfig(TypedDict):
-    screen_width: int
-    screen_height: int
-    fullscreen: bool
-    borderless: bool
-    target_fps: int
-    vsync: bool
-
-class Config(TypedDict):
-    general: GeneralConfig
-    nameplate_1p: NameplateConfig
-    nameplate_2p: NameplateConfig
-    paths: PathsConfig
-    keys: KeysConfig
-    keys_1p: Keys1PConfig
-    keys_2p: Keys2PConfig
-    gamepad: GamepadConfig
-    audio: AudioConfig
-    volume: VolumeConfig
-    video: VideoConfig
 
 @dataclass
 class Modifiers:

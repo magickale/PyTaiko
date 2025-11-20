@@ -20,9 +20,10 @@ class BaseChibi:
         self.name = 'chibi_' + str(index)
         self.bpm = bpm
         self.is_2p = is_2p
-        self.hori_move = Animation.create_move(60000 / self.bpm * 5, total_distance=1280)
+        self.tex = tex
+        self.hori_move = Animation.create_move(60000 / self.bpm * 5, total_distance=tex.screen_width)
         self.hori_move.start()
-        self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50, reverse_delay=0)
+        self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50 * tex.screen_scale, reverse_delay=0)
         self.vert_move.start()
         self.index = random.randint(0, len([item for item in tex.textures[self.name] if item[0].isdigit()])-1)
         tex_list = tex.textures[self.name][str(self.index)].texture
@@ -47,9 +48,9 @@ class BaseChibi:
             textures = [((duration / len(self.keyframes))*i, (duration / len(self.keyframes))*(i+1), index) for i, index in enumerate(self.keyframes)]
             self.texture_change = Animation.create_texture_change(duration, textures=textures)
             self.texture_change.start()
-            self.hori_move = Animation.create_move(60000 / self.bpm * 5, total_distance=1280)
+            self.hori_move = Animation.create_move(60000 / self.bpm * 5, total_distance=self.tex.screen_width)
             self.hori_move.start()
-            self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50, reverse_delay=0)
+            self.vert_move = Animation.create_move(60000 / self.bpm / 2, total_distance=50 * self.tex.screen_scale, reverse_delay=0)
             self.vert_move.start()
 
     def draw(self, tex: TextureWrapper):
@@ -62,9 +63,9 @@ class ChibiBad(BaseChibi):
         self.index = random.randint(0, 2)
         self.keyframes = [3, 4]
         duration = (60000 / self.bpm) / 2
-        self.hori_move = Animation.create_move(duration * 10, total_distance=1280)
+        self.hori_move = Animation.create_move(duration * 10, total_distance=1280 * self.tex.screen_width)
         self.hori_move.start()
-        self.vert_move = Animation.create_move(duration, total_distance=50, reverse_delay=0)
+        self.vert_move = Animation.create_move(duration, total_distance=50 * self.tex.screen_scale, reverse_delay=0)
         self.vert_move.start()
         self.fade_in = Animation.create_fade(duration, initial_opacity=0.0, final_opacity=1.0)
         self.fade_in.start()
@@ -95,7 +96,7 @@ class Chibi0(BaseChibi):
 class Chibi2(BaseChibi):
     def __init__(self, index: int, bpm: float, tex: TextureWrapper, is_2p: bool):
         super().__init__(index, bpm, tex, is_2p)
-        self.rotate = Animation.create_move(60000 / self.bpm, total_distance=360)
+        self.rotate = Animation.create_move(60000 / self.bpm, total_distance=self.tex.screen_height//2)
         self.rotate.start()
 
     def update(self, current_time_ms: float, bpm: float):
