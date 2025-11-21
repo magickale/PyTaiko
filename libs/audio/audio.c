@@ -699,7 +699,7 @@ sound load_sound_from_wave(wave wave) {
             wave.channels,
             wave.sampleRate,
             (int)AUDIO.System.sampleRate,
-            SPEEX_RESAMPLER_QUALITY_DESKTOP,
+            SPEEX_RESAMPLER_QUALITY_MIN,
             &error
         );
 
@@ -936,7 +936,7 @@ music load_music_stream(const char* filename) {
         if (sf_info.samplerate != AUDIO.System.sampleRate) {
             TRACELOG(LOG_INFO, "Resampling music from %d Hz to %f Hz", sf_info.samplerate, AUDIO.System.sampleRate);
             int error;
-            ctx->resampler = speex_resampler_init(sf_info.channels, sf_info.samplerate, AUDIO.System.sampleRate, SPEEX_RESAMPLER_QUALITY_DESKTOP, &error);
+            ctx->resampler = speex_resampler_init(sf_info.channels, sf_info.samplerate, AUDIO.System.sampleRate, SPEEX_RESAMPLER_QUALITY_MIN, &error);
             if (ctx->resampler == NULL) {
                 TRACELOG(LOG_WARNING, "Failed to create resampler");
                 free(ctx);
