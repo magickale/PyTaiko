@@ -399,14 +399,15 @@ class YellowBox:
         if not self.tja:
             return
         offset = tex.skin_config['yb_diff_offset'].x
+        print(song_box.scores)
         for diff in self.tja.metadata.course_data:
             if diff >= Difficulty.URA:
                 continue
-            if diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] == Crown.DFC:
+            if diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][5] is not None and song_box.scores[diff][5] == Crown.DFC:
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*offset), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] == Crown.FC:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][5] is not None and song_box.scores[diff][5] == Crown.FC:
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*offset), color=color)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] >= Crown.CLEAR:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][5] is not None and song_box.scores[diff][5] >= Crown.CLEAR:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*offset), color=color)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*offset), fade=min(fade, 0.25))
 
@@ -446,11 +447,11 @@ class YellowBox:
         for diff in self.tja.metadata.course_data:
             if diff >= Difficulty.URA:
                 continue
-            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] is not None and song_box.scores[diff][4] == 2 and song_box.scores[diff][2] == 0) or (song_box.scores[diff][2] == 0 and song_box.scores[diff][3] == 0)):
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][5] is not None and song_box.scores[diff][5] == Crown.DFC:
                 tex.draw_texture('yellow_box', 's_crown_dfc', x=(diff*offset_x)+tex.skin_config['yb_diff_offset_crown'].x, y=offset_y, fade=self.fade_in.attribute)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and ((song_box.scores[diff][4] is not None and song_box.scores[diff][4] == 2) or (song_box.scores[diff][3] == 0)):
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][5] is not None and song_box.scores[diff][5] == Crown.FC:
                 tex.draw_texture('yellow_box', 's_crown_fc', x=(diff*offset_x)+tex.skin_config['yb_diff_offset_crown'].x, y=offset_y, fade=self.fade_in.attribute)
-            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][4] is not None and song_box.scores[diff][4] >= 1:
+            elif diff in song_box.scores and song_box.scores[diff] is not None and song_box.scores[diff][5] is not None and song_box.scores[diff][5] >= Crown.CLEAR:
                 tex.draw_texture('yellow_box', 's_crown_clear', x=(diff*offset_x)+tex.skin_config['yb_diff_offset_crown'].x, y=offset_y, fade=self.fade_in.attribute)
             tex.draw_texture('yellow_box', 's_crown_outline', x=(diff*offset_x)+tex.skin_config['yb_diff_offset_crown'].x, y=offset_y, fade=min(self.fade_in.attribute, 0.25))
 
