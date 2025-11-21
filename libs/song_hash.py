@@ -80,7 +80,8 @@ def build_song_hashes(output_dir=Path("cache")):
     all_tja_files: list[Path] = []
     for root_dir in tja_paths:
         root_path = Path(root_dir)
-        all_tja_files.extend(root_path.rglob("*.tja"))
+        found_tja_files = root_path.rglob("*.tja", recurse_symlinks=True)
+        all_tja_files.extend(found_tja_files)
 
     global_data.total_songs = len(all_tja_files)
     files_to_process = []
