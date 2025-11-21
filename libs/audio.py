@@ -143,13 +143,6 @@ class AudioEngine:
 
     def get_host_api_name(self, api_id: int) -> str:
         """Returns the name of the host API with the given ID"""
-        if api_id == -1:
-            if sys.platform == "win32":
-                return "Windows WDM-KS"
-            elif sys.platform == "darwin":
-                return "Core Audio"
-            else:
-                return "ALSA"
         result = lib.get_host_api_name(api_id) # type: ignore
         if result == ffi.NULL:
             return ""

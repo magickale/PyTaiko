@@ -15,7 +15,7 @@ A TJA player and Taiko simulator written in Python using the [raylib](https://ww
 
 - Cross-platform compatibility (Windows, macOS, Linux)
 - Controller Support
-- Low latency audio via ASIO
+- Low latency audio via ASIO or WDM-KS
 - Recursive Song Select Menu
 - 1080p Support (And higher if you give me assets!)
 
@@ -35,8 +35,8 @@ A TJA player and Taiko simulator written in Python using the [raylib](https://ww
 
 ## FAQ
 
-Q: I'm on Windows and I have no sound!<br>
-A: Change your `device_type` in `config.toml` to `0` (you can experiment with other values which will give better latency)<br>
+Q: I'm on Windows and my latency is really high!<br>
+A: Change your `device_type` in game settings to `WDM-KS`, `WASAPI`, or `ASIO` if your computer supports it<br>
 <br>
 Q: I want to add more song paths!<br>
 A: You can either append new folders:<br>
