@@ -53,7 +53,7 @@ source $HOME/.local/bin/env
 git clone https://github.com/Yonokid/PyTaiko
 cd PyTaiko
 brew install libsndfile
-brew install libsamplerate
+brew install speexdsp
 cd libs/audio
 make
 mv libaudio.dylib ../../
@@ -118,7 +118,7 @@ Then run with Python as described in the Building from Source section.
 
 ### C Libraries
 ```bash
-sudo apt install libsamplerate libsndfile
+sudo apt install speexdsp libsndfile
 ```
 
 Some distributions may also require [patchelf](https://github.com/NixOS/patchelf) and this symbolic link:
