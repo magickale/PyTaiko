@@ -184,7 +184,7 @@ class TextureWrapper:
                         finally:
                             os.unlink(temp_path)
                     else:
-                        raise Exception(f"Texture {tex_name} was not found in {zip}")
+                        logger.error(f"Texture {tex_name} was not found in {zip}")
             logger.info(f"Textures loaded from zip: {zip}")
         except Exception as e:
             logger.error(f"Failed to load textures from zip {zip}: {e}")
@@ -227,6 +227,10 @@ class TextureWrapper:
                             mirror: str, x: float, y: float, x2: float, y2: float,
                             origin: tuple[float, float], rotation: float, fade: float,
                             index: int, src: Optional[tuple[float, float, float, float]], controllable: bool) -> None:
+        if subset not in self.textures:
+            return
+        if texture not in self.textures[subset]:
+            return
         mirror_x = -1 if mirror == 'horizontal' else 1
         mirror_y = -1 if mirror == 'vertical' else 1
         if fade != 1.1:
