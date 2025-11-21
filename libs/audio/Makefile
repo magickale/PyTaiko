@@ -71,10 +71,11 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
         CORE_LIBS += -lsndfile
     endif
 
-    ifneq (,$(wildcard /mingw64/lib/libsamplerate.a))
-        CORE_LIBS += /mingw64/lib/libsamplerate.a
+    ifneq (,$(wildcard /mingw64/lib/libspeexdsp.a))
+        CORE_LIBS += /mingw64/lib/libspeexdsp.a
+        CFLAGS += -DHAVE_SPEEXDSP
     else
-        CORE_LIBS += -lsamplerate
+        CORE_LIBS += -lspeexdsp
     endif
 
     # Windows system libraries (these provide the missing symbols)
@@ -103,7 +104,8 @@ else ifeq ($(UNAME_S),Darwin)
         CORE_LIBS += -lportaudio
     endif
 
-    CORE_LIBS += -lsndfile -lsamplerate
+    CORE_LIBS += -lsndfile
+    CORE_LIBS += -lspeexdsp
 
     # macOS frameworks
     LIBS = $(CORE_LIBS) -framework CoreAudio -framework AudioToolbox -framework AudioUnit
@@ -127,12 +129,9 @@ else ifeq ($(UNAME_S),Linux)
 
     CORE_LIBS += -lsndfile
 
-    # Check for libsamplerate
-    ifeq ($(call check_lib,samplerate),yes)
-        CORE_LIBS += -lsamplerate
-        CFLAGS += -DHAVE_SAMPLERATE
-    else
-        $(warning libsamplerate not found - building without sample rate conversion)
+    ifeq ($(call check_lib,speexdsp),yes)
+        CORE_LIBS += -lspeexdsp
+        CFLAGS += -DHAVE_SPEEXDSP
     endif
 
     # Audio backend libraries (optional)
@@ -188,7 +187,7 @@ else ifeq ($(UNAME_S),Linux)
 else
     # Generic Unix fallback - minimal dependencies
     LIBNAME = libaudio.so
-    LIBS = -lportaudio -lsndfile -lpthread -lm
+    LIBS = -lportaudio -lsndfile -lspeexdsp -lpthread -lm
     OBJ_EXT = .o
 endif
 
@@ -250,7 +249,7 @@ ifneq (,$(findstring MINGW,$(UNAME_S)))
 	@echo "Checking for Windows-specific libportaudio:"
 	@ls -la ./libportaudio-win.a 2>/dev/null && echo "✓ Found local libportaudio-win.a" || echo "✗ No local libportaudio-win.a"
 	@echo "Available system static libraries:"
-	@ls /mingw64/lib/lib{portaudio,sndfile,samplerate,FLAC,vorbis*,ogg}.a 2>/dev/null || echo "None found"
+	@ls /mingw64/lib/lib{portaudio,sndfile,speexdsp,FLAC,vorbis*,ogg}.a 2>/dev/null || echo "None found"
 	@echo "Static pthread library:"
 	@ls /mingw64/lib/libwinpthread.a 2>/dev/null && echo "✓ Found libwinpthread.a" || echo "✗ Missing libwinpthread.a"
 	@echo "Libraries to link: $(LIBS)"
@@ -262,7 +261,7 @@ ifdef PKG_CONFIG
 	@echo "pkg-config available: yes"
 	@echo -n "PortAudio: "; pkg-config --exists portaudio-2.0 && echo "✓" || echo "✗"
 	@echo -n "libsndfile: "; pkg-config --exists sndfile && echo "✓" || echo "✗"
-	@echo -n "libsamplerate: "; pkg-config --exists samplerate && echo "✓" || echo "✗"
+	@echo -n "speexdsp: "; pkg-config --exists speexdsp && echo "✓" || echo "✗"
 	@echo -n "ALSA: "; pkg-config --exists alsa && echo "✓" || echo "✗"
 	@echo -n "PulseAudio: "; pkg-config --exists libpulse && echo "✓" || echo "✗"
 	@echo -n "JACK: "; pkg-config --exists jack && echo "✓" || echo "✗"
@@ -288,7 +287,7 @@ list-libs:
 	@echo "All libraries: $(LIBS)"
 
 # Build with only essential libraries (fallback)
-minimal: override LIBS = -lportaudio -lsndfile -lpthread -lm
+minimal: override LIBS = -lportaudio -lsndfile -lspeexdsp -lpthread -lm
 minimal: $(LIBNAME)
 	@echo "Built minimal version with basic dependencies only"
 

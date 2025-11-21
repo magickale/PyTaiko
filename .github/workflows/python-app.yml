@@ -23,7 +23,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install portaudio libsndfile libsamplerate pkg-config
+          brew install portaudio libsndfile speexdsp pkg-config
 
       - name: Set up MSYS2 (Windows)
         if: runner.os == 'Windows'
@@ -34,7 +34,7 @@ jobs:
             base-devel
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-libsndfile
-            mingw-w64-x86_64-libsamplerate
+            mingw-w64-x86_64-speexdsp
             mingw-w64-x86_64-flac
             mingw-w64-x86_64-libvorbis
             mingw-w64-x86_64-libogg
@@ -175,7 +175,7 @@ jobs:
               libportaudio2 \
               portaudio19-dev \
               libsndfile1-dev \
-              libsamplerate0-dev \
+              libspeexdsp-dev \
               libflac-dev \
               libvorbis-dev \
               libogg-dev \
