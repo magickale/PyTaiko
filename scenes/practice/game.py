@@ -69,7 +69,7 @@ class PracticeGameScreen(GameScreen):
         else:
             self.player_1.input_log.clear()
             resume_bar_index = max(0, self.scrobble_index)
-            previous_bar_index = max(0, self.scrobble_index - 1)
+            previous_bar_index = max(0, self.scrobble_index - global_data.config["general"]["practice_mode_bar_delay"])
 
             first_bar_time = self.bars[0].hit_ms
             resume_time = self.bars[resume_bar_index].hit_ms - first_bar_time + self.start_delay
@@ -87,9 +87,9 @@ class PracticeGameScreen(GameScreen):
             self.player_1.total_notes = len([note for note in self.player_1.play_notes if 0 < note.type < 5])
 
             self.pause_time = start_time
-            if self.song_music is not None:
-                audio.play_music_stream(self.song_music, 'music')
-                audio.seek_music_stream(self.song_music, (self.pause_time - self.start_delay)/1000 - self.tja.metadata.offset)
+            audio.play_music_stream(self.song_music, 'music')
+            audio.seek_music_stream(self.song_music, (self.pause_time - self.start_delay)/1000 - self.tja.metadata.offset)
+            self.song_started = True
             self.start_ms = get_current_ms() - self.pause_time
 
     def global_keys(self):

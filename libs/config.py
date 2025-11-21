@@ -17,6 +17,7 @@ class GeneralConfig(TypedDict):
     nijiiro_notes: bool
     log_level: int
     fake_online: bool
+    practice_mode_bar_delay: int
 
 class NameplateConfig(TypedDict):
     name: str

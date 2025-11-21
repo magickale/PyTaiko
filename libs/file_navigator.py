@@ -1280,7 +1280,7 @@ class FileNavigator:
                 if selected_item.collection == Directory.COLLECTIONS[3]:
                     diff_sort = self.diff_sort_level
                     diffs = ['かんたん', 'ふつう', 'むずかしい', 'おに']
-                    hori_name = OutlinedText(diffs[min(Difficulty.ONI, self.diff_sort_diff)], 40, ray.WHITE, outline_thickness=5)
+                    hori_name = OutlinedText(diffs[min(Difficulty.ONI, self.diff_sort_diff)], tex.skin_config["song_hori_name"].font_size, ray.WHITE, outline_thickness=5)
                 self.genre_bg = GenreBG(start_box, end_box, hori_name, diff_sort)
 
     def select_current_item(self):

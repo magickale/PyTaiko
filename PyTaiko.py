@@ -2,6 +2,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+import argparse
 
 import sqlite3
 
@@ -146,14 +147,36 @@ def main():
         logger.info("Fullscreen enabled")
 
     current_screen = Screens.LOADING
-    if len(sys.argv) > 1 and Path(sys.argv[1]).exists():
-        current_screen = Screens.GAME
-        path = Path(os.path.abspath(sys.argv[1]))
-        tja = TJAParser(path)
-        max_difficulty = max(tja.metadata.course_data.keys())
-        global_data.session_data[PlayerNum.P1].selected_song = path
-        global_data.session_data[PlayerNum.P1].selected_difficulty = max_difficulty
-        global_data.modifiers[PlayerNum.P1].auto = True
+
+    if len(sys.argv) == 1:
+        pass
+    else:
+        parser = argparse.ArgumentParser(description='Launch game with specified song file')
+        parser.add_argument('song_path', type=str, help='Path to the TJA song file')
+        parser.add_argument('difficulty', type=int, nargs='?', default=None,
+                            help='Difficulty level (optional, defaults to max difficulty)')
+        parser.add_argument('--auto', action='store_true',
+                            help='Enable auto mode')
+        parser.add_argument('--practice', action='store_true',
+                            help='Start in practice mode')
+        args = parser.parse_args()
+        path = Path(args.song_path)
+        if not path.exists():
+            parser.error(f"Song file not found: {args.song_path}")
+        else:
+            path = Path(os.path.abspath(path))
+            tja = TJAParser(path)
+            if args.difficulty is not None:
+                if args.difficulty not in tja.metadata.course_data.keys():
+                    parser.error(f"Invalid difficulty: {args.difficulty}. Available: {list(tja.metadata.course_data.keys())}")
+                selected_difficulty = args.difficulty
+            else:
+                selected_difficulty = max(tja.metadata.course_data.keys())
+            current_screen = Screens.GAME_PRACTICE if args.practice else Screens.GAME
+            global_data.session_data[PlayerNum.P1].selected_song = path
+            global_data.session_data[PlayerNum.P1].selected_difficulty = selected_difficulty
+            global_data.modifiers[PlayerNum.P1].auto = args.auto
+
     logger.info(f"Initial screen: {current_screen}")
 
     audio.set_log_level((log_level-1)//10)
