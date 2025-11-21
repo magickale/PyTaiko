@@ -1235,7 +1235,7 @@ class FileNavigator:
                                 for item in self.directory_contents[sibling_key]:
                                     if not isinstance(item, Directory):
                                         temp_items.append(item)
-                    content_items = random.sample(temp_items, 10)
+                    content_items = random.sample(temp_items, min(10, len(temp_items)))
 
             if content_items == []:
                 self.go_back()

@@ -114,13 +114,13 @@ def build_song_hashes(output_dir=Path("cache")):
         global_data.total_songs = total_songs
 
     for tja_path in files_to_process:
-        tja_path_str = str(tja_path)
-        current_modified = tja_path.stat().st_mtime
-        tja = TJAParser(tja_path)
-        all_notes = NoteList()
-        diff_hashes = dict()
-
         try:
+            tja_path_str = str(tja_path)
+            current_modified = tja_path.stat().st_mtime
+            tja = TJAParser(tja_path)
+            all_notes = NoteList()
+            diff_hashes = dict()
+
             for diff in tja.metadata.course_data:
                 diff_notes, branch_m, branch_e, branch_n = TJAParser.notes_to_position(TJAParser(tja.file_path), diff)
                 diff_hashes[diff] = tja.hash_note_data(diff_notes)

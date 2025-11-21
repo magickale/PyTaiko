@@ -140,6 +140,8 @@ class SongSelectScreen(Screen):
         elif action == "select_song":
             current_song = self.navigator.get_current_item()
             if isinstance(current_song, Directory) and current_song.box.texture_index == 13:
+                if len(self.navigator.directory_contents[str(current_song.path)]) == 0:
+                    return
                 self.dan_transition.start()
                 audio.stop_sound('bgm')
                 return

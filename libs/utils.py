@@ -31,12 +31,6 @@ def force_dedicated_gpu():
         except Exception as e:
             logger.error(e)
 
-        try:
-            # AMD PowerXpress
-            ctypes.windll.kernel32.SetEnvironmentVariableW("AMD_VULKAN_ICD", "DISABLE")
-        except Exception as e:
-            logger.error(e)
-
 def rounded(num: float) -> int:
     """Round a number to the nearest integer"""
     sign = 1 if (num >= 0) else -1
