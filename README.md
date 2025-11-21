@@ -33,6 +33,17 @@ A TJA player and Taiko simulator written in Python using the [raylib](https://ww
 
 > **Note**: Operating systems below these requirements are not supported.
 
+## FAQ
+
+Q: I'm on Windows and I have no sound!
+A: Change your `device_type` in `config.toml` to `0` (you can experiment with other values which will give better latency)
+
+Q: I want to add more song paths!
+A: You can either append new folders:
+`tja_path = ["/run/media/yonokid/HDD/Games/PyTaiko/Songs", "Songs", "Cool Folder"]`
+ or replace the base one:
+`tja_path = ["/run/media/yonokid/HDD/Games/PyTaiko/Songs"]`
+Just make sure to use `/` and not `\`!
 ## Installation
 
 ### Pre-built Binaries
