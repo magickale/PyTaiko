@@ -145,7 +145,6 @@ def main():
     plain_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(colored_formatter)
-    console_handler = DedupHandler(console_handler)
 
     file_handler = logging.FileHandler("latest.log")
     file_handler.setFormatter(plain_formatter)

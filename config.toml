@@ -3,8 +3,6 @@ fps_counter = false
 audio_offset = 0
 visual_offset = 0
 language = "ja"
-hard_judge = 108
-touch_enabled = false
 timer_frozen = true
 judge_counter = false
 nijiiro_notes = false
@@ -31,6 +29,7 @@ rainbow = false
 [paths]
 tja_path = ['Songs']
 video_path = ['Videos']
+#You can change this path to Graphics/GreenVer1080 for the 1080p skin
 graphics_path = 'Graphics/GreenVer'
 
 [keys]
