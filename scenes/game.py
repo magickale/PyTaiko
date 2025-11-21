@@ -910,20 +910,26 @@ class Player:
                         self.branch_indicator.level_down('expert')
                     else:
                         self.branch_indicator.level_up('expert')
-                self.branch_m.pop(0)
-                self.branch_n.pop(0)
+                if self.branch_m:
+                    self.branch_m.pop(0)
+                if self.branch_n:
+                    self.branch_n.pop(0)
             elif self.branch_condition_count >= m_req:
                 self.merge_branch_section(self.branch_m.pop(0), current_ms)
                 if self.branch_indicator is not None and self.branch_indicator.difficulty != 'master':
                     self.branch_indicator.level_up('master')
-                self.branch_n.pop(0)
-                self.branch_e.pop(0)
+                if self.branch_n:
+                    self.branch_n.pop(0)
+                if self.branch_e:
+                    self.branch_e.pop(0)
             else:
                 self.merge_branch_section(self.branch_n.pop(0), current_ms)
                 if self.branch_indicator is not None and self.branch_indicator.difficulty != 'normal':
                     self.branch_indicator.level_down('normal')
-                self.branch_m.pop(0)
-                self.branch_e.pop(0)
+                if self.branch_m:
+                    self.branch_m.pop(0)
+                if self.branch_e:
+                    self.branch_e.pop(0)
             if self.branch_indicator is not None:
                 logger.info(f"Branch set to {self.branch_indicator.difficulty} based on conditions {self.branch_condition_count}, {e_req, m_req}")
             self.branch_condition_count = 0
