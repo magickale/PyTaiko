@@ -1,4 +1,3 @@
-import sys
 import cffi
 import platform
 import logging

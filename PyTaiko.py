@@ -78,9 +78,44 @@ class ColoredFormatter(logging.Formatter):
         record.levelname = f"{log_color}{record.levelname}{self.RESET}"
         return super().format(record)
 
+class DedupHandler(logging.Handler):
+    def __init__(self, handler, show_count=True):
+        super().__init__()
+        self.handler = handler
+        self.last_log = None
+        self.duplicate_count = 0
+        self.show_count = show_count
+
+    def emit(self, record):
+        current_log = (record.levelno, record.name, record.getMessage())
+
+        if current_log == self.last_log:
+            self.duplicate_count += 1
+        else:
+            if self.duplicate_count > 0 and self.show_count:
+                dup_record = logging.LogRecord(
+                    record.name, logging.INFO, "", 0,
+                    f"(previous message repeated {self.duplicate_count} time{'s' if self.duplicate_count > 1 else ''})",
+                    (), None
+                )
+                self.handler.emit(dup_record)
+
+            self.handler.emit(record)
+            self.last_log = current_log
+            self.duplicate_count = 0
+
+    def setFormatter(self, fmt):
+        self.handler.setFormatter(fmt)
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Log uncaught exceptions"""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
 def create_song_db():
-    """Create the scores database if it doesn't exist
-    The migration will eventually be removed"""
+    """Create the scores database if it doesn't exist"""
     with sqlite3.connect('scores.db') as con:
         cursor = con.cursor()
         create_table_query = '''
@@ -102,13 +137,6 @@ def create_song_db():
         con.commit()
         logger.info("Scores database created successfully")
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-    """Log uncaught exceptions"""
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
 def main():
     force_dedicated_gpu()
     global_data.config = get_config()
@@ -117,9 +145,11 @@ def main():
     plain_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(colored_formatter)
+    console_handler = DedupHandler(console_handler)
 
     file_handler = logging.FileHandler("latest.log")
     file_handler.setFormatter(plain_formatter)
+    file_handler = DedupHandler(file_handler)
     logging.basicConfig(
         level=log_level,
         handlers=[console_handler, file_handler]

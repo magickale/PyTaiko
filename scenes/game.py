@@ -903,7 +903,9 @@ class Player:
             self.is_branch = False
             if self.branch_condition == 'p':
                 self.branch_condition_count = max(min((self.branch_condition_count/total_notes)*100, 100), 0)
-            if self.branch_condition_count >= e_req and self.branch_condition_count < m_req:
+            if self.branch_indicator is not None:
+                logger.info(f"Branch set to {self.branch_indicator.difficulty} based on conditions {self.branch_condition_count}, {e_req, m_req}")
+            if self.branch_condition_count >= e_req and self.branch_condition_count < m_req and e_req >= 0:
                 self.merge_branch_section(self.branch_e.pop(0), current_ms)
                 if self.branch_indicator is not None and self.branch_indicator.difficulty != 'expert':
                     if self.branch_indicator.difficulty == 'master':
@@ -930,8 +932,6 @@ class Player:
                     self.branch_m.pop(0)
                 if self.branch_e:
                     self.branch_e.pop(0)
-            if self.branch_indicator is not None:
-                logger.info(f"Branch set to {self.branch_indicator.difficulty} based on conditions {self.branch_condition_count}, {e_req, m_req}")
             self.branch_condition_count = 0
 
     def update(self, ms_from_start: float, current_time: float, background: Optional[Background]):

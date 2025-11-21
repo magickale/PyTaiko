@@ -399,7 +399,6 @@ class YellowBox:
         if not self.tja:
             return
         offset = tex.skin_config['yb_diff_offset'].x
-        print(song_box.scores)
         for diff in self.tja.metadata.course_data:
             if diff >= Difficulty.URA:
                 continue

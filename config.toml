@@ -76,8 +76,6 @@ hitsound = 1.0
 attract_mode = 1.0
 
 [video]
-screen_width = 1280
-screen_height = 720
 fullscreen = false
 borderless = false
 target_fps = -1

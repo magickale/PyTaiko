@@ -161,6 +161,7 @@ class OutlinedText:
         self.text = text
         self.hash = self._hash_text(text, font_size, color, vertical)
         self.outline_thickness = outline_thickness * global_tex.screen_scale
+        self.vertical = vertical
         if self.hash in text_cache:
             self.texture = ray.load_texture(f'cache/image/{self.hash}.png')
         else:
@@ -428,7 +429,11 @@ class OutlinedText:
             final_color = ray.fade(color, fade)
         else:
             final_color = color
-        dest_rect = ray.Rectangle(x, y+((10 * global_tex.screen_scale)-10), self.texture.width+x2, self.texture.height+y2)
+        if not self.vertical:
+            offset = (10 * global_tex.screen_scale)-10
+        else:
+            offset = 0
+        dest_rect = ray.Rectangle(x, y+offset, self.texture.width+x2, self.texture.height+y2)
         if self.outline_thickness > 0:
             ray.begin_shader_mode(self.shader)
         ray.draw_texture_pro(self.texture, self.default_src, dest_rect, origin, rotation, final_color)
