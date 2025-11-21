@@ -206,6 +206,10 @@ class AudioEngine:
                 file_path_str = str(file_path).encode('utf-8')
             sound = lib.load_sound(file_path_str) # type: ignore
 
+            if not lib.is_sound_valid(sound): # type: ignore
+                file_path_str = str(file_path).encode('utf-8')
+                sound = lib.load_sound(file_path_str) # type: ignore
+
             if lib.is_sound_valid(sound): # type: ignore
                 self.sounds[name] = sound
                 return name
@@ -325,7 +329,12 @@ class AudioEngine:
             file_path_str = str(file_path).encode('cp932', errors='replace')
         else:
             file_path_str = str(file_path).encode('utf-8')
+
         music = lib.load_music_stream(file_path_str) # type: ignore
+
+        if not lib.is_music_valid(music): # type: ignore
+            file_path_str = str(file_path).encode('utf-8')
+            music = lib.load_music_stream(file_path_str) # type: ignore
 
         if lib.is_music_valid(music): # type: ignore
             self.music_streams[name] = music
