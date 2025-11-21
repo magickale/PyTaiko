@@ -121,7 +121,7 @@ except OSError as e:
 class AudioEngine:
     """Initialize an audio engine for playing sounds and music."""
     def __init__(self, device_type: int, sample_rate: float, buffer_size: int, volume_presets: VolumeConfig):
-        self.device_type = device_type
+        self.device_type = max(device_type, 0)
         if sample_rate < 0:
             self.target_sample_rate = 44100
         else:
