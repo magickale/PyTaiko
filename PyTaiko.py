@@ -102,6 +102,13 @@ def create_song_db():
         con.commit()
         logger.info("Scores database created successfully")
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Log uncaught exceptions"""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
 def main():
     force_dedicated_gpu()
     global_data.config = get_config()
@@ -117,6 +124,7 @@ def main():
         level=log_level,
         handlers=[console_handler, file_handler]
     )
+    sys.excepthook = handle_exception
     logger.info("Starting PyTaiko")
 
     logger.debug(f"Loaded config: {global_data.config}")

@@ -1208,7 +1208,7 @@ class ModifierSelector:
             setattr(global_data.modifiers[self.player_num], current_mod.name, not current_value)
             self._start_text_animation(-1, current_value)
         elif current_mod.name == 'speed':
-            new_value = max(0.1, (current_value*10 - 1))/10
+            new_value = max(1, (current_value*10 - 1))/10
             setattr(global_data.modifiers[self.player_num], current_mod.name, new_value)
             self._start_text_animation(-1, current_value)
         elif current_mod.name == 'random':
