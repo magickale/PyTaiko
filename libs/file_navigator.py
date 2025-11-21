@@ -1293,7 +1293,6 @@ class FileNavigator:
         if isinstance(selected_item, Directory):
             if self.box_open:
                 self.go_back()
-                return
 
             if selected_item.back:
                 # Handle back navigation
