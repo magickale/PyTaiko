@@ -23,7 +23,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install libsndfile speexdsp
+          brew install portaudio libsndfile speexdsp
 
       - name: Install libaudio Dependencies (Windows)
         if: runner.os == 'Windows'
@@ -45,6 +45,7 @@ jobs:
               pkg-config \
               libsndfile1-dev \
               libspeexdsp-dev \
+              portaudio19-dev \
 
       - name: Build libaudio (Windows)
         if: runner.os == 'Windows'
