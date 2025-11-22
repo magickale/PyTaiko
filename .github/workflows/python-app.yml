@@ -86,6 +86,7 @@ jobs:
         run: uv python install
 
       - name: Build Executable
+        shell: bash
         run: |
           uv run nuitka \
           --lto=yes \
