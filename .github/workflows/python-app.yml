@@ -46,6 +46,8 @@ jobs:
               libsndfile1-dev \
               libspeexdsp-dev \
               portaudio19-dev \
+              libpulse-dev \
+              ccache \
 
       - name: Build libaudio (Windows)
         if: runner.os == 'Windows'
