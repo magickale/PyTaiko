@@ -141,6 +141,10 @@ def main():
     force_dedicated_gpu()
     global_data.config = get_config()
     log_level = global_data.config["general"]["log_level"]
+    if sys.platform == 'win32':
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
     colored_formatter = ColoredFormatter('[%(levelname)s] %(name)s: %(message)s')
     plain_formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
     console_handler = logging.StreamHandler()
