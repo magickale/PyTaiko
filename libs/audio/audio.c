@@ -8,6 +8,7 @@
 #include "portaudio.h"
 #ifdef _WIN32
 #include "pa_asio.h"
+#include <windows.h>
 #endif
 #include <pthread.h>
 #include <stdbool.h>
@@ -647,7 +648,26 @@ wave load_wave(const char* filename) {
     SF_INFO sf_info;
     memset(&sf_info, 0, sizeof(sf_info));
 
+#ifdef _WIN32
+    // Convert UTF-8 filename to wide string for Windows
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+    if (wlen == 0) {
+        TRACELOG(LOG_ERROR, "Failed to convert filename to wide string: '%s'\n", filename);
+        return wave;
+    }
+
+    wchar_t *wfilename = malloc(wlen * sizeof(wchar_t));
+    if (wfilename == NULL) {
+        TRACELOG(LOG_ERROR, "Failed to allocate memory for wide filename");
+        return wave;
+    }
+
+    MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wlen);
+    snd_file = sf_wchar_open(wfilename, SFM_READ, &sf_info);
+    free(wfilename);
+#else
     snd_file = sf_open(filename, SFM_READ, &sf_info);
+#endif
     if (snd_file == NULL) {
         TRACELOG(LOG_ERROR, "Failed to open file '%s'\n", filename);
         return wave;
@@ -921,9 +941,30 @@ void update_audio_stream(audio_stream stream, const void *data, int frame_count)
 music load_music_stream(const char* filename) {
     music music = { 0 };
     bool music_loaded = false;
-
     SF_INFO sf_info = { 0 };
-    SNDFILE *snd_file = sf_open(filename, SFM_READ, &sf_info);
+    SNDFILE *snd_file;
+
+#ifdef _WIN32
+    // Convert UTF-8 filename to wide string for Windows
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+    if (wlen == 0) {
+        TRACELOG(LOG_WARNING, "FILEIO: [%s] Failed to convert filename to wide string", filename);
+        return music;
+    }
+
+    wchar_t *wfilename = malloc(wlen * sizeof(wchar_t));
+    if (wfilename == NULL) {
+        TRACELOG(LOG_WARNING, "FILEIO: Failed to allocate memory for wide filename");
+        return music;
+    }
+
+    MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wlen);
+    snd_file = sf_wchar_open(wfilename, SFM_READ, &sf_info);
+    free(wfilename);
+#else
+    snd_file = sf_open(filename, SFM_READ, &sf_info);
+#endif
+
     if (snd_file != NULL) {
         music_ctx *ctx = calloc(1, sizeof(music_ctx));
         if (ctx == NULL) {
@@ -932,7 +973,6 @@ music load_music_stream(const char* filename) {
             return music;
         }
         ctx->snd_file = snd_file;
-
         if (sf_info.samplerate != AUDIO.System.sampleRate) {
             TRACELOG(LOG_INFO, "Resampling music from %d Hz to %f Hz", sf_info.samplerate, AUDIO.System.sampleRate);
             int error;
@@ -948,7 +988,6 @@ music load_music_stream(const char* filename) {
             ctx->resampler = NULL;
             ctx->src_ratio = 1.0;
         }
-
         music.ctxData = ctx;
         int sample_size = 32;
         music.stream = load_audio_stream(AUDIO.System.sampleRate, sample_size, sf_info.channels);

@@ -378,6 +378,7 @@ class TJAParser:
             elif item.startswith('WAVE'):
                 data = item.split(':')[1]
                 if not Path(self.file_path.parent / data.strip()).exists():
+                    logger.error(f'{data}, {self.file_path}')
                     logger.warning(f"Invalid WAVE value: {data} in TJA file {self.file_path}")
                     self.metadata.wave = Path()
                 else:
