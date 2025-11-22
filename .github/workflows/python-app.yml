@@ -46,8 +46,18 @@ jobs:
               libsndfile1-dev \
               libspeexdsp-dev \
 
-      - name: Build libaudio
-        shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      - name: Build libaudio (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          cd libs/audio
+          make clean
+          make all
+          make verify
+
+      - name: Build libaudio (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           cd libs/audio
           make clean
