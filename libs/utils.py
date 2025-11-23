@@ -421,14 +421,14 @@ class OutlinedText:
             ])
         ray.set_shader_value(self.shader, self.outline_color_loc, outline_color_alloc, SHADER_UNIFORM_VEC4)
         if isinstance(color, tuple):
-            alpha_value = ray.ffi.new('float*', color[3] / 255.0)
+            alpha_value = ray.ffi.new('float*', min(fade * 255, color[3]) / 255.0)
         else:
-            alpha_value = ray.ffi.new('float*', color.a / 255.0)
-        ray.set_shader_value(self.shader, self.alpha_loc, alpha_value, SHADER_UNIFORM_FLOAT)
+            alpha_value = ray.ffi.new('float*', min(fade * 255, color.a) / 255.0)
         if fade != 1.1:
             final_color = ray.fade(color, fade)
         else:
             final_color = color
+        ray.set_shader_value(self.shader, self.alpha_loc, alpha_value, SHADER_UNIFORM_FLOAT)
         if not self.vertical:
             offset = (10 * global_tex.screen_scale)-10
         else:

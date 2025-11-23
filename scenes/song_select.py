@@ -333,13 +333,7 @@ class SongSelectScreen(Screen):
         if self.navigator.genre_bg is not None and self.state == State.BROWSING:
             self.navigator.genre_bg.draw(tex.skin_config["boxes"].y)
 
-        for i, item in enumerate(self.navigator.items):
-            box = item.box
-            if (-156 * tex.screen_scale) <= box.position <= (tex.screen_width + 144) * tex.screen_scale:
-                if box.position <= (500 * tex.screen_scale):
-                    box.draw(box.position - int(self.move_away.attribute), tex.skin_config["boxes"].y, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
-                else:
-                    box.draw(box.position + int(self.move_away.attribute), tex.skin_config["boxes"].y, self.player_1.is_ura, fade_override=self.diff_fade_out.attribute)
+        self.navigator.draw_boxes(self.move_away.attribute, self.player_1.is_ura, self.diff_fade_out.attribute)
 
         if self.state == State.BROWSING:
             tex.draw_texture('global', 'arrow', index=0, x=-(self.blue_arrow_move.attribute*2), fade=self.blue_arrow_fade.attribute)

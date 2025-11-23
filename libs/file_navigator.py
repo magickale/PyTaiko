@@ -45,12 +45,27 @@ class BaseBox():
         self.position = float('inf')
         self.start_position: float = -1
         self.target_position: float = -1
-        self.open_anim = Animation.create_move(133, total_distance=150*tex.screen_scale, delay=83.33)
+        self.open_anim = Animation.create_move(233, total_distance=150*tex.screen_scale, delay=50)
         self.open_fade = Animation.create_fade(200, initial_opacity=0, final_opacity=1.0)
         self.move = None
         self.is_open = False
         self.text_loaded = False
         self.wait = 0
+
+    def __lt__(self, other):
+        return self.position < other.position
+
+    def __le__(self, other):
+        return self.position <= other.position
+
+    def __gt__(self, other):
+        return self.position > other.position
+
+    def __ge__(self, other):
+        return self.position >= other.position
+
+    def __eq__(self, other):
+        return self.position == other.position
 
     def load_text(self):
         self.name = OutlinedText(self.text_name, tex.skin_config["song_box_name"].font_size, ray.WHITE, outline_thickness=5, vertical=True)
@@ -63,7 +78,7 @@ class BaseBox():
                 direction = -1
             if abs(self.target_position - self.position) > 250 * tex.screen_scale:
                 direction *= -1
-            self.move = Animation.create_move(83.3, total_distance=100 * direction * tex.screen_scale, ease_out='cubic')
+            self.move = Animation.create_move(133, total_distance=100 * direction * tex.screen_scale, ease_out='cubic')
             self.move.start()
             if self.is_open or self.target_position == BOX_CENTER:
                 self.move.total_distance = int(250 * direction * tex.screen_scale)
@@ -80,24 +95,24 @@ class BaseBox():
         self.open_anim.update(current_time)
         self.open_fade.update(current_time)
 
-    def _draw_closed(self, x: float, y: float):
-        tex.draw_texture('box', 'folder_texture_left', frame=self.texture_index, x=x)
+    def _draw_closed(self, x: float, y: float, outer_fade_override: float):
+        tex.draw_texture('box', 'folder_texture_left', frame=self.texture_index, x=x, fade=outer_fade_override)
         offset = 1 * tex.screen_scale if self.texture_index == 3 or self.texture_index >= 9 and self.texture_index not in {10,11,12} else 0
-        tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x, x2=tex.skin_config["song_box_bg"].width, y=offset)
-        tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x)
+        tex.draw_texture('box', 'folder_texture', frame=self.texture_index, x=x, x2=tex.skin_config["song_box_bg"].width, y=offset, fade=outer_fade_override)
+        tex.draw_texture('box', 'folder_texture_right', frame=self.texture_index, x=x, fade=outer_fade_override)
         if self.texture_index == BaseBox.DEFAULT_INDEX:
-            tex.draw_texture('box', 'genre_overlay', x=x, y=y)
+            tex.draw_texture('box', 'genre_overlay', x=x, y=y, fade=outer_fade_override)
         elif self.texture_index == BaseBox.DIFFICULTY_SORT_INDEX:
-            tex.draw_texture('box', 'diff_overlay', x=x, y=y)
+            tex.draw_texture('box', 'diff_overlay', x=x, y=y, fade=outer_fade_override)
 
     def _draw_open(self, x: float, y: float, fade_override: Optional[float], is_ura: bool):
         pass
 
-    def draw(self, x: float, y: float, is_ura: bool, fade_override: Optional[float] = None):
+    def draw(self, x: float, y: float, is_ura: bool, inner_fade_override: Optional[float] = None, outer_fade_override: float = 1.0):
         if self.is_open and get_current_ms() >= self.wait + 83.33:
-            self._draw_open(x, y, fade_override, is_ura)
+            self._draw_open(x, y, inner_fade_override, is_ura)
         else:
-            self._draw_closed(x, y)
+            self._draw_closed(x, y, outer_fade_override)
 
 class BackBox(BaseBox):
     def __init__(self, name: str, texture_index: int):
@@ -122,9 +137,9 @@ class BackBox(BaseBox):
             self.yellow_box.create_anim()
             self.wait = current_time
 
-    def _draw_closed(self, x: float, y: float):
-        super()._draw_closed(x, y)
-        tex.draw_texture('box', 'back_text', x=x, y=y)
+    def _draw_closed(self, x: float, y: float, outer_fade_override: float):
+        super()._draw_closed(x, y, outer_fade_override)
+        tex.draw_texture('box', 'back_text', x=x, y=y, fade=outer_fade_override)
 
     def _draw_open(self, x: float, y: float, fade_override: Optional[float] = None, is_ura: bool = False):
         if self.yellow_box is not None:
@@ -198,23 +213,23 @@ class SongBox(BaseBox):
         if self.score_history is not None:
             self.score_history.update(current_time)
 
-    def _draw_closed(self, x: float, y: float):
-        super()._draw_closed(x, y)
+    def _draw_closed(self, x: float, y: float, outer_fade_override: float):
+        super()._draw_closed(x, y, outer_fade_override)
 
-        self.name.draw(outline_color=SongBox.OUTLINE_MAP.get(self.name_texture_index, ray.Color(101, 0, 82, 255)), x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+tex.skin_config["song_box_name"].y, y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height)
+        self.name.draw(outline_color=SongBox.OUTLINE_MAP.get(self.name_texture_index, ray.Color(101, 0, 82, 255)), x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+tex.skin_config["song_box_name"].y, y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height, fade=outer_fade_override)
 
         if self.tja.ex_data.new:
-            tex.draw_texture('yellow_box', 'ex_data_new_song_balloon', x=x, y=y)
+            tex.draw_texture('yellow_box', 'ex_data_new_song_balloon', x=x, y=y, fade=outer_fade_override)
         valid_scores = {k: v for k, v in self.scores.items() if v is not None}
         if valid_scores:
             highest_key = max(valid_scores.keys())
             score = self.scores[highest_key]
             if score and score[5] == Crown.DFC:
-                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(Difficulty.URA, highest_key))
+                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(Difficulty.URA, highest_key), fade=outer_fade_override)
             elif score and score[5] == Crown.FC:
-                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(Difficulty.URA, highest_key))
+                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(Difficulty.URA, highest_key), fade=outer_fade_override)
             elif score and score[5] >= Crown.CLEAR:
-                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(Difficulty.URA, highest_key))
+                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(Difficulty.URA, highest_key), fade=outer_fade_override)
 
     def _draw_open(self, x: float, y: float, fade_override=None, is_ura=False):
         if self.yellow_box is not None:
@@ -256,21 +271,21 @@ class FolderBox(BaseBox):
         elif not self.is_open and is_open_prev and self.texture_index != 17 and audio.is_sound_playing(f'genre_voice_{self.texture_index}'):
             audio.stop_sound(f'genre_voice_{self.texture_index}')
 
-    def _draw_closed(self, x: float, y: float):
-        super()._draw_closed(x, y)
+    def _draw_closed(self, x: float, y: float, outer_fade_override: float):
+        super()._draw_closed(x, y, outer_fade_override)
         offset = 1 * tex.screen_scale if self.texture_index == 3 or self.texture_index >= 9 and self.texture_index not in {10,11,12} else 0
-        tex.draw_texture('box', 'folder_clip', frame=self.texture_index, x=x - ((1 * tex.screen_scale) - offset), y=y)
+        tex.draw_texture('box', 'folder_clip', frame=self.texture_index, x=x - ((1 * tex.screen_scale) - offset), y=y, fade=outer_fade_override)
 
-        self.name.draw(outline_color=SongBox.OUTLINE_MAP.get(self.texture_index, ray.Color(101, 0, 82, 255)), x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+tex.skin_config["song_box_name"].y, y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height)
+        self.name.draw(outline_color=SongBox.OUTLINE_MAP.get(self.texture_index, ray.Color(101, 0, 82, 255)), x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+tex.skin_config["song_box_name"].y, y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height, fade=outer_fade_override)
 
         if self.crown: #Folder lamp
             highest_crown = max(self.crown)
             if self.crown[highest_crown] == 'DFC':
-                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(Difficulty.URA, highest_crown))
+                tex.draw_texture('yellow_box', 'crown_dfc', x=x, y=y, frame=min(Difficulty.URA, highest_crown), fade=outer_fade_override)
             elif self.crown[highest_crown] == 'FC':
-                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(Difficulty.URA, highest_crown))
+                tex.draw_texture('yellow_box', 'crown_fc', x=x, y=y, frame=min(Difficulty.URA, highest_crown), fade=outer_fade_override)
             else:
-                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(Difficulty.URA, highest_crown))
+                tex.draw_texture('yellow_box', 'crown_clear', x=x, y=y, frame=min(Difficulty.URA, highest_crown), fade=outer_fade_override)
 
     def _draw_open(self, x: float, y: float, fade_override: Optional[float], is_ura: bool):
         color = ray.WHITE
@@ -594,10 +609,10 @@ class DanBox(BaseBox):
             elif exam.range == 'less':
                 tex.draw_texture('yellow_box', 'exam_less', x=(x_offset*-1.7), y=(i*offset))
 
-    def _draw_closed(self, x: float, y: float):
-        tex.draw_texture('box', 'folder', frame=self.texture_index, x=x)
+    def _draw_closed(self, x: float, y: float, outer_fade_override: float):
+        tex.draw_texture('box', 'folder', frame=self.texture_index, x=x, fade=outer_fade_override)
         if self.name is not None:
-            self.name.draw(outline_color=ray.BLACK, x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+(tex.skin_config["song_box_name"].height//2), y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height)
+            self.name.draw(outline_color=ray.BLACK, x=x + tex.skin_config["song_box_name"].x - int(self.name.texture.width / 2), y=y+(tex.skin_config["song_box_name"].height//2), y2=min(self.name.texture.height, tex.skin_config["song_box_name"].height)-self.name.texture.height, fade=outer_fade_override)
 
     def _draw_open(self, x: float, y: float, fade_override: Optional[float], is_ura: bool):
         if fade_override is not None:
@@ -643,15 +658,25 @@ class GenreBG:
         self.start_box = start_box
         self.end_box = end_box
         self.start_position = start_box.position
-        self.end_position = end_box.position
+        self.end_position_final = end_box.position
         self.title = title
-        self.fade_in = Animation.create_fade(116, initial_opacity=0.0, final_opacity=1.0, ease_in='quadratic', delay=50)
+        self.fade_in = Animation.create_fade(133, initial_opacity=0.0, final_opacity=1.0, ease_in='quadratic', delay=50)
         self.fade_in.start()
+        self.move = Animation.create_move(316, delay=self.fade_in.duration/2, total_distance=abs(self.end_position_final - self.start_position), ease_in='quadratic')
+        self.move.start()
+        self.box_fade_in = Animation.create_fade(66.67*2, delay=self.move.duration, initial_opacity=0.0, final_opacity=1.0)
+        self.box_fade_in.start()
+        self.end_position = self.start_position + self.move.attribute
         self.diff_num = diff_sort
     def update(self, current_ms):
         self.start_position = self.start_box.position
-        self.end_position = self.end_box.position
+        #self.end_position_final = self.end_box.position
+        self.end_position = self.start_position + self.move.attribute
+        if self.move.is_finished:
+            self.end_position = self.end_box.position
+        self.box_fade_in.update(current_ms)
         self.fade_in.update(current_ms)
+        self.move.update(current_ms)
     def draw(self, y):
         offset = (tex.skin_config["genre_bg_offset"].x * -1) if self.start_box.is_open else 0
 
@@ -1496,6 +1521,18 @@ class FileNavigator:
             else:
                 item.box.target_position = position
 
+    def draw_boxes(self, move_away_attribute: float, is_ura: bool, diff_fade_out_attribute: float):
+        for item in self.items:
+            box = item.box
+            fade = 1.0
+            if self.genre_bg and self.genre_bg.start_position <= box.position <= self.genre_bg.end_position_final:
+                fade = self.genre_bg.box_fade_in.attribute
+            if (-156 * tex.screen_scale) <= box.position <= (tex.screen_width + 144) * tex.screen_scale:
+                if box.position <= (500 * tex.screen_scale):
+                    box.draw(box.position - int(move_away_attribute), tex.skin_config["boxes"].y, is_ura, inner_fade_override=diff_fade_out_attribute, outer_fade_override=fade)
+                else:
+                    box.draw(box.position + int(move_away_attribute), tex.skin_config["boxes"].y, is_ura, inner_fade_override=diff_fade_out_attribute, outer_fade_override=fade)
+
     def mark_crowns_dirty_for_song(self, song_file: SongFile):
         """Mark directories as needing crown recalculation when a song's score changes"""
         song_path = song_file.path
@@ -1510,6 +1547,8 @@ class FileNavigator:
     def navigate_left(self):
         """Move selection left with wrap-around"""
         if self.items:
+            if self.items[0].box.move is not None and not self.items[0].box.move.is_finished:
+                return
             self.selected_index = (self.selected_index - 1) % len(self.items)
             self.calculate_box_positions()
             logger.info(f"Moved Left to {self.items[self.selected_index].path}")
@@ -1517,6 +1556,8 @@ class FileNavigator:
     def navigate_right(self):
         """Move selection right with wrap-around"""
         if self.items:
+            if self.items[0].box.move is not None and not self.items[0].box.move.is_finished:
+                return
             self.selected_index = (self.selected_index + 1) % len(self.items)
             self.calculate_box_positions()
             logger.info(f"Moved Right to {self.items[self.selected_index].path}")
