@@ -1233,7 +1233,7 @@ class FileNavigator:
                             sibling_key = str(sibling_path)
                             if sibling_key in self.directory_contents:
                                 for item in self.directory_contents[sibling_key]:
-                                    if not isinstance(item, Directory) and hasattr(item, 'tja'):
+                                    if not isinstance(item, Directory) and isinstance(item, SongFile):
                                         temp_items.append(item)
                     content_items = random.sample(temp_items, min(10, len(temp_items)))
 
