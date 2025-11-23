@@ -94,8 +94,8 @@ jobs:
           --noinclude-setuptools-mode=nofollow \
           --noinclude-IPython-mode=nofollow \
           --assume-yes-for-downloads \
-          --windows-icon-from-ico=libs/icon.png \
-          --macos-app-icon=libs/icon.png \
+          --windows-icon-from-ico=libs/icon.ico \
+          --macos-app-icon=libs/icon.icns \
           --linux-icon=libs/icon.png \
           PyTaiko.py
 
