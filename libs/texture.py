@@ -154,7 +154,7 @@ class TextureWrapper:
                     tex_mapping_data: dict[str, dict] = json.loads(json_file.read().decode('utf-8'))
                     self.textures[zip.stem] = dict()
 
-                encoding = 'utf-8'
+                encoding = sys.getfilesystemencoding()
                 for tex_name in tex_mapping_data:
                     if f"{tex_name}/" in zip_ref.namelist():
                         tex_mapping = tex_mapping_data[tex_name]
