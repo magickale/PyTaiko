@@ -151,14 +151,10 @@ class TextureWrapper:
                     raise Exception(f"texture.json file missing from {zip}")
 
                 with zip_ref.open('texture.json') as json_file:
-                    tex_mapping_data = json.loads(json_file.read().decode('utf-8'))
+                    tex_mapping_data: dict[str, dict] = json.loads(json_file.read().decode('utf-8'))
                     self.textures[zip.stem] = dict()
 
-                if sys.platform == 'win32':
-                    encoding = 'utf-16'
-                else:
-                    encoding = 'utf-8'
-
+                encoding = 'utf-8'
                 for tex_name in tex_mapping_data:
                     if f"{tex_name}/" in zip_ref.namelist():
                         tex_mapping = tex_mapping_data[tex_name]
