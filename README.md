@@ -77,37 +77,6 @@ Download the latest release for your operating system from the [releases page](h
 - Try running the compiled `PyTaiko.bin` binary
 - If that doesn't work, fall back to running with Python (see [Building from Source](#building-from-source))
 
-#### NixOS
-
-Use the provided `shell.nix` environment:
-```nix
-{ pkgs ? import <nixpkgs> {} }:
-(pkgs.buildFHSEnv {
-  name = "PyTaiko-env";
-  targetPkgs = pkgs: (with pkgs; [
-    python3Full
-    gcc
-    libGL
-    uv
-    patchelf
-    portaudio
-    zlib
-    python312Packages.pyaudio
-    python312Packages.nuitka
-    python312Packages.numpy
-    alsa-lib
-    xorg.libX11 xorg.libxcb xorg.libXcomposite
-    xorg.libXdamage xorg.libXext xorg.libXfixes
-    xorg.libXrender xorg.libxshmfence xorg.libXtst
-    xorg.libXi
-    xorg.xcbutilkeysyms
-  ]);
-  runScript = "bash";
-}).env
-```
-
-Then run with Python as described in the Building from Source section.
-
 ## Building from Source
 
 ### Prerequisites
