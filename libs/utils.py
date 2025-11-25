@@ -203,6 +203,17 @@ class OutlinedText:
         return n.hexdigest()
 
     def _load_font_for_text(self, text: str) -> ray.Font:
+        reload_font = False
+        for character in text:
+            if character not in global_data.font_codepoints:
+                global_data.font_codepoints.add(character)
+                reload_font = True
+        if reload_font:
+            codepoint_count = ray.ffi.new('int *', 0)
+            codepoints = ray.load_codepoints(''.join(global_data.font_codepoints), codepoint_count)
+            global_data.font = ray.load_font_ex(str(Path('Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, len(global_data.font_codepoints))
+            logger.info(f"Reloaded font with {len(global_data.font_codepoints)} codepoints")
+        return global_data.font
         codepoint_count = ray.ffi.new('int *', 0)
         unique_codepoints = set(text)
         codepoints = ray.load_codepoints(''.join(unique_codepoints), codepoint_count)

@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import threading
 
 import pyray as ray
@@ -43,6 +44,22 @@ class LoadScreen(Screen):
         self.songs_loaded = True
         logger.info("Song hashes loaded")
 
+    def _load_font(self):
+        for hash in global_data.song_hashes:
+            song_entry = global_data.song_hashes[hash]
+            for song in song_entry:
+                titles = song.get('title', dict())
+                subtitles = song.get('subtitle', dict())
+                for title in titles.values():
+                    for character in title:
+                        global_data.font_codepoints.add(character)
+                for subtitle in subtitles.values():
+                    for character in subtitle:
+                        global_data.font_codepoints.add(character)
+        codepoint_count = ray.ffi.new('int *', 0)
+        codepoints = ray.load_codepoints(''.join(global_data.font_codepoints), codepoint_count)
+        global_data.font = ray.load_font_ex(str(Path('Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, len(global_data.font_codepoints))
+
     def _load_navigator(self):
         """Background thread function to load navigator"""
         self.navigator.initialize(global_data.config["paths"]["tja_path"])
@@ -70,6 +87,7 @@ class LoadScreen(Screen):
         super().update()
 
         if self.songs_loaded and not self.navigator_started:
+            self._load_font()
             self.navigator_thread = threading.Thread(target=self._load_navigator)
             self.navigator_thread.daemon = True
             self.navigator_thread.start()
