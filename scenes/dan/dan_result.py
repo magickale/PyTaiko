@@ -171,8 +171,8 @@ class DanResultScreen(Screen):
             tex.draw_texture('exam_info', exam_data.bar_texture, x2=tex.skin_config["dan_exam_info"].width *exam_data.progress*scale, y=y_offset, fade=fade, scale=scale)
             # Draw exam type and red value counter
             red_counter = str(exam.red)
-            self._draw_counter(red_counter, margin=tex.skin_config["dan_exam_info"].x*scale, texture='value_counter', index=0, y=y_offset, fade=fade, scale=scale)
-            tex.draw_texture('exam_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*20*scale, fade=fade, scale=scale)
+            self._draw_counter(red_counter, margin=tex.skin_config["dan_exam_info"].x*scale, texture='value_counter', index=0, y=y_offset, fade=fade, scale=scale, exam_type=exam.type)
+            tex.draw_texture('exam_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*(20 * tex.screen_scale), fade=fade, scale=scale)
             # Draw range indicator
             if exam.range == 'less':
                 tex.draw_texture('exam_info', 'exam_less', y=y_offset, fade=fade, scale=scale)
@@ -183,17 +183,21 @@ class DanResultScreen(Screen):
             value_counter = str(exam_data.counter_value)
             self._draw_counter(value_counter, margin=tex.skin_config["dan_exam_info"].x*scale, texture='value_counter', index=1, y=y_offset, fade=fade, scale=scale)
             if exam.type == 'gauge':
+                tex.draw_texture('exam_info', 'exam_percent', y=y_offset, index=0, fade=fade, scale=scale)
                 tex.draw_texture('exam_info', 'exam_percent', y=y_offset, index=1, fade=fade, scale=scale)
             if exam_data.failed:
                 tex.draw_texture('exam_info', 'exam_bg', fade=min(fade, 0.5), y=y_offset, scale=scale)
                 tex.draw_texture('exam_info', 'exam_failed', y=y_offset, fade=fade, scale=scale)
 
-    def _draw_counter(self, counter, margin, texture, index=None, y: float = 0.0, fade=0.0, scale=1.0):
+    def _draw_counter(self, counter, margin, texture, index=None, y: float = 0.0, fade=0.0, scale=1.0, exam_type=None):
         """Helper to draw digit counters"""
         for j in range(len(counter)):
             kwargs = {'frame': int(counter[j]), 'x': -(len(counter) - j) * margin, 'y': y, 'fade': fade, 'scale': scale}
             if index is not None:
                 kwargs['index'] = index
+            if exam_type == 'gauge':
+                # Add space for percentage
+                kwargs['x'] = kwargs['x'] - margin
             tex.draw_texture('exam_info', texture, **kwargs)
 
     def draw(self):

@@ -149,6 +149,7 @@ class DanGameScreen(GameScreen):
             'judgeperfect': self.player_1.good_count,
             'judgegood': self.player_1.ok_count + self.player_1.bad_count,
             'judgebad': self.player_1.bad_count,
+            'hit': self.player_1.good_count + self.player_1.ok_count + self.player_1.total_drumroll,
             'score': self.player_1.score,
             'combo': self.player_1.max_combo
         }
@@ -156,7 +157,7 @@ class DanGameScreen(GameScreen):
 
     @override
     def global_keys(self):
-        if ray.is_key_pressed(ray.KeyboardKey.KEY_F1):
+        if ray.is_key_pressed(global_data.config["keys"]["restart_key"]):
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
                 audio.seek_music_stream(self.song_music, 0)
@@ -164,7 +165,7 @@ class DanGameScreen(GameScreen):
             audio.play_sound('restart', 'sound')
             self.init_dan()
 
-        if ray.is_key_pressed(ray.KeyboardKey.KEY_ESCAPE):
+        if ray.is_key_pressed(global_data.config["keys"]["back_key"]):
             if self.song_music is not None:
                 audio.stop_music_stream(self.song_music)
             return self.on_screen_end('DAN_SELECT')
@@ -296,7 +297,7 @@ class DanGameScreen(GameScreen):
 
             # Draw exam type and red value counter
             red_counter = str(exam_info['red_value'])
-            self._draw_counter(red_counter, margin=tex.skin_config["dan_score_box_margin"].x, texture='value_counter', index=0, y=y_offset)
+            self._draw_counter(red_counter, margin=tex.skin_config["dan_score_box_margin"].x, texture='value_counter', index=0, y=y_offset, exam_type=exam.type)
             tex.draw_texture('dan_info', f'exam_{exam.type}', y=y_offset, x=-len(red_counter)*(20 * tex.screen_scale))
 
             # Draw range indicator
@@ -311,6 +312,7 @@ class DanGameScreen(GameScreen):
             self._draw_counter(value_counter, margin=tex.skin_config["dan_score_box_margin"].x, texture='value_counter', index=1, y=y_offset)
 
             if exam.type == 'gauge':
+                tex.draw_texture('dan_info', 'exam_percent', y=y_offset, index=0)
                 tex.draw_texture('dan_info', 'exam_percent', y=y_offset, index=1)
 
             if self.exam_failed[i]:
@@ -323,12 +325,15 @@ class DanGameScreen(GameScreen):
             self.hori_name.draw(outline_color=ray.BLACK, x=tex.skin_config["dan_game_hori_name"].x - (self.hori_name.texture.width//2),
                                y=tex.skin_config["dan_game_hori_name"].y, x2=min(self.hori_name.texture.width, tex.skin_config["dan_game_hori_name"].width)-self.hori_name.texture.width)
 
-    def _draw_counter(self, counter: str, margin: float, texture: str, index: Optional[int] = None, y: float = 0):
+    def _draw_counter(self, counter: str, margin: float, texture: str, index: Optional[int] = None, y: float = 0, exam_type: Optional[str] = None):
         """Helper to draw digit counters"""
         for j in range(len(counter)):
             kwargs = {'frame': int(counter[j]), 'x': -(len(counter) - j) * margin, 'y': y}
             if index is not None:
                 kwargs['index'] = index
+            if exam_type == 'gauge':
+                # Add space for percentage
+                kwargs['x'] = kwargs['x'] - margin
             tex.draw_texture('dan_info', texture, **kwargs)
 
     @override

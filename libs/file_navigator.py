@@ -1356,8 +1356,8 @@ class FileNavigator:
             for song_list_path in song_list_files:
                 with open(song_list_path, 'r', encoding='utf-8-sig') as song_list_file:
                     tja_count += len([line for line in song_list_file.readlines() if line.strip()])
-        # Fallback: Use recursive counting of .tja files
-        tja_count += sum(1 for _ in folder_path.rglob("*.tja"))
+        # Fallback: Use recursive counting of .tja or dan.json files
+        tja_count += sum(1 for _ in list(folder_path.rglob("*.tja")) + list(folder_path.rglob("dan.json")))
 
         return tja_count
 
