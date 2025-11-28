@@ -481,16 +481,16 @@ class Player:
     def get_position_x(self, width: int, current_ms: float, load_ms: float, pixels_per_frame: float) -> int:
         """Calculates the x-coordinate of a note based on its load time and current time"""
         # Override if delay active
-        if self.delay_end:
-            current_ms = self.delay_end
+        if self.delay_start:
+            current_ms = self.delay_start
         time_diff = load_ms - current_ms
         return int(width + pixels_per_frame * 0.06 * time_diff - (tex.textures["notes"]["1"].width//2)) - self.visual_offset
 
     def get_position_y(self, current_ms: float, load_ms: float, pixels_per_frame: float, pixels_per_frame_x) -> int:
         """Calculates the y-coordinate of a note based on its load time and current time"""
         # Override if delay active
-        if self.delay_end:
-            current_ms = self.delay_end
+        if self.delay_start:
+            current_ms = self.delay_start
         time_diff = load_ms - current_ms
         return int((pixels_per_frame * 0.06 * time_diff) + ((self.tja.distance * pixels_per_frame) / pixels_per_frame_x))
 
@@ -1001,17 +1001,21 @@ class Player:
                     note.pixels_per_frame_y *= bpmchange.bpmchange
                 self.bpm *= bpmchange.bpmchange
                 self.bpmchanges.popleft()
+        if self.delay_start is not None and self.delay_end is not None:
+            # Currently, a delay is active: notes should be frozen at ms = delay_start
+            # Check if it ended
+            if ms_from_start >= self.delay_end:
+                delay = self.delay_end - self.delay_start
+                for note in chain(self.play_notes, self.current_bars, self.draw_bar_list):
+                    note.load_ms += delay
+                self.delay_start = None
+                self.delay_end = None
         if len(self.delays) != 0:
-            if self.delay_start is not None and self.delay_end is not None:
-                # Currently, a delay is active: notes should be frozen at ms = delay_start
-                # Check if it ended
-                if ms_from_start >= self.delay_end:
-                    self.delay_start = None
-                    self.delay_end = None
-            # else:
             delay = self.delays[0]
             delay_success = delay.is_ready(ms_from_start)
             if delay_success:
+                if self.delay_start is not None and self.delay_end is not None:
+                    logger.error('Needs fix: delay is currently active, but another delay is being activated')
                 # Turn on delay visual
                 self.delay_start = delay.hit_ms
                 self.delay_end = delay.hit_ms + delay.delay
@@ -1020,7 +1024,7 @@ class Player:
                     # time_diff must be the same throughout the delay
                     # time_diff = note.load_ms - delay.hit_ms
                     note.hit_ms += delay.delay
-                    note.load_ms += delay.delay
+                    # note.load_ms += delay.delay
                 self.delays.popleft()
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.update(current_time)

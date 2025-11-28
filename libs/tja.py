@@ -684,7 +684,30 @@ class TJAParser:
         section_bar = None
         lyric = ""
         scroll_type = ScrollType.NMSCROLL
+
+        # Only used during BMSCROLL or HBSCROLL
         bpmchange_last_bpm = bpm
+        delay_current = 0
+        def add_delay_bar(hit_ms: float, delay: float):
+            delay_bar = Note()
+            delay_bar.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
+            delay_bar.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
+            pixels_per_ms = get_pixels_per_ms(delay_bar.pixels_per_frame_x)
+
+            delay_bar.hit_ms = hit_ms
+            if pixels_per_ms == 0:
+                delay_bar.load_ms = delay_bar.hit_ms
+            else:
+                delay_bar.load_ms = delay_bar.hit_ms - (self.distance / pixels_per_ms)
+            delay_bar.type = 0
+            delay_bar.display = False
+            delay_bar.gogo_time = gogo_time
+            delay_bar.bpm = bpm
+
+            delay_bar.delay = delay
+
+            bisect.insort(curr_bar_list, delay_bar, key=lambda x: x.load_ms)
+
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
@@ -925,29 +948,14 @@ class TJAParser:
                 elif part.startswith("#DELAY"):
                     delay_ms = float(part[6:]) * 1000
                     if scroll_type == ScrollType.BMSCROLL or scroll_type == ScrollType.HBSCROLL:
-                        if delay_ms < 0:
-                            # No changes if negative
+                        if delay_ms <= 0:
+                            # No changes if not positive
                             pass
                         else:
                             # Do not modify current_ms, it will be modified live
-                            delay_bar = Note()
-                            delay_bar.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
-                            delay_bar.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
-                            pixels_per_ms = get_pixels_per_ms(delay_bar.pixels_per_frame_x)
+                            delay_current += delay_ms
 
-                            delay_bar.hit_ms = self.current_ms
-                            if pixels_per_ms == 0:
-                                delay_bar.load_ms = delay_bar.hit_ms
-                            else:
-                                delay_bar.load_ms = delay_bar.hit_ms - (self.distance / pixels_per_ms)
-                            delay_bar.type = 0
-                            delay_bar.display = False
-                            delay_bar.gogo_time = gogo_time
-                            delay_bar.bpm = bpm
-
-                            delay_bar.delay = delay_ms
-
-                            bisect.insort(curr_bar_list, delay_bar, key=lambda x: x.load_ms)
+                            # Delays will be combined between notes, and attached to previous note
                     else:
                         self.current_ms += delay_ms
                     continue
@@ -1022,6 +1030,12 @@ class TJAParser:
                     if item == '9' and curr_note_list and curr_note_list[-1].type == 9:
                         self.current_ms += increment
                         continue
+
+                    if delay_current != 0:
+                        logger.debug(delay_current)
+                        add_delay_bar(self.current_ms, delay_current)
+                        delay_current = 0
+
                     note = Note()
                     note.hit_ms = self.current_ms
                     note.display = True
