@@ -39,6 +39,11 @@ class NoteType(IntEnum):
     TAIL = 8
     KUSUDAMA = 9
 
+class ScrollType(IntEnum):
+    NMSCROLL = 0
+    BMSCROLL = 1
+    HBSCROLL = 2
+
 @dataclass()
 class Note:
     """A note in a TJA file.
@@ -56,6 +61,7 @@ class Note:
         moji (int): The text drawn below the note.
         is_branch_start (bool): Whether the note is the start of a branch.
         branch_params (str): The parameters (requirements) of the branch.
+        bpmchange (float): If it exists, the bpm will be multiplied by it when the note passes the judgement circle
     """
     type: int = field(init=False)
     hit_ms: float = field(init=False)
@@ -74,6 +80,7 @@ class Note:
     sudden_moving_ms: float = field(init=False)
     judge_pos_x: float = field(init=False)
     judge_pos_y: float = field(init=False)
+    bpmchange: float = field(init=False)
 
     def __lt__(self, other):
         return self.hit_ms < other.hit_ms
@@ -509,6 +516,7 @@ class TJAParser:
         # Use enumerate for single iteration
         note_start = note_end = -1
         target_found = False
+        scroll_type = ScrollType.NMSCROLL
 
         # Find the section boundaries
         for i, line in enumerate(self.data):
@@ -521,6 +529,15 @@ class TJAParser:
                 elif line == "#END" and note_start != -1:
                     note_end = i
                     break
+                elif '#NMSCROLL' in line:
+                    scroll_type = ScrollType.NMSCROLL
+                    continue
+                elif '#BMSCROLL' in line:
+                    scroll_type = ScrollType.BMSCROLL
+                    continue
+                elif '#HBSCROLL' in line:
+                    scroll_type = ScrollType.HBSCROLL
+                    continue
 
         if note_start == -1 or note_end == -1:
             return []
@@ -529,6 +546,14 @@ class TJAParser:
         notes = []
         bar = []
         section_data = self.data[note_start:note_end]
+
+        # Prepend scroll type
+        if scroll_type == ScrollType.NMSCROLL:
+            bar.append('#NMSCROLL')
+        elif scroll_type == ScrollType.BMSCROLL:
+            bar.append('#BMSCROLL')
+        elif scroll_type == ScrollType.HBSCROLL:
+            bar.append('#HBSCROLL')
 
         for line in section_data:
             if line.startswith("#"):
@@ -656,6 +681,8 @@ class TJAParser:
         is_section_start = False
         section_bar = None
         lyric = ""
+        scroll_type = ScrollType.NMSCROLL
+        bpmchange_last_bpm = bpm
         for bar in notes:
             #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
@@ -828,25 +855,60 @@ class TJAParser:
 
                     continue
                 elif '#NMSCROLL' in part:
+                    scroll_type = ScrollType.NMSCROLL
+                    continue
+                elif '#BMSCROLL' in part:
+                    scroll_type = ScrollType.BMSCROLL
+                    continue
+                elif '#HBSCROLL' in part:
+                    scroll_type = ScrollType.HBSCROLL
                     continue
                 elif '#MEASURE' in part:
                     divisor = part.find('/')
                     time_signature = float(part[9:divisor]) / float(part[divisor+1:])
                     continue
                 elif '#SCROLL' in part:
-                    scroll_value = part[7:]
-                    if 'i' in scroll_value:
-                        normalized = scroll_value.replace('.i', 'j').replace('i', 'j')
-                        normalized = normalized.replace(',', '')
-                        c = complex(normalized)
-                        x_scroll_modifier = c.real
-                        y_scroll_modifier = c.imag
-                    else:
-                        x_scroll_modifier = float(scroll_value)
-                        y_scroll_modifier = 0.0
+                    if scroll_type != ScrollType.BMSCROLL:
+                        scroll_value = part[7:]
+                        if 'i' in scroll_value:
+                            normalized = scroll_value.replace('.i', 'j').replace('i', 'j')
+                            normalized = normalized.replace(',', '')
+                            c = complex(normalized)
+                            x_scroll_modifier = c.real
+                            y_scroll_modifier = c.imag
+                        else:
+                            x_scroll_modifier = float(scroll_value)
+                            y_scroll_modifier = 0.0
                     continue
                 elif '#BPMCHANGE' in part:
-                    bpm = float(part[11:])
+                    parsed_bpm = float(part[11:])
+                    if scroll_type == ScrollType.BMSCROLL or scroll_type == ScrollType.HBSCROLL:
+                        # Do not modify bpm, it needs to be changed live by bpmchange
+                        bpmchange = parsed_bpm / bpmchange_last_bpm
+                        bpmchange_last_bpm = parsed_bpm
+                        
+                        bpmchange_bar = Note()
+                        bpmchange_bar.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
+                        bpmchange_bar.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
+                        pixels_per_ms = get_pixels_per_ms(bpmchange_bar.pixels_per_frame_x)
+
+                        bpmchange_bar.hit_ms = self.current_ms
+                        if pixels_per_ms == 0:
+                            bpmchange_bar.load_ms = bpmchange_bar.hit_ms
+                        else:
+                            bpmchange_bar.load_ms = bpmchange_bar.hit_ms - (self.distance / pixels_per_ms)
+                        bpmchange_bar.type = 0
+                        bpmchange_bar.display = False
+                        bpmchange_bar.gogo_time = gogo_time
+                        bpmchange_bar.bpm = bpm
+
+                        bpmchange_bar.bpmchange = bpmchange
+
+                        bisect.insort(curr_bar_list, bpmchange_bar, key=lambda x: x.load_ms)
+
+                        bpmchange = None
+                    else:
+                        bpm = parsed_bpm
                     continue
                 elif '#BARLINEOFF' in part:
                     barline_display = False

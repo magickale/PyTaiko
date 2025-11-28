@@ -6,6 +6,7 @@ import sqlite3
 from collections import deque
 from pathlib import Path
 from typing import Optional
+from itertools import chain
 
 import pyray as ray
 
@@ -360,6 +361,7 @@ class Player:
         self.combo_display = Combo(self.combo, 0, self.is_2p)
         self.score_counter = ScoreCounter(self.score, self.is_2p)
         self.gogo_time: Optional[GogoTime] = None
+        self.bpmchanges: deque[BPMChange]
         self.combo_announce = ComboAnnounce(self.combo, 0, player_num, self.is_2p)
         self.branch_indicator = BranchIndicator(self.is_2p) if tja and tja.metadata.course_data[self.difficulty].is_branching else None
         self.ending_anim: Optional[FailAnimation | ClearAnimation | FCAnimation] = None
@@ -403,6 +405,12 @@ class Player:
         self.kat_notes = deque([note for note in self.play_notes if note.type in {NoteType.KAT, NoteType.KAT_L}])
         self.other_notes = deque([note for note in self.play_notes if note.type not in {NoteType.DON, NoteType.DON_L, NoteType.KAT, NoteType.KAT_L}])
         self.total_notes = len([note for note in self.play_notes if 0 < note.type < 5])
+
+        self.bpmchanges = deque()
+        for note in self.draw_bar_list:
+            if hasattr(note, 'bpmchange'):
+                self.bpmchanges.append(BPMChange(note.hit_ms, note.bpmchange))
+
         total_notes = notes
         if self.branch_m:
             for section in self.branch_m:
@@ -943,6 +951,28 @@ class Player:
         self.balloon_manager(current_time)
         if self.gogo_time is not None:
             self.gogo_time.update(current_time)
+        if len(self.bpmchanges) != 0:
+            bpmchange = self.bpmchanges[0]
+            bpmchange_success = bpmchange.is_ready(ms_from_start)
+            if bpmchange_success:
+                # Adjust notes
+                for note in chain(self.play_notes, self.current_bars, self.draw_bar_list):
+                    note.bpm *= bpmchange.bpmchange
+                    note.hit_ms = (note.hit_ms - bpmchange.hit_ms) / bpmchange.bpmchange + bpmchange.hit_ms
+                    # time_diff * note.pixels_per_frame need to be the same before and after the adjustment
+                    # that means time_diff should be divided by self.bpmchange.bpmchange
+                    # current_ms = self.bpmchange.hit_ms
+                    time_diff = note.load_ms - bpmchange.hit_ms
+                    note.load_ms = time_diff / bpmchange.bpmchange + bpmchange.hit_ms
+
+                    note.pixels_per_frame_x *= bpmchange.bpmchange
+                    note.pixels_per_frame_y *= bpmchange.bpmchange
+
+                self.bpm *= bpmchange.bpmchange
+                self.bpmchanges.popleft()
+                # Adjust later bpmchanges too
+                for bpmchange_bar in self.bpmchanges:
+                    bpmchange_bar.hit_ms = (bpmchange_bar.hit_ms - bpmchange.hit_ms) / bpmchange.bpmchange + bpmchange.hit_ms
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.update(current_time)
         self.animation_manager(self.draw_drum_hit_list, current_time)
@@ -1931,6 +1961,14 @@ class GogoTime:
         if not self.explosion_anim.is_finished and not self.is_2p:
             for i in range(5):
                 tex.draw_texture('gogo_time', 'explosion', frame=self.explosion_anim.attribute, index=i)
+
+class BPMChange:
+    """For BPM changes during HBSCROLL or BMSCROLL"""
+    def __init__(self, hit_ms: float, bpmchange: float):
+        self.hit_ms = hit_ms
+        self.bpmchange = bpmchange
+    def is_ready(self, ms_from_start: float):
+        return ms_from_start >= self.hit_ms
 
 class ComboAnnounce:
     """Displays the combo every 100 combos"""
