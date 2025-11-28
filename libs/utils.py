@@ -214,11 +214,6 @@ class OutlinedText:
             global_data.font = ray.load_font_ex(str(Path('Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, len(global_data.font_codepoints))
             logger.info(f"Reloaded font with {len(global_data.font_codepoints)} codepoints")
         return global_data.font
-        codepoint_count = ray.ffi.new('int *', 0)
-        unique_codepoints = set(text)
-        codepoints = ray.load_codepoints(''.join(unique_codepoints), codepoint_count)
-        font = ray.load_font_ex(str(Path('Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, 0)
-        return font
 
     def _create_text_vertical(self, text: str, font_size: int, color: ray.Color, bg_color: ray.Color, font: Optional[ray.Font]=None, padding: int=10):
         rotate_chars = {'-', '‐', '|', '/', '\\', 'ー', '～', '~', '（', '）', '(', ')',

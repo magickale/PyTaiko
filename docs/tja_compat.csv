@@ -24,6 +24,8 @@ SCENEPRESET,Supported,OpenTaiko (0auBSQ) v0.6.0
 #LYRIC,Supported,TJAPlayer2 for.PC
 #SUDDEN,Supported,TJAPlayer2 for.PC
 #JPOSSCROLL,Supported,TJAPlayer2 for.PC
+#OBJ / #CAM,Supported,TJAPlayer3-Extended
+#BORDERCOLOR,Supported,TJAPlayer3-Extended
 
 SONGVOL,Unsupported,TaikoJiro v1.66
 SEVOL,Unsupported,TaikoJiro v1.66
@@ -67,8 +69,6 @@ BGOFFSET,Unsupported,Unknown
 #NEXTSONG,Unsupported,TJAPlayer3 v1.5.0
 #PAPAMAMA,Unsupported,TJAPlayer3-f v1.7.2.0
 #ENABLEDORON / #DISABLEDORON,Unsupported,TJAPlayer3-Extended
-#OBJ / #CAM,Unsupported,TJAPlayer3-Extended
-#BORDERCOLOR,Unsupported,TJAPlayer3-Extended
 #CHANGETEXTURE / #RESETTEXTURE,Unsupported,TJAPlayer3-Extended
 #SETCONFIG,Unsupported,TJAPlayer3-Extended
 #BARLINE,Unsupported,taiko-web (plugin Custom Barlines)

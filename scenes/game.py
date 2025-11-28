@@ -411,6 +411,8 @@ class Player:
         self.base_score = calculate_base_score(total_notes)
 
         #Note management
+        self.timeline = notes.timeline
+        self.timeline_index = 0
         self.current_bars: list[Note] = []
         self.current_notes_draw: list[Note | Drumroll | Balloon] = []
         self.is_drumroll = False
@@ -422,7 +424,9 @@ class Player:
         self.branch_condition_count = 0
         self.branch_condition = ''
         self.balloon_index = 0
-        self.bpm = self.play_notes[0].bpm if self.play_notes else 120
+        self.bpm = 120
+        if self.timeline and hasattr(self.timeline[self.timeline_index], 'bpm'):
+            self.bpm = self.timeline[self.timeline_index].bpm
 
     def merge_branch_section(self, branch_section: NoteList, current_ms: float):
         """Merges the branch notes into the current notes"""
@@ -452,35 +456,80 @@ class Player:
     def get_position_y(self, current_ms: float, load_ms: float, pixels_per_frame: float, pixels_per_frame_x) -> int:
         """Calculates the y-coordinate of a note based on its load time and current time"""
         time_diff = load_ms - current_ms
+        if pixels_per_frame_x == 0:
+            return int(pixels_per_frame * 0.06 * time_diff)
         return int((pixels_per_frame * 0.06 * time_diff) + ((self.tja.distance * pixels_per_frame) / pixels_per_frame_x))
+
+    def handle_tjap3_extended_commands(self, current_ms: float):
+        if not self.timeline:
+            return
+
+        timeline_object = self.timeline[self.timeline_index]
+        should_advance = False
+
+        if hasattr(timeline_object, 'border_color') and timeline_object.hit_ms <= current_ms:
+            global_data.camera.border_color = timeline_object.border_color
+            should_advance = True
+
+        if hasattr(timeline_object, 'cam_h_offset') and timeline_object.hit_ms <= current_ms:
+            orig_offset = global_data.camera.offset
+            global_data.camera.offset = ray.Vector2(timeline_object.cam_h_offset, orig_offset.y)
+            should_advance = True
+
+        if hasattr(timeline_object, 'cam_v_offset') and timeline_object.hit_ms <= current_ms:
+            orig_offset = global_data.camera.offset
+            global_data.camera.offset = ray.Vector2(orig_offset.x, timeline_object.cam_v_offset)
+            should_advance = True
+
+        if hasattr(timeline_object, 'cam_zoom') and timeline_object.hit_ms <= current_ms:
+            global_data.camera.zoom = timeline_object.cam_zoom
+            should_advance = True
+
+        if hasattr(timeline_object, 'cam_h_scale') and timeline_object.hit_ms <= current_ms:
+            global_data.camera.h_scale = timeline_object.cam_h_scale
+            should_advance = True
+
+        if hasattr(timeline_object, 'cam_v_scale') and timeline_object.hit_ms <= current_ms:
+            global_data.camera.v_scale = timeline_object.cam_v_scale
+            should_advance = True
+
+        if hasattr(timeline_object, 'cam_rotation') and timeline_object.hit_ms <= current_ms:
+            global_data.camera.rotation = timeline_object.cam_rotation
+            should_advance = True
+
+        if should_advance and self.timeline_index < len(self.timeline) - 1:
+            self.timeline_index += 1
 
     def get_judge_position(self, current_ms: float):
         """Get the current judgment circle position based on bar data"""
-        judge_x = 0
-        judge_y = 0
+        if not self.timeline:
+            return
+        timeline_object = self.timeline[self.timeline_index]
+        if hasattr(timeline_object, 'judge_pos_x') and timeline_object.hit_ms <= current_ms:
+            self.judge_x = timeline_object.judge_pos_x * tex.screen_scale
+            self.judge_y = timeline_object.judge_pos_y * tex.screen_scale
+            if self.timeline_index < len(self.timeline) - 1:
+                self.timeline_index += 1
 
-        # Find the most recent bar with judge position data
-        for bar in self.current_bars:
-            if hasattr(bar, 'judge_pos_x') and bar.hit_ms <= current_ms:
-                judge_x = bar.judge_pos_x * tex.screen_scale
-                judge_y = bar.judge_pos_y * tex.screen_scale
-            elif bar.hit_ms > current_ms:
-                break
-
-        return judge_x, judge_y
+    def update_bpm(self, current_ms: float):
+        if not self.timeline:
+            return
+        timeline_object = self.timeline[self.timeline_index]
+        if hasattr(timeline_object, 'bpm') and timeline_object.hit_ms <= current_ms:
+            self.bpm = timeline_object.bpm
+            if self.timeline_index < len(self.timeline) - 1:
+                self.timeline_index += 1
 
     def animation_manager(self, animation_list: list, current_time: float):
         if not animation_list:
             return
 
-        # More efficient: use list comprehension to filter out finished animations
         remaining_animations = []
         for animation in animation_list:
             animation.update(current_time)
             if not animation.is_finished:
                 remaining_animations.append(animation)
 
-        # Replace the original list contents
         animation_list[:] = remaining_animations
 
     def bar_manager(self, current_ms: float):
@@ -638,6 +687,7 @@ class Player:
         self.bar_manager(current_ms)
         self.play_note_manager(current_ms, background)
         self.draw_note_manager(current_ms)
+        self.handle_tjap3_extended_commands(current_ms)
 
     def note_correct(self, note: Note, current_time: float):
         """Removes a note from the appropriate separated list"""
@@ -862,14 +912,10 @@ class Player:
 
         # Handle drumroll and balloon hits
         if self.is_drumroll or self.is_balloon:
-            if not self.other_notes:
-                return
-            note = self.other_notes[0]
-            bpm = note.bpm
-            if bpm == 0:
+            if self.bpm == 0:
                 subdivision_in_ms = 0
             else:
-                subdivision_in_ms = ms_from_start // ((60000 * 4 / bpm) / 24)
+                subdivision_in_ms = ms_from_start // ((60000 * 4 / self.bpm) / 24)
             if subdivision_in_ms > self.last_subdivision:
                 self.last_subdivision = subdivision_in_ms
                 hit_type = DrumType.DON
@@ -880,7 +926,6 @@ class Player:
         else:
             # Handle DON notes
             while self.don_notes and ms_from_start >= self.don_notes[0].hit_ms:
-                note = self.don_notes[0]
                 hit_type = DrumType.DON
                 self.autoplay_hit_side = Side.RIGHT if self.autoplay_hit_side == Side.LEFT else Side.LEFT
                 self.spawn_hit_effects(hit_type, self.autoplay_hit_side)
@@ -889,7 +934,6 @@ class Player:
 
             # Handle KAT notes
             while self.kat_notes and ms_from_start >= self.kat_notes[0].hit_ms:
-                note = self.kat_notes[0]
                 hit_type = DrumType.KAT
                 self.autoplay_hit_side = Side.RIGHT if self.autoplay_hit_side == Side.LEFT else Side.LEFT
                 self.spawn_hit_effects(hit_type, self.autoplay_hit_side)
@@ -946,7 +990,9 @@ class Player:
         if self.lane_hit_effect is not None:
             self.lane_hit_effect.update(current_time)
         self.animation_manager(self.draw_drum_hit_list, current_time)
-        self.judge_x, self.judge_y = self.get_judge_position(ms_from_start)
+        self.get_judge_position(ms_from_start)
+        self.handle_tjap3_extended_commands(ms_from_start)
+        self.update_bpm(ms_from_start)
 
         # More efficient arc management
         finished_arcs = []
@@ -990,7 +1036,6 @@ class Player:
             next_note = min(candidates, key=lambda note: note.load_ms)
 
         if next_note:
-            self.bpm = next_note.bpm
             if next_note.gogo_time and not self.is_gogo_time:
                 self.is_gogo_time = True
                 self.gogo_time = GogoTime(self.is_2p)

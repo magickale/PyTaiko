@@ -10,6 +10,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+import pyray as ray
+
 from libs.global_data import Modifiers
 from libs.utils import get_pixels_per_frame, strip_comments, global_tex
 
@@ -40,6 +42,36 @@ class NoteType(IntEnum):
     KUSUDAMA = 9
 
 @dataclass()
+class TimelineObject:
+    hit_ms: float = field(init=False)
+    load_ms: float = field(init=False)
+
+    judge_pos_x: float = field(init=False)
+    judge_pos_y: float = field(init=False)
+    border_color: ray.Color = field(init=False)
+    cam_h_offset: float = field(init=False)
+    cam_v_offset: float = field(init=False)
+    cam_h_scale: float = field(init=False)
+    cam_v_scale: float = field(init=False)
+    cam_zoom: float = field(init=False)
+    cam_rotation: float = field(init=False)
+
+    bpm: float = field(init=False)
+    '''
+    gogo_time: bool = field(init=False)
+    branch_params: str = field(init=False)
+    is_branch_start: bool = False
+    is_section_marker: bool = False
+    sudden_appear_ms: float = 0
+    sudden_moving_ms: float = 0
+    '''
+
+    def __lt__(self, other):
+        """Allow sorting by load_ms"""
+        return self.load_ms < other.load_ms
+
+
+@dataclass()
 class Note:
     """A note in a TJA file.
 
@@ -51,7 +83,6 @@ class Note:
         pixels_per_frame_y (float): The number of pixels per frame in the y direction.
         display (bool): Whether the note should be displayed.
         index (int): The index of the note.
-        bpm (float): The beats per minute of the song.
         gogo_time (bool): Whether the note is a gogo time note.
         moji (int): The text drawn below the note.
         is_branch_start (bool): Whether the note is the start of a branch.
@@ -64,7 +95,6 @@ class Note:
     pixels_per_frame_y: float = field(init=False)
     display: bool = field(init=False)
     index: int = field(init=False)
-    bpm: float = field(init=False)
     gogo_time: bool = field(init=False)
     moji: int = field(init=False)
     is_branch_start: bool = field(init=False)
@@ -72,8 +102,6 @@ class Note:
     lyric: str = field(init=False)
     sudden_appear_ms: float = field(init=False)
     sudden_moving_ms: float = field(init=False)
-    judge_pos_x: float = field(init=False)
-    judge_pos_y: float = field(init=False)
 
     def __lt__(self, other):
         return self.hit_ms < other.hit_ms
@@ -185,18 +213,21 @@ class NoteList:
     play_notes: list[Note | Drumroll | Balloon] = field(default_factory=lambda: [])
     draw_notes: list[Note | Drumroll | Balloon] = field(default_factory=lambda: [])
     bars: list[Note] = field(default_factory=lambda: [])
+    timeline: list[TimelineObject] = field(default_factory=lambda: [])
 
     def __add__(self, other: 'NoteList') -> 'NoteList':
         return NoteList(
             play_notes=self.play_notes + other.play_notes,
             draw_notes=self.draw_notes + other.draw_notes,
-            bars=self.bars + other.bars
+            bars=self.bars + other.bars,
+            timeline=self.timeline + other.timeline
         )
 
     def __iadd__(self, other: 'NoteList') -> 'NoteList':
         self.play_notes += other.play_notes
         self.draw_notes += other.draw_notes
         self.bars += other.bars
+        self.timeline += other.timeline
         return self
 
 @dataclass
@@ -618,6 +649,45 @@ class TJAParser:
                     else:
                         play_note_list[-3].moji = 2
 
+    def apply_easing(self, t, easing_point, easing_function):
+        """Apply easing function to normalized time value t (0 to 1)"""
+        if easing_point == 'IN':
+            pass  # t stays as is
+        elif easing_point == 'OUT':
+            t = 1 - t
+        elif easing_point == 'IN_OUT':
+            if t < 0.5:
+                t = t * 2
+            else:
+                t = (1 - t) * 2
+
+        if easing_function == 'LINEAR':
+            result = t
+        elif easing_function == 'CUBIC':
+            result = t ** 3
+        elif easing_function == 'QUARTIC':
+            result = t ** 4
+        elif easing_function == 'QUINTIC':
+            result = t ** 5
+        elif easing_function == 'SINUSOIDAL':
+            import math
+            result = 1 - math.cos((t * math.pi) / 2)
+        elif easing_function == 'EXPONENTIAL':
+            result = 0 if t == 0 else 2 ** (10 * (t - 1))
+        elif easing_function == 'CIRCULAR':
+            import math
+            result = 1 - math.sqrt(1 - t ** 2)
+        else:
+            result = t
+
+        if easing_point == 'OUT':
+            result = 1 - result
+        elif easing_point == 'IN_OUT':
+            if t >= 0.5:
+                result = 1 - result
+
+        return result
+
     def notes_to_position(self, diff: int):
         """Parse a TJA's notes into a NoteList."""
         master_notes = NoteList()
@@ -630,10 +700,54 @@ class TJAParser:
         index = 0
         sudden_appear = 0
         sudden_moving = 0
-        judge_pos_x = 0  # Offset from default judgment position
+        judge_pos_x = 0
         judge_pos_y = 0
-        judge_target_x = 0  # Target position for interpolation
+        judge_target_x = 0
         judge_target_y = 0
+        border_color = ray.BLACK
+        cam_h_offset = 0
+        cam_v_offset = 0
+        cam_h_move_active = False
+        cam_h_move_start_ms = 0
+        cam_h_move_duration_ms = 0
+        cam_h_move_start_offset = 0
+        cam_h_move_end_offset = 0
+        cam_h_easing_point = None
+        cam_h_easing_function = None
+        cam_v_move_active = False
+        cam_v_move_start_ms = 0
+        cam_v_move_duration_ms = 0
+        cam_v_move_start_offset = 0
+        cam_v_move_end_offset = 0
+        cam_v_easing_point = None
+        cam_v_easing_function = None
+        cam_zoom_move_active = False
+        cam_zoom_move_start_ms = 0
+        cam_zoom_start = 1.0
+        cam_zoom_end = 1.0
+        cam_zoom_easing_point = ""
+        cam_zoom_easing_function = ""
+        cam_h_scale = 1.0
+        cam_h_scale_move_active = False
+        cam_h_scale_move_start_ms = 0
+        cam_h_scale_start = 1.0
+        cam_h_scale_end = 1.0
+        cam_h_scale_easing_point = ""
+        cam_h_scale_easing_function = ""
+        cam_v_scale = 1.0
+        cam_v_scale_move_active = False
+        cam_v_scale_move_start_ms = 0
+        cam_v_scale_start = 1.0
+        cam_v_scale_end = 1.0
+        cam_v_scale_easing_point = ""
+        cam_v_scale_easing_function = ""
+        cam_rotation = 0.0
+        cam_rotation_move_active = False
+        cam_rotation_move_start_ms = 0
+        cam_rotation_start = 0.0
+        cam_rotation_end = 0.0
+        cam_rotation_easing_point = ""
+        cam_rotation_easing_function = ""
         time_signature = 4/4
         bpm = self.metadata.bpm
         x_scroll_modifier = 1
@@ -643,6 +757,11 @@ class TJAParser:
         curr_note_list = master_notes.play_notes
         curr_draw_list = master_notes.draw_notes
         curr_bar_list = master_notes.bars
+        curr_timeline = master_notes.timeline
+        init_bpm = TimelineObject()
+        init_bpm.hit_ms = self.current_ms
+        init_bpm.bpm = bpm
+        curr_timeline.append(init_bpm)
         start_branch_ms = 0
         start_branch_bpm = bpm
         start_branch_time_sig = time_signature
@@ -656,14 +775,269 @@ class TJAParser:
         is_section_start = False
         section_bar = None
         lyric = ""
+
         for bar in notes:
-            #Length of the bar is determined by number of notes excluding commands
             bar_length = sum(len(part) for part in bar if '#' not in part)
             barline_added = False
+
             for part in bar:
+                if part.startswith('#BORDERCOLOR'):
+                    r, g, b = part[13:].split(',')
+                    border_color = ray.Color(int(r), int(g), int(b), 255)
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.border_color = border_color
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+                if part.startswith('#CAMRESET'):
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_h_offset = 0
+                    timeline_obj.cam_v_offset = 0
+                    timeline_obj.cam_zoom = 1
+                    timeline_obj.cam_h_scale = 1
+                    timeline_obj.cam_v_scale = 1
+                    timeline_obj.cam_rotation = 0
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+
+                # Horizontal Offset Commands
+                if part.startswith('#CAMHOFFSET'):
+                    cam_h_offset = float(part[12:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_h_offset = cam_h_offset
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+                if part.startswith('#CAMHMOVESTART'):
+                    parts = part[15:].split(',')
+                    if len(parts) >= 4:
+                        cam_h_move_start_offset = float(parts[0].strip())
+                        cam_h_move_end_offset = float(parts[1].strip())
+                        cam_h_easing_point = parts[2].strip()
+                        cam_h_easing_function = parts[3].strip()
+                        cam_h_move_active = True
+                        cam_h_move_start_ms = self.current_ms
+                        cam_h_offset = cam_h_move_start_offset
+                    continue
+                if part.startswith('#CAMHMOVEEND'):
+                    if cam_h_move_active:
+                        cam_h_move_duration_ms = self.current_ms - cam_h_move_start_ms
+                        interpolation_interval_ms = 8
+                        num_steps = int(cam_h_move_duration_ms / interpolation_interval_ms)
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)
+                            eased_t = self.apply_easing(t, cam_h_easing_point, cam_h_easing_function)
+                            interpolated_ms = cam_h_move_start_ms + (step * interpolation_interval_ms)
+                            interp_offset = cam_h_move_start_offset + (
+                                (cam_h_move_end_offset - cam_h_move_start_offset) * eased_t
+                            )
+                            cam_timeline = TimelineObject()
+                            cam_timeline.hit_ms = interpolated_ms
+                            cam_timeline.cam_h_offset = interp_offset
+                            curr_timeline.append(cam_timeline)
+                        cam_h_offset = cam_h_move_end_offset
+                        cam_h_move_active = False
+                    continue
+
+                # Vertical Offset Commands
+                if part.startswith('#CAMVOFFSET'):
+                    cam_v_offset = float(part[12:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_v_offset = cam_v_offset
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+                if part.startswith('#CAMVMOVESTART'):
+                    parts = part[15:].split(',')
+                    if len(parts) >= 4:
+                        cam_v_move_start_offset = float(parts[0].strip())
+                        cam_v_move_end_offset = float(parts[1].strip())
+                        cam_v_easing_point = parts[2].strip()
+                        cam_v_easing_function = parts[3].strip()
+                        cam_v_move_active = True
+                        cam_v_move_start_ms = self.current_ms
+                        cam_v_offset = cam_v_move_start_offset
+                    continue
+                if part.startswith('#CAMVMOVEEND'):
+                    if cam_v_move_active:
+                        cam_v_move_duration_ms = self.current_ms - cam_v_move_start_ms
+                        interpolation_interval_ms = 8
+                        num_steps = int(cam_v_move_duration_ms / interpolation_interval_ms)
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)
+                            eased_t = self.apply_easing(t, cam_v_easing_point, cam_v_easing_function)
+                            interpolated_ms = cam_v_move_start_ms + (step * interpolation_interval_ms)
+                            interp_offset = cam_v_move_start_offset + (
+                                (cam_v_move_end_offset - cam_v_move_start_offset) * eased_t
+                            )
+                            cam_timeline = TimelineObject()
+                            cam_timeline.hit_ms = interpolated_ms
+                            cam_timeline.cam_v_offset = interp_offset
+                            curr_timeline.append(cam_timeline)
+                        cam_v_offset = cam_v_move_end_offset
+                        cam_v_move_active = False
+                    continue
+
+                # Zoom Commands
+                if part.startswith('#CAMZOOMSTART'):
+                    parts = part[14:].split(',')
+                    if len(parts) >= 4:
+                        cam_zoom_start = float(parts[0].strip())
+                        cam_zoom_end = float(parts[1].strip())
+                        cam_zoom_easing_point = parts[2].strip()
+                        cam_zoom_easing_function = parts[3].strip()
+                        cam_zoom_move_active = True
+                        cam_zoom_move_start_ms = self.current_ms
+                        cam_zoom = cam_zoom_start
+                    continue
+                if part.startswith('#CAMZOOMEND'):
+                    if cam_zoom_move_active:
+                        cam_zoom_move_duration_ms = self.current_ms - cam_zoom_move_start_ms
+                        interpolation_interval_ms = 8
+                        num_steps = int(cam_zoom_move_duration_ms / interpolation_interval_ms)
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)
+                            eased_t = self.apply_easing(t, cam_zoom_easing_point, cam_zoom_easing_function)
+                            interpolated_ms = cam_zoom_move_start_ms + (step * interpolation_interval_ms)
+                            interp_zoom = cam_zoom_start + (
+                                (cam_zoom_end - cam_zoom_start) * eased_t
+                            )
+                            cam_timeline = TimelineObject()
+                            cam_timeline.hit_ms = interpolated_ms
+                            cam_timeline.cam_zoom = interp_zoom
+                            curr_timeline.append(cam_timeline)
+                        cam_zoom = cam_zoom_end
+                        cam_zoom_move_active = False
+                    continue
+                if part.startswith('#CAMZOOM'):
+                    cam_zoom = float(part[9:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_zoom = cam_zoom
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+
+                # Horizontal Scale Commands
+                if part.startswith('#CAMHSCALESTART'):
+                    parts = part[16:].split(',')
+                    if len(parts) >= 4:
+                        cam_h_scale_start = float(parts[0].strip())
+                        cam_h_scale_end = float(parts[1].strip())
+                        cam_h_scale_easing_point = parts[2].strip()
+                        cam_h_scale_easing_function = parts[3].strip()
+                        cam_h_scale_move_active = True
+                        cam_h_scale_move_start_ms = self.current_ms
+                        cam_h_scale = cam_h_scale_start
+                    continue
+                if part.startswith('#CAMHSCALEEND'):
+                    if cam_h_scale_move_active:
+                        cam_h_scale_move_duration_ms = self.current_ms - cam_h_scale_move_start_ms
+                        interpolation_interval_ms = 8
+                        num_steps = int(cam_h_scale_move_duration_ms / interpolation_interval_ms)
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)
+                            eased_t = self.apply_easing(t, cam_h_scale_easing_point, cam_h_scale_easing_function)
+                            interpolated_ms = cam_h_scale_move_start_ms + (step * interpolation_interval_ms)
+                            interp_scale = cam_h_scale_start + (
+                                (cam_h_scale_end - cam_h_scale_start) * eased_t
+                            )
+                            cam_timeline = TimelineObject()
+                            cam_timeline.hit_ms = interpolated_ms
+                            cam_timeline.cam_h_scale = interp_scale
+                            curr_timeline.append(cam_timeline)
+                        cam_h_scale = cam_h_scale_end
+                        cam_h_scale_move_active = False
+                    continue
+                if part.startswith('#CAMHSCALE'):
+                    cam_h_scale = float(part[11:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_h_scale = cam_h_scale
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+
+                # Vertical Scale Commands
+                if part.startswith('#CAMVSCALESTART'):
+                    parts = part[16:].split(',')
+                    if len(parts) >= 4:
+                        cam_v_scale_start = float(parts[0].strip())
+                        cam_v_scale_end = float(parts[1].strip())
+                        cam_v_scale_easing_point = parts[2].strip()
+                        cam_v_scale_easing_function = parts[3].strip()
+                        cam_v_scale_move_active = True
+                        cam_v_scale_move_start_ms = self.current_ms
+                        cam_v_scale = cam_v_scale_start
+                    continue
+                if part.startswith('#CAMVSCALEEND'):
+                    if cam_v_scale_move_active:
+                        cam_v_scale_move_duration_ms = self.current_ms - cam_v_scale_move_start_ms
+                        interpolation_interval_ms = 8
+                        num_steps = int(cam_v_scale_move_duration_ms / interpolation_interval_ms)
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)
+                            eased_t = self.apply_easing(t, cam_v_scale_easing_point, cam_v_scale_easing_function)
+                            interpolated_ms = cam_v_scale_move_start_ms + (step * interpolation_interval_ms)
+                            interp_scale = cam_v_scale_start + (
+                                (cam_v_scale_end - cam_v_scale_start) * eased_t
+                            )
+                            cam_timeline = TimelineObject()
+                            cam_timeline.hit_ms = interpolated_ms
+                            cam_timeline.cam_v_scale = interp_scale
+                            curr_timeline.append(cam_timeline)
+                        cam_v_scale = cam_v_scale_end
+                        cam_v_scale_move_active = False
+                    continue
+                if part.startswith('#CAMVSCALE'):
+                    cam_v_scale = float(part[11:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_v_scale = cam_v_scale
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
+
+                # Rotation Commands
+                if part.startswith('#CAMROTATIONSTART'):
+                    parts = part[18:].split(',')
+                    if len(parts) >= 4:
+                        cam_rotation_start = float(parts[0].strip())
+                        cam_rotation_end = float(parts[1].strip())
+                        cam_rotation_easing_point = parts[2].strip()
+                        cam_rotation_easing_function = parts[3].strip()
+                        cam_rotation_move_active = True
+                        cam_rotation_move_start_ms = self.current_ms
+                        cam_rotation = cam_rotation_start
+                    continue
+                if part.startswith('#CAMROTATIONEND'):
+                    if cam_rotation_move_active:
+                        cam_rotation_move_duration_ms = self.current_ms - cam_rotation_move_start_ms
+                        interpolation_interval_ms = 8
+                        num_steps = int(cam_rotation_move_duration_ms / interpolation_interval_ms)
+                        for step in range(num_steps + 1):
+                            t = step / max(num_steps, 1)
+                            eased_t = self.apply_easing(t, cam_rotation_easing_point, cam_rotation_easing_function)
+                            interpolated_ms = cam_rotation_move_start_ms + (step * interpolation_interval_ms)
+                            interp_rotation = cam_rotation_start + (
+                                (cam_rotation_end - cam_rotation_start) * eased_t
+                            )
+                            cam_timeline = TimelineObject()
+                            cam_timeline.hit_ms = interpolated_ms
+                            cam_timeline.cam_rotation = interp_rotation
+                            curr_timeline.append(cam_timeline)
+                        cam_rotation = cam_rotation_end
+                        cam_rotation_move_active = False
+                    continue
+                if part.startswith('#CAMROTATION'):
+                    cam_rotation = float(part[13:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.cam_rotation = cam_rotation
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
+                    continue
                 if part.startswith('#SECTION'):
                     is_section_start = True
                     continue
+
                 if part.startswith('#BRANCHSTART'):
                     start_branch_ms = self.current_ms
                     start_branch_bpm = bpm
@@ -699,7 +1073,6 @@ class TJAParser:
                             bar_line.type = 0
                             bar_line.display = False
                             bar_line.gogo_time = gogo_time
-                            bar_line.bpm = bpm
                             bar_line.branch_params = branch_params
                             bar_list.append(bar_line)
 
@@ -711,16 +1084,20 @@ class TJAParser:
                     if section_bar:
                         section_bar = None
                     continue
+
                 elif part.startswith('#BRANCHEND'):
                     curr_note_list = master_notes.play_notes
                     curr_draw_list = master_notes.draw_notes
                     curr_bar_list = master_notes.bars
+                    curr_timeline = master_notes.timeline
                     continue
+
                 if part == '#M':
                     branch_m.append(NoteList())
                     curr_note_list = branch_m[-1].play_notes
                     curr_draw_list = branch_m[-1].draw_notes
                     curr_bar_list = branch_m[-1].bars
+                    curr_timeline = branch_m[-1].timeline
                     self.current_ms = start_branch_ms
                     bpm = start_branch_bpm
                     time_signature = start_branch_time_sig
@@ -736,6 +1113,7 @@ class TJAParser:
                     curr_note_list = branch_e[-1].play_notes
                     curr_draw_list = branch_e[-1].draw_notes
                     curr_bar_list = branch_e[-1].bars
+                    curr_timeline = branch_e[-1].timeline
                     self.current_ms = start_branch_ms
                     bpm = start_branch_bpm
                     time_signature = start_branch_time_sig
@@ -751,6 +1129,7 @@ class TJAParser:
                     curr_note_list = branch_n[-1].play_notes
                     curr_draw_list = branch_n[-1].draw_notes
                     curr_bar_list = branch_n[-1].bars
+                    curr_timeline = branch_n[-1].timeline
                     self.current_ms = start_branch_ms
                     bpm = start_branch_bpm
                     time_signature = start_branch_time_sig
@@ -761,71 +1140,56 @@ class TJAParser:
                     count = branch_balloon_count
                     is_branching = True
                     continue
+
                 if '#LYRIC' in part:
                     lyric = part[6:]
                     continue
+
                 if '#JPOSSCROLL' in part:
                     parts = part.split()
                     if len(parts) >= 4:
                         duration_ms = float(parts[1]) * 1000
                         distance_str = parts[2]
-                        direction_deg = float(parts[3])
-
+                        direction = int(parts[3])  # 0 = normal, 1 = reverse
                         delta_x = 0
                         delta_y = 0
-
                         if 'i' in distance_str:
                             normalized = distance_str.replace('.i', 'j').replace('i', 'j')
                             normalized = normalized.replace(',', '')
                             c = complex(normalized)
-                            direction_rad = math.radians(direction_deg)
-                            cos_dir = math.cos(direction_rad)
-                            sin_dir = math.sin(direction_rad)
-                            delta_x = c.real * cos_dir - c.imag * sin_dir
-                            delta_y = c.real * sin_dir + c.imag * cos_dir
+                            delta_x = c.real
+                            delta_y = c.imag
                         else:
                             distance = float(distance_str)
-                            direction_rad = math.radians(direction_deg)
-                            delta_x = distance * math.cos(direction_rad)
-                            delta_y = distance * math.sin(direction_rad)
+                            delta_x = distance
+                            delta_y = 0
+
+                        if direction == 0:
+                            delta_x = -delta_x
+                            delta_y = -delta_y
 
                         judge_target_x = judge_pos_x + delta_x
                         judge_target_y = judge_pos_y + delta_y
                         interpolation_interval_ms = 8
                         num_steps = int(duration_ms / interpolation_interval_ms)
-
                         for step in range(num_steps + 1):
-                            t = step / max(num_steps, 1)  # Interpolation factor (0 to 1)
+                            t = step / max(num_steps, 1)
                             interpolated_ms = self.current_ms + (step * interpolation_interval_ms)
-
-                            # Linear interpolation
                             interp_x = judge_pos_x + (delta_x * t)
                             interp_y = judge_pos_y + (delta_y * t)
-
-                            # Create invisible bar line to store position
-                            jpos_bar = Note()
-                            jpos_bar.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
-                            jpos_bar.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
-                            pixels_per_ms = get_pixels_per_ms(jpos_bar.pixels_per_frame_x)
-
-                            jpos_bar.hit_ms = interpolated_ms
+                            jpos_timeline = TimelineObject()
+                            pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
+                            pixels_per_ms = get_pixels_per_ms(pixels_per_frame_x)
+                            jpos_timeline.hit_ms = interpolated_ms
                             if pixels_per_ms == 0:
-                                jpos_bar.load_ms = jpos_bar.hit_ms
+                                jpos_timeline.load_ms = jpos_timeline.hit_ms
                             else:
-                                jpos_bar.load_ms = jpos_bar.hit_ms - (self.distance / pixels_per_ms)
-                            jpos_bar.type = 0
-                            jpos_bar.display = False
-                            jpos_bar.gogo_time = gogo_time
-                            jpos_bar.bpm = bpm
-
-                            jpos_bar.judge_pos_x = interp_x
-                            jpos_bar.judge_pos_y = interp_y
-
-                            bisect.insort(curr_bar_list, jpos_bar, key=lambda x: x.load_ms)
-
+                                jpos_timeline.load_ms = jpos_timeline.hit_ms - (self.distance / pixels_per_ms)
+                            jpos_timeline.judge_pos_x = interp_x
+                            jpos_timeline.judge_pos_y = interp_y
+                            bisect.insort(curr_timeline, jpos_timeline, key=lambda x: x.load_ms)
                         judge_pos_x = judge_target_x
                         judge_pos_y = judge_target_y
-
                     continue
                 elif '#NMSCROLL' in part:
                     continue
@@ -847,6 +1211,10 @@ class TJAParser:
                     continue
                 elif '#BPMCHANGE' in part:
                     bpm = float(part[11:])
+                    timeline_obj = TimelineObject()
+                    timeline_obj.hit_ms = self.current_ms
+                    timeline_obj.bpm = bpm
+                    bisect.insort(curr_timeline, timeline_obj, key=lambda x: x.hit_ms)
                     continue
                 elif '#BARLINEOFF' in part:
                     barline_display = False
@@ -864,33 +1232,26 @@ class TJAParser:
                     self.current_ms += float(part[6:]) * 1000
                     continue
                 elif part.startswith("#SUDDEN"):
-                    # Parse #SUDDEN command
                     parts = part.split()
                     if len(parts) >= 3:
                         appear_duration = float(parts[1])
                         moving_duration = float(parts[2])
 
-                        # Convert to milliseconds
                         sudden_appear = appear_duration * 1000
                         sudden_moving = moving_duration * 1000
 
-                        # Handle special case: if value is 0, treat as infinity
                         if sudden_appear == 0:
                             sudden_appear = float('inf')
                         if sudden_moving == 0:
                             sudden_moving = float('inf')
                     continue
-                #Unrecognized commands will be skipped for now
                 elif len(part) > 0 and not part[0].isdigit():
                     logger.warning(f"Unrecognized command: {part} in TJA {self.file_path}")
                     continue
 
                 ms_per_measure = get_ms_per_measure(bpm, time_signature)
-
-                #Create note object
                 bar_line = Note()
 
-                #Determines how quickly the notes need to move across the screen to reach the judgment circle in time
                 bar_line.pixels_per_frame_x = get_pixels_per_frame(bpm * time_signature * x_scroll_modifier, time_signature*4, self.distance)
                 bar_line.pixels_per_frame_y = get_pixels_per_frame(bpm * time_signature * y_scroll_modifier, time_signature*4, self.distance)
                 pixels_per_ms = get_pixels_per_ms(bar_line.pixels_per_frame_x)
@@ -903,7 +1264,6 @@ class TJAParser:
                 bar_line.type = 0
                 bar_line.display = barline_display
                 bar_line.gogo_time = gogo_time
-                bar_line.bpm = bpm
                 if barline_added:
                     bar_line.display = False
 
@@ -918,7 +1278,6 @@ class TJAParser:
                 bisect.insort(curr_bar_list, bar_line, key=lambda x: x.load_ms)
                 barline_added = True
 
-                #Empty bar is still a bar, otherwise start increment
                 if len(part) == 0:
                     self.current_ms += ms_per_measure
                     increment = 0
@@ -934,6 +1293,7 @@ class TJAParser:
                     if item == '9' and curr_note_list and curr_note_list[-1].type == 9:
                         self.current_ms += increment
                         continue
+
                     note = Note()
                     note.hit_ms = self.current_ms
                     note.display = True
@@ -944,7 +1304,6 @@ class TJAParser:
                                     else note.hit_ms - (self.distance / pixels_per_ms))
                     note.type = int(item)
                     note.index = index
-                    note.bpm = bpm
                     note.gogo_time = gogo_time
                     note.moji = -1
                     note.lyric = lyric
@@ -974,15 +1333,14 @@ class TJAParser:
                         else:
                             note.load_ms = note.hit_ms - (self.distance / new_pixels_per_ms)
                         note.pixels_per_frame_x = prev_note.pixels_per_frame_x
+
                     self.current_ms += increment
                     curr_note_list.append(note)
                     bisect.insort(curr_draw_list, note, key=lambda x: x.load_ms)
                     self.get_moji(curr_note_list, ms_per_measure)
                     index += 1
                     prev_note = note
-        # Sorting by load_ms is necessary for drawing, as some notes appear on the
-        # screen slower regardless of when they reach the judge circle
-        # Bars can be sorted like this because they don't need hit detection
+
         return master_notes, branch_m, branch_e, branch_n
 
     def hash_note_data(self, notes: NoteList):
@@ -1013,10 +1371,16 @@ def modifier_speed(notes: NoteList, value: float):
     modded_bars = notes.bars.copy()
     for note in modded_notes:
         note.pixels_per_frame_x *= value
-        note.load_ms = note.hit_ms - (866 * global_tex.screen_scale / get_pixels_per_ms(note.pixels_per_frame_x))
+        pixels_per_ms = get_pixels_per_ms(note.pixels_per_frame_x)
+        if pixels_per_ms == 0:
+            continue
+        note.load_ms = note.hit_ms - (866 * global_tex.screen_scale / pixels_per_ms)
     for bar in modded_bars:
         bar.pixels_per_frame_x *= value
-        bar.load_ms = bar.hit_ms - (866 * global_tex.screen_scale / get_pixels_per_ms(bar.pixels_per_frame_x))
+        pixels_per_ms = get_pixels_per_ms(bar.pixels_per_frame_x)
+        if pixels_per_ms == 0:
+            continue
+        bar.load_ms = bar.hit_ms - (866 * global_tex.screen_scale / pixels_per_ms)
     return modded_notes, modded_bars
 
 def modifier_display(notes: NoteList):

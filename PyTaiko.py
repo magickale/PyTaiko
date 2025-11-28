@@ -137,6 +137,40 @@ def create_song_db():
         con.commit()
         logger.info("Scores database created successfully")
 
+def update_camera_for_window_size(camera, virtual_width, virtual_height):
+    """Update camera zoom, offset, scale, and rotation to maintain aspect ratio"""
+    screen_width = ray.get_screen_width()
+    screen_height = ray.get_screen_height()
+
+    if screen_width == 0 or screen_height == 0:
+        camera.zoom = 1.0
+        camera.offset = ray.Vector2(0, 0)
+        camera.rotation = 0.0
+        return
+
+    scale = min(screen_width / virtual_width, screen_height / virtual_height)
+
+    base_offset_x = (screen_width - (virtual_width * scale)) * 0.5
+    base_offset_y = (screen_height - (virtual_height * scale)) * 0.5
+
+    camera.zoom = scale * global_data.camera.zoom
+
+    zoom_offset_x = (virtual_width * scale * (global_data.camera.zoom - 1.0)) * 0.5
+    zoom_offset_y = (virtual_height * scale * (global_data.camera.zoom - 1.0)) * 0.5
+
+    h_scale = global_data.camera.h_scale
+    v_scale = global_data.camera.v_scale
+
+    h_scale_offset_x = (virtual_width * scale * (h_scale - 1.0)) * 0.5
+    v_scale_offset_y = (virtual_height * scale * (v_scale - 1.0)) * 0.5
+
+    camera.offset = ray.Vector2(
+        base_offset_x - zoom_offset_x - h_scale_offset_x + (global_data.camera.offset.x * scale),
+        base_offset_y - zoom_offset_y - v_scale_offset_y + (global_data.camera.offset.y * scale)
+    )
+
+    camera.rotation = global_data.camera.rotation
+
 def main():
     force_dedicated_gpu()
     global_data.config = get_config()
@@ -171,6 +205,7 @@ def main():
         ray.set_target_fps(global_data.config["video"]["target_fps"])
         logger.info(f"Target FPS set to {global_data.config['video']['target_fps']}")
     ray.set_config_flags(ray.ConfigFlags.FLAG_MSAA_4X_HINT)
+    ray.set_config_flags(ray.ConfigFlags.FLAG_WINDOW_RESIZABLE)
     ray.set_trace_log_level(ray.TraceLogLevel.LOG_WARNING)
 
     ray.init_window(screen_width, screen_height, "PyTaiko")
@@ -267,15 +302,20 @@ def main():
         Screens.DAN_RESULT: dan_result_screen,
         Screens.LOADING: load_screen
     }
-    target = ray.load_render_texture(screen_width, screen_height)
-    ray.gen_texture_mipmaps(target.texture)
-    ray.set_texture_filter(target.texture, ray.TextureFilter.TEXTURE_FILTER_TRILINEAR)
+
+    camera = ray.Camera2D()
+    camera.target = ray.Vector2(0, 0)
+    camera.rotation = 0.0
+    update_camera_for_window_size(camera, screen_width, screen_height)
+    logger.info("Camera2D initialized")
+
     ray.rl_set_blend_factors_separate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD)
     ray.set_exit_key(global_data.config["keys"]["exit_key"])
 
     ray.hide_cursor()
     logger.info("Cursor hidden")
     last_fps = 1
+    last_color = ray.BLACK
 
     while not ray.window_should_close():
         if ray.is_key_pressed(global_data.config["keys"]["fullscreen_key"]):
@@ -285,25 +325,21 @@ def main():
             ray.toggle_borderless_windowed()
             logger.info("Toggled borderless windowed mode")
 
-        curr_screen_width = ray.get_screen_width()
-        curr_screen_height = ray.get_screen_height()
+        update_camera_for_window_size(camera, screen_width, screen_height)
 
-        if curr_screen_width == 0 or curr_screen_height == 0:
-            dest_rect = ray.Rectangle(0, 0, screen_width, screen_height)
-        else:
-            scale = min(curr_screen_width / screen_width, curr_screen_height / screen_height)
-            dest_rect = ray.Rectangle((curr_screen_width - (screen_width * scale)) * 0.5,
-                (curr_screen_height - (screen_height * scale)) * 0.5,
-                screen_width * scale, screen_height * scale)
+        ray.begin_drawing()
 
-        ray.begin_texture_mode(target)
+        if global_data.camera.border_color != last_color:
+            ray.clear_background(global_data.camera.border_color)
+            last_color = global_data.camera.border_color
+
+        ray.begin_mode_2d(camera)
         ray.begin_blend_mode(ray.BlendMode.BLEND_CUSTOM_SEPARATE)
 
         screen = screen_mapping[current_screen]
 
         next_screen = screen.update()
         if screen.screen_init:
-            ray.clear_background(ray.BLACK)
             screen._do_draw()
 
         if next_screen is not None:
@@ -321,19 +357,16 @@ def main():
                 ray.draw_text(f'{last_fps} FPS', 20, 20, 20, ray.YELLOW)
             else:
                 ray.draw_text(f'{last_fps} FPS', 20, 20, 20, ray.LIME)
+
+        ray.draw_rectangle(-screen_width, 0, screen_width, screen_height, last_color)
+        ray.draw_rectangle(screen_width, 0, screen_width, screen_height, last_color)
+        ray.draw_rectangle(0, -screen_height, screen_width, screen_height, last_color)
+        ray.draw_rectangle(0, screen_height, screen_width, screen_height, last_color)
+
         ray.end_blend_mode()
-        ray.end_texture_mode()
-        ray.begin_drawing()
-        ray.clear_background(ray.BLACK)
-        ray.draw_texture_pro(
-             target.texture,
-             ray.Rectangle(0, 0, target.texture.width, -target.texture.height),
-             dest_rect,
-             ray.Vector2(0,0),
-             0,
-             ray.WHITE
-        )
+        ray.end_mode_2d()
         ray.end_drawing()
+
     ray.close_window()
     audio.close_audio_device()
     logger.info("Window closed and audio device shut down")

@@ -120,6 +120,14 @@ class SessionData:
     result_data: ResultData = field(default_factory=lambda: ResultData())
     dan_result_data: DanResultData = field(default_factory=lambda: DanResultData())
 
+class Camera:
+    offset: ray.Vector2 = ray.Vector2(0, 0)
+    zoom: float = 1.0
+    h_scale: float = 1.0
+    v_scale: float = 1.0
+    rotation: float = 0.0
+    border_color: ray.Color = ray.BLACK
+
 @dataclass
 class GlobalData:
     """
@@ -139,6 +147,7 @@ class GlobalData:
         session_data (list[SessionData]): Session data for both players.
     """
     songs_played: int = 0
+    camera: Camera = Camera()
     font: ray.Font = ray.get_font_default()
     font_codepoints = set()
     config: Config = field(default_factory=dict)
