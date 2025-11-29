@@ -20,6 +20,7 @@ SCENEPRESET,Supported,OpenTaiko (0auBSQ) v0.6.0
 #SECTION,Supported,TaikoJiro v1.63
 #BRANCHSTART / #BRANCHEND,Supported,TaikoJiro v1.63
 #N / #E / #M,Supported,TaikoJiro v1.63
+#BMSCROLL / #HBSCROLL / #NMSCROLL,Supported,TaikoJiro v1.91
 #BARLINEOFF / #BARLINEON,Supported,TaikoJiro v2.69
 #LYRIC,Supported,TJAPlayer2 for.PC
 #SUDDEN,Supported,TJAPlayer2 for.PC
@@ -62,7 +63,6 @@ AUTHOR,Unsupported,Malody
 BGOFFSET,Unsupported,Unknown
 
 #LEVELHOLD,Unsupported,TaikoJiro v1.63
-#BMSCROLL / #HBSCROLL / #NMSCROLL,Unsupported,TaikoJiro v1.91
 #DIRECTION,Unsupported,TJAPlayer2 for.PC
 #HIDDEN,Unsupported,TJAPlayer2 for.PC
 #SENOTECHANGE,Unsupported,TJAPlayer3 v1.4.0
