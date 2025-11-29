@@ -532,14 +532,32 @@ class Player:
             self.timeline_index += 1
 
     def get_judge_position(self, current_ms: float):
-        """Get the current judgment circle position based on bar data"""
+        """Get the current judgment circle position based on bar data with on-demand interpolation"""
         if not self.timeline or self.timeline_index >= len(self.timeline):
             return
+
         timeline_object = self.timeline[self.timeline_index]
-        if hasattr(timeline_object, 'judge_pos_x') and timeline_object.hit_ms <= current_ms:
-            self.judge_x = timeline_object.judge_pos_x * tex.screen_scale
-            self.judge_y = timeline_object.judge_pos_y * tex.screen_scale
-            self.timeline_index += 1
+
+        if hasattr(timeline_object, 'delta_x'):
+            if timeline_object.load_ms <= current_ms <= timeline_object.hit_ms:
+                duration = timeline_object.hit_ms - timeline_object.load_ms
+                if duration > 0:
+                    t = (current_ms - timeline_object.load_ms) / duration
+                    t = max(0.0, min(1.0, t))
+
+                    self.judge_x = (timeline_object.judge_pos_x + (timeline_object.delta_x * t)) * tex.screen_scale
+                    self.judge_y = (timeline_object.judge_pos_y + (timeline_object.delta_y * t)) * tex.screen_scale
+                else:
+                    self.judge_x = (timeline_object.judge_pos_x + timeline_object.delta_x) * tex.screen_scale
+                    self.judge_y = (timeline_object.judge_pos_y + timeline_object.delta_y) * tex.screen_scale
+
+            if current_ms > timeline_object.hit_ms:
+                self.timeline_index += 1
+                if self.timeline_index < len(self.timeline):
+                    next_timeline_object = self.timeline[self.timeline_index]
+                    if hasattr(next_timeline_object, 'delta_x'):
+                        next_timeline_object.judge_pos_x = self.judge_x / tex.screen_scale
+                        next_timeline_object.judge_pos_y = self.judge_y / tex.screen_scale
 
     def handle_scroll_type_commands(self, current_ms: float):
         if not self.timeline or self.timeline_index >= len(self.timeline):

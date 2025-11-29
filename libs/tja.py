@@ -53,6 +53,8 @@ class TimelineObject:
 
     judge_pos_x: float = field(init=False)
     judge_pos_y: float = field(init=False)
+    delta_x: float = field(init=False)
+    delta_y: float = field(init=False)
     border_color: ray.Color = field(init=False)
     cam_h_offset: float = field(init=False)
     cam_v_offset: float = field(init=False)
@@ -729,8 +731,6 @@ class TJAParser:
         sudden_moving = 0
         judge_pos_x = 0
         judge_pos_y = 0
-        judge_target_x = 0
-        judge_target_y = 0
         border_color = ray.BLACK
         cam_h_offset = 0
         cam_v_offset = 0
@@ -1183,7 +1183,7 @@ class TJAParser:
                     if len(parts) >= 4:
                         duration_ms = float(parts[1]) * 1000
                         distance_str = parts[2]
-                        direction = int(parts[3])  # 0 = normal, 1 = reverse
+                        direction = int(parts[3])
                         delta_x = 0
                         delta_y = 0
                         if 'i' in distance_str:
@@ -1196,27 +1196,32 @@ class TJAParser:
                             distance = float(distance_str)
                             delta_x = distance
                             delta_y = 0
-
                         if direction == 0:
                             delta_x = -delta_x
                             delta_y = -delta_y
 
-                        judge_target_x = judge_pos_x + delta_x
-                        judge_target_y = judge_pos_y + delta_y
-                        interpolation_interval_ms = 8
-                        num_steps = int(duration_ms / interpolation_interval_ms)
-                        for step in range(num_steps + 1):
-                            t = step / max(num_steps, 1)
-                            interpolated_ms = self.current_ms + (step * interpolation_interval_ms)
-                            interp_x = judge_pos_x + (delta_x * t)
-                            interp_y = judge_pos_y + (delta_y * t)
-                            jpos_timeline = TimelineObject()
-                            jpos_timeline.hit_ms = interpolated_ms
-                            jpos_timeline.judge_pos_x = interp_x
-                            jpos_timeline.judge_pos_y = interp_y
-                            bisect.insort(curr_timeline, jpos_timeline, key=lambda x: x.hit_ms)
-                        judge_pos_x = judge_target_x
-                        judge_pos_y = judge_target_y
+                        for obj in reversed(curr_timeline):
+                            if hasattr(obj, 'delta_x') and hasattr(obj, 'delta_y'):
+                                if obj.hit_ms > self.current_ms:
+                                    available_time = self.current_ms - obj.load_ms
+                                    total_duration = obj.hit_ms - obj.load_ms
+                                    ratio = min(1.0, available_time / total_duration) if total_duration > 0 else 1.0
+                                    obj.delta_x *= ratio
+                                    obj.delta_y *= ratio
+                                    obj.hit_ms = self.current_ms
+                                    break
+
+                        jpos_scroll = TimelineObject()
+                        jpos_scroll.load_ms = self.current_ms
+                        jpos_scroll.hit_ms = self.current_ms + duration_ms
+                        jpos_scroll.judge_pos_x = judge_pos_x
+                        jpos_scroll.judge_pos_y = judge_pos_y
+                        jpos_scroll.delta_x = delta_x
+                        jpos_scroll.delta_y = delta_y
+                        curr_timeline.append(jpos_scroll)
+
+                        judge_pos_x += delta_x
+                        judge_pos_y += delta_y
                     continue
                 elif '#NMSCROLL' in part:
                     scroll_type = ScrollType.NMSCROLL
