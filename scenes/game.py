@@ -386,21 +386,6 @@ class Player:
     def reset_chart(self):
         notes, self.branch_m, self.branch_e, self.branch_n = self.tja.notes_to_position(self.difficulty)
         self.play_notes, self.draw_note_list, self.draw_bar_list = apply_modifiers(notes, self.modifiers)
-        self.end_time = 0
-        if self.play_notes:
-            self.end_time = self.play_notes[-1].hit_ms
-        if self.branch_m:
-            for section in self.branch_m:
-                if section.play_notes:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
-        if self.branch_e:
-            for section in self.branch_e:
-                if section.play_notes:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
-        if self.branch_n:
-            for section in self.branch_n:
-                if section.play_notes:
-                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
 
         self.don_notes = deque([note for note in self.play_notes if note.type in {NoteType.DON, NoteType.DON_L}])
         self.kat_notes = deque([note for note in self.play_notes if note.type in {NoteType.KAT, NoteType.KAT_L}])
@@ -450,6 +435,23 @@ class Player:
                 for i2 in range(i + 1, len(self.timeline)):
                     o2 = self.timeline[i2]
                     o2.hit_ms += delay
+        
+        # Decide end_time after all transforms have been applied
+        self.end_time = 0
+        if self.play_notes:
+            self.end_time = self.play_notes[-1].hit_ms
+        if self.branch_m:
+            for section in self.branch_m:
+                if section.play_notes:
+                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+        if self.branch_e:
+            for section in self.branch_e:
+                if section.play_notes:
+                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
+        if self.branch_n:
+            for section in self.branch_n:
+                if section.play_notes:
+                    self.end_time = max(self.end_time, section.play_notes[-1].hit_ms)
 
     def merge_branch_section(self, branch_section: NoteList, current_ms: float):
         """Merges the branch notes into the current notes"""
