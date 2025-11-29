@@ -415,7 +415,7 @@ class Player:
         self.bpm = 120
         if self.timeline and hasattr(self.timeline[self.timeline_index], 'bpm'):
             self.bpm = self.timeline[self.timeline_index].bpm
-        # Handle HBSCROLL, BMSCROLL (pre-modify hit_ms, so that notes can't be literally hit, but are still visually different) - basically it applies the transformations of #BPMCHANGE and #DELAY to hit_ms, so that notes can't be hit even if its visaulyl 
+        # Handle HBSCROLL, BMSCROLL (pre-modify hit_ms, so that notes can't be literally hit, but are still visually different) - basically it applies the transformations of #BPMCHANGE and #DELAY to hit_ms, so that notes can't be hit even if its visaulyl
         for i, o in enumerate(self.timeline):
             if hasattr(o, 'bpmchange'):
                 hit_ms = o.hit_ms
@@ -435,7 +435,7 @@ class Player:
                 for i2 in range(i + 1, len(self.timeline)):
                     o2 = self.timeline[i2]
                     o2.hit_ms += delay
-        
+
         # Decide end_time after all transforms have been applied
         self.end_time = 0
         if self.play_notes:
@@ -1067,7 +1067,7 @@ class Player:
             # Check if it ended
             if ms_from_start >= self.delay_end:
                 delay = self.delay_end - self.delay_start
-                for note in chain(self.play_notes, self.current_bars, self.draw_bar_list):
+                for note in chain(self.don_notes, self.kat_notes, self.other_notes, self.current_bars, self.draw_bar_list):
                     note.load_ms += delay
                 self.delay_start = None
                 self.delay_end = None

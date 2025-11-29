@@ -1256,7 +1256,7 @@ class TJAParser:
                         # Do not modify bpm, it needs to be changed live by bpmchange
                         bpmchange = parsed_bpm / bpmchange_last_bpm
                         bpmchange_last_bpm = parsed_bpm
-                        
+
                         bpmchange_timeline = TimelineObject()
                         bpmchange_timeline.hit_ms = self.current_ms
                         bpmchange_timeline.bpmchange = bpmchange
@@ -1281,17 +1281,14 @@ class TJAParser:
                     continue
                 elif part.startswith("#DELAY"):
                     delay_ms = float(part[6:]) * 1000
-                    if scroll_type == ScrollType.BMSCROLL or scroll_type == ScrollType.HBSCROLL:
-                        if delay_ms <= 0:
-                            # No changes if not positive
-                            pass
-                        else:
-                            # Do not modify current_ms, it will be modified live
-                            delay_current += delay_ms
-
-                            # Delays will be combined between notes, and attached to previous note
+                    if delay_ms <= 0:
+                        # No changes if not positive
+                        pass
                     else:
-                        self.current_ms += delay_ms
+                        # Do not modify current_ms, it will be modified live
+                        delay_current += delay_ms
+
+                        # Delays will be combined between notes, and attached to previous note
                     continue
                 elif part.startswith("#SUDDEN"):
                     parts = part.split()
