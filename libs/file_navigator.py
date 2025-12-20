@@ -1105,11 +1105,11 @@ class DanCourse(FileSystemItem):
                                 path = Path(global_data.song_hashes[hash_val][i]["file_path"])
                                 break
                 if (path.parent.parent / "box.def").exists():
-                    texture_index = parse_box_def(path.parent.parent)[1]
+                    genre_index = parse_box_def(path.parent.parent)[2]
                 else:
-                    texture_index = TextureIndex.DEFAULT
+                    genre_index = GenreIndex.NAMCO
                 tja = TJAParser(path)
-                self.charts.append((tja, texture_index, difficulty, tja.metadata.course_data[difficulty].level))
+                self.charts.append((tja, genre_index, difficulty, tja.metadata.course_data[difficulty].level))
             self.exams = []
             for exam in data["exams"]:
                 self.exams.append(Exam(exam["type"], exam["value"][0], exam["value"][1], exam["range"]))
@@ -1348,7 +1348,7 @@ class FileNavigator:
 
         # Determine if current directory has child directories with box.def
         has_children = False
-        if self.is_at_root() or selected_item and selected_item.box.texture_index == 13:
+        if self.is_at_root() or selected_item and selected_item.box.genre_index == GenreIndex.DAN:
             has_children = True  # Root always has "children" (the root directories)
         else:
             has_children = any(item.is_dir() and (item / "box.def").exists()

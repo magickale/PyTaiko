@@ -154,7 +154,7 @@ class SongSelectScreen(Screen):
             self.text_fade_out.start()
         elif action == "select_song":
             current_song = self.navigator.get_current_item()
-            if isinstance(current_song, Directory) and current_song.box.texture_index == 13:
+            if isinstance(current_song, Directory) and current_song.box.genre_index == GenreIndex.DAN:
                 if len(self.navigator.directory_contents[str(current_song.path)]) == 0:
                     return
                 self.dan_transition.start()
