@@ -1280,8 +1280,36 @@ class FileNavigator:
             for tja_path in sorted(tja_files):
                 song_key = str(tja_path)
                 if song_key not in self.all_song_files and tja_path.name == "dan.json":
-                    song_obj = DanCourse(tja_path, tja_path.name)
-                    self.all_song_files[song_key] = song_obj
+                    valid_dan = True
+                    with open(tja_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        for chart in data["charts"]:
+                            hash = chart["hash"]
+                            chart_title = chart["title"]
+                            chart_subtitle = chart["subtitle"]
+                            path = None
+
+                            if hash in global_data.song_hashes:
+                                path = Path(global_data.song_hashes[hash][0]["file_path"])
+                            else:
+                                # Fallback: search by title and subtitle
+                                found = False
+                                for key, value in global_data.song_hashes.items():
+                                    for i, song in enumerate(value):
+                                        if (song["title"]["en"].strip() == chart_title and
+                                            song["subtitle"]["en"].strip() == chart_subtitle.removeprefix('--') and
+                                            Path(song["file_path"]).exists()):
+                                            path = Path(song["file_path"])
+                                            found = True
+                                            break
+                                    if found:
+                                        break
+                            if path is None or not path.exists():
+                                valid_dan = False
+                                break
+                    if valid_dan:
+                        song_obj = DanCourse(tja_path, tja_path.name)
+                        self.all_song_files[song_key] = song_obj
                 elif song_key not in self.all_song_files and tja_path in global_data.song_paths:
                     song_obj = SongFile(tja_path, tja_path.name, back_color, fore_color, texture_index)
                     song_obj.box.get_scores()
