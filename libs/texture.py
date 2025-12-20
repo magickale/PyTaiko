@@ -25,6 +25,9 @@ class SkinInfo:
         self.height = height
         self.font_size = font_size
 
+    def __repr__(self):
+        return f"{self.__dict__}"
+
 class Texture:
     """Texture class for managing textures and animations."""
     def __init__(self, name: str, texture: Any, init_vals: dict[str, int]):
@@ -54,6 +57,9 @@ class Texture:
         self.x2: list[int] = [self.width]
         self.y2: list[int] = [self.height]
         self.controllable: list[bool] = [False]
+
+    def __repr__(self):
+        return f"{self.__dict__}"
 
 class TextureWrapper:
     """Texture wrapper class for managing textures and animations."""
@@ -188,9 +194,15 @@ class TextureWrapper:
                             with parent_zip_ref.open('texture.json') as json_file:
                                 tex_mapping_data = json.loads(json_file.read().decode('utf-8'))
                                 for tex_map in tex_mapping_data:
-                                    for key in tex_mapping_data[tex_map]:
-                                        if key in ["x", "y", "x2", "y2"]:
-                                            tex_mapping_data[tex_map][key] = tex_mapping_data[tex_map][key] * self.screen_scale
+                                    if isinstance(tex_mapping_data[tex_map], list):
+                                        for index, item in enumerate(tex_mapping_data[tex_map]):
+                                            for key in item:
+                                                if key in ["x", "y", "x2", "y2"]:
+                                                    tex_mapping_data[tex_map][index][key] = tex_mapping_data[tex_map][index][key] * self.screen_scale
+                                    else:
+                                        for key in tex_mapping_data[tex_map]:
+                                            if key in ["x", "y", "x2", "y2"]:
+                                                tex_mapping_data[tex_map][key] = tex_mapping_data[tex_map][key] * self.screen_scale
                             texture_json_source = "parent"
                         else:
                             raise Exception(f"texture.json file missing from both {zip_path} and {parent_zip_path}")

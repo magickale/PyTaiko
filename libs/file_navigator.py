@@ -412,11 +412,12 @@ class YellowBox:
         self.is_back = is_back
         self.tja = tja
         if self.tja is not None:
-            subtitle_text = self.tja.metadata.subtitle.get(global_data.config['general']['language'], '')
+            subtitle_text = self.tja.metadata.subtitle.get(global_data.config['general']['language'], self.tja.metadata.subtitle.get('en', ''))
             font_size = tex.skin_config["yb_subtitle"].font_size if len(subtitle_text) < 30 else tex.skin_config["yb_subtitle"].font_size - int(10 * tex.screen_scale)
             self.subtitle = OutlinedText(subtitle_text, font_size, ray.WHITE, outline_thickness=5, vertical=True)
+        else:
+            self.subtitle = None
         self.is_dan = is_dan
-        self.subtitle = None
 
         self.left_out = tex.get_animation(9)
         self.right_out = tex.get_animation(10)
