@@ -67,7 +67,7 @@ class SongSelectScreen(Screen):
         self.screen_init = True
         self.ura_switch_animation = UraSwitchAnimation()
         self.dan_transition = DanTransition()
-        self.shader = ray.load_shader('', 'shader/colortransform.fs')
+        self.shader = ray.load_shader('shader/dummy.vs', 'shader/colortransform.fs')
         self.color = None
         self.load_shader_values(self.color)
 

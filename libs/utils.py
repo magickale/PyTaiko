@@ -164,7 +164,7 @@ class OutlinedText:
         outline_size = ray.ffi.new('float*', self.outline_thickness)
         texture_size = ray.ffi.new("float[2]", [self.texture.width, self.texture.height])
 
-        self.shader = ray.load_shader('shader/outline.vs', 'shader/outline.fs')
+        self.shader = ray.load_shader('shader/dummy.vs', 'shader/outline.fs')
         self.outline_size_loc = ray.get_shader_location(self.shader, "outlineSize")
         self.outline_color_loc = ray.get_shader_location(self.shader, "outlineColor")
         self.texture_size_loc = ray.get_shader_location(self.shader, "textureSize")

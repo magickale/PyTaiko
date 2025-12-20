@@ -122,7 +122,7 @@ class BaseBox():
     def load_text(self):
         self.name = OutlinedText(self.text_name, tex.skin_config["song_box_name"].font_size, ray.WHITE, outline_thickness=5, vertical=True)
         if self.back_color is not None:
-            self.shader = ray.load_shader('', 'shader/colortransform.fs')
+            self.shader = ray.load_shader('shader/dummy.vs', 'shader/colortransform.fs')
             source_rgb = (142, 212, 30)
             target_rgb = self.back_color
             source_color = ray.ffi.new('float[3]', [source_rgb[0]/255.0, source_rgb[1]/255.0, source_rgb[2]/255.0])
@@ -756,7 +756,7 @@ class GenreBG:
 
     def load_shader(self):
         if self.color is not None:
-            self.shader = ray.load_shader('', 'shader/colortransform.fs')
+            self.shader = ray.load_shader('shader/dummy.vs', 'shader/colortransform.fs')
             source_rgb = (142, 212, 30)
             target_rgb = self.color
             source_color = ray.ffi.new('float[3]', [source_rgb[0]/255.0, source_rgb[1]/255.0, source_rgb[2]/255.0])

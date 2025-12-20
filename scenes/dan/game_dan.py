@@ -21,7 +21,7 @@ class DanGameScreen(GameScreen):
 
     @override
     def on_screen_start(self):
-        self.mask_shader = ray.load_shader("shader/outline.vs", "shader/mask.fs")
+        self.mask_shader = ray.load_shader("shader/dummy.vs", "shader/mask.fs")
         self.current_ms = 0
         self.end_ms = 0
         self.start_delay = 4000

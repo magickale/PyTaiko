@@ -16,7 +16,7 @@ class TwoPlayerSongSelectScreen(SongSelectScreen):
 
     def finalize_song(self, current_item):
         global_data.session_data[PlayerNum.P1].selected_song = current_item.path
-        global_data.session_data[PlayerNum.P1].genre_index = current_item.box.name_texture_index
+        global_data.session_data[PlayerNum.P1].genre_index = current_item.box.genre_index
         logger.info(f"Finalized song selection: {global_data.session_data[PlayerNum.P1].selected_song}")
 
     def handle_input(self):
