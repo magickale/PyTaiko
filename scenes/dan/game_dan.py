@@ -68,6 +68,7 @@ class DanGameScreen(GameScreen):
             for branch in branch_n:
                 self.total_notes += sum(1 for note in branch.play_notes if note.type < 5)
         song, genre_index, difficulty, level = songs[self.song_index]
+        self.total_notes //= 2
         session_data.selected_difficulty = difficulty
         self.init_tja(song.file_path)
         self.color = session_data.dan_color

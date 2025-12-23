@@ -45,6 +45,7 @@ class Texture:
         self.x2: list[int] = [self.width]
         self.y2: list[int] = [self.height]
         self.controllable: list[bool] = [False]
+        self.crop_data: Optional[list[tuple[float, float, float, float]]] = None
 
     def __repr__(self):
         return f"{self.__dict__}"
@@ -65,6 +66,7 @@ class FramedTexture:
         self.x2: list[int] = [self.width]
         self.y2: list[int] = [self.height]
         self.controllable: list[bool] = [False]
+        self.crop_data: Optional[list[tuple[float, float, float, float]]] = None
 
 class TextureWrapper:
     """Texture wrapper class for managing textures and animations."""
@@ -145,14 +147,24 @@ class TextureWrapper:
                     tex_object.x2.append(tex_mapping[i].get("x2", tex_object.width))
                     tex_object.y2.append(tex_mapping[i].get("y2", tex_object.height))
                     tex_object.controllable.append(tex_mapping[i].get("controllable", False))
+                if "frame_order" in tex_mapping[i]:
+                    tex_object.texture = list(map(lambda j: tex_object.texture[j], tex_mapping[i]["frame_order"]))
+                if "crop" in tex_mapping[0]:
+                    tex_object.crop_data = tex_mapping[0]["crop"]
+                    tex_object.x2[i] = tex_object.crop_data[0][2]
+                    tex_object.y2[i] = tex_object.crop_data[0][3]
         else:
             tex_object.x = [tex_mapping.get("x", 0)]
             tex_object.y = [tex_mapping.get("y", 0)]
             tex_object.x2 = [tex_mapping.get("x2", tex_object.width)]
             tex_object.y2 = [tex_mapping.get("y2", tex_object.height)]
             tex_object.controllable = [tex_mapping.get("controllable", False)]
-            if "frame_order" in tex_mapping:
+            if "frame_order" in tex_mapping and isinstance(tex_object, FramedTexture):
                 tex_object.texture = list(map(lambda i: tex_object.texture[i], tex_mapping["frame_order"]))
+            if "crop" in tex_mapping:
+                tex_object.crop_data = tex_mapping["crop"]
+                tex_object.x2 = [tex_object.crop_data[0][2]]
+                tex_object.y2 = [tex_object.crop_data[0][3]]
 
     def load_animations(self, screen_name: str):
         """Load animations for a screen, falling back to parent if not found."""
@@ -317,13 +329,14 @@ class TextureWrapper:
         tex_object = self.textures[subset][texture]
         if src is not None:
             source_rect = src
+        elif tex_object.crop_data is not None:
+            source_rect = tex_object.crop_data[frame]
         else:
             source_rect = (0, 0, tex_object.width * mirror_x, tex_object.height * mirror_y)
         if center:
             dest_rect = (tex_object.x[index] + (tex_object.width//2) - ((tex_object.width * scale)//2) + x, tex_object.y[index] + (tex_object.height//2) - ((tex_object.height * scale)//2) + y, tex_object.x2[index]*scale + x2, tex_object.y2[index]*scale + y2)
         else:
             dest_rect = (tex_object.x[index] + x, tex_object.y[index] + y, tex_object.x2[index]*scale + x2, tex_object.y2[index]*scale + y2)
-
         if isinstance(tex_object, FramedTexture):
             if frame >= len(tex_object.texture):
                 raise Exception(f"Frame {frame} not available in iterable texture {tex_object.name}")
