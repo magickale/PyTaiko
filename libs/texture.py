@@ -34,23 +34,11 @@ class Texture:
         self.name = name
         self.texture = texture
         self.init_vals = init_vals
-        if isinstance(self.texture, list):
-            self.width = self.texture[0].width
-            self.height = self.texture[0].height
-        else:
-            self.width = self.texture.width
-            self.height = self.texture.height
-        self.is_frames = isinstance(self.texture, list)
-        if isinstance(self.texture, list):
-            pass
-            for texture_data in self.texture:
-                ray.GenTextureMipmaps(ray.ffi.addressof(texture_data))
-                ray.SetTextureFilter(texture_data, ray.TEXTURE_FILTER_TRILINEAR)
-                ray.SetTextureWrap(texture_data, ray.TEXTURE_WRAP_CLAMP)
-        else:
-            ray.GenTextureMipmaps(ray.ffi.addressof(self.texture))
-            ray.SetTextureFilter(self.texture, ray.TEXTURE_FILTER_TRILINEAR)
-            ray.SetTextureWrap(self.texture, ray.TEXTURE_WRAP_CLAMP)
+        self.width = self.texture.width
+        self.height = self.texture.height
+        ray.GenTextureMipmaps(ray.ffi.addressof(self.texture))
+        ray.SetTextureFilter(self.texture, ray.TEXTURE_FILTER_TRILINEAR)
+        ray.SetTextureWrap(self.texture, ray.TEXTURE_WRAP_CLAMP)
 
         self.x: list[int] = [0]
         self.y: list[int] = [0]
@@ -61,10 +49,27 @@ class Texture:
     def __repr__(self):
         return f"{self.__dict__}"
 
+class FramedTexture:
+    def __init__(self, name: str, texture: list[Any], init_vals: dict[str, int]):
+        self.name = name
+        self.texture = texture
+        self.init_vals = init_vals
+        self.width = self.texture[0].width
+        self.height = self.texture[0].height
+        for texture_data in self.texture:
+            ray.GenTextureMipmaps(ray.ffi.addressof(texture_data))
+            ray.SetTextureFilter(texture_data, ray.TEXTURE_FILTER_TRILINEAR)
+            ray.SetTextureWrap(texture_data, ray.TEXTURE_WRAP_CLAMP)
+        self.x: list[int] = [0]
+        self.y: list[int] = [0]
+        self.x2: list[int] = [self.width]
+        self.y2: list[int] = [self.height]
+        self.controllable: list[bool] = [False]
+
 class TextureWrapper:
     """Texture wrapper class for managing textures and animations."""
     def __init__(self):
-        self.textures: dict[str, dict[str, Texture]] = dict()
+        self.textures: dict[str, dict[str, Texture | FramedTexture]] = dict()
         self.animations: dict[int, BaseAnimation] = dict()
         self.skin_config: dict[str, SkinInfo] = dict()
         self.graphics_path = Path(get_config()['paths']['graphics_path'])
@@ -125,7 +130,7 @@ class TextureWrapper:
             self.animations[index].start()
         return self.animations[index]
 
-    def _read_tex_obj_data(self, tex_mapping: dict | list, tex_object: Texture):
+    def _read_tex_obj_data(self, tex_mapping: dict | list, tex_object: Texture | FramedTexture):
         if isinstance(tex_mapping, list):
             for i in range(len(tex_mapping)):
                 if i == 0:
@@ -146,6 +151,8 @@ class TextureWrapper:
             tex_object.x2 = [tex_mapping.get("x2", tex_object.width)]
             tex_object.y2 = [tex_mapping.get("y2", tex_object.height)]
             tex_object.controllable = [tex_mapping.get("controllable", False)]
+            if "frame_order" in tex_mapping:
+                tex_object.texture = list(map(lambda i: tex_object.texture[i], tex_mapping["frame_order"]))
 
     def load_animations(self, screen_name: str):
         """Load animations for a screen, falling back to parent if not found."""
@@ -226,7 +233,7 @@ class TextureWrapper:
                                             key=lambda x: int(x.stem)) if frame.is_file()]
                             else:
                                 frames = [ray.LoadTexture(str(extracted_path).encode(encoding))]
-                        self.textures[zip_path.stem][tex_name] = Texture(tex_name, frames, tex_mapping)
+                        self.textures[zip_path.stem][tex_name] = FramedTexture(tex_name, frames, tex_mapping)
                         self._read_tex_obj_data(tex_mapping, self.textures[zip_path.stem][tex_name])
                     elif f"{tex_name}.png" in zip_ref.namelist():
                         tex_mapping = tex_mapping_data[tex_name]
@@ -268,7 +275,7 @@ class TextureWrapper:
 
         logger.info(f"Screen textures loaded for: {screen_name}")
 
-    def control(self, tex_object: Texture, index: int = 0):
+    def control(self, tex_object: Texture | FramedTexture, index: int = 0):
         '''debug function'''
         distance = 1
         if ray.IsKeyDown(ray.KEY_LEFT_SHIFT):
@@ -317,15 +324,11 @@ class TextureWrapper:
         else:
             dest_rect = (tex_object.x[index] + x, tex_object.y[index] + y, tex_object.x2[index]*scale + x2, tex_object.y2[index]*scale + y2)
 
-        if tex_object.is_frames:
-            if not isinstance(tex_object.texture, list):
-                raise Exception("Texture was marked as multiframe but is only 1 texture")
+        if isinstance(tex_object, FramedTexture):
             if frame >= len(tex_object.texture):
                 raise Exception(f"Frame {frame} not available in iterable texture {tex_object.name}")
             ray.DrawTexturePro(tex_object.texture[frame], source_rect, dest_rect, origin, rotation, final_color)
         else:
-            if isinstance(tex_object.texture, list):
-                raise Exception("Texture is multiframe but was called as 1 texture")
             ray.DrawTexturePro(tex_object.texture, source_rect, dest_rect, origin, rotation, final_color)
         if tex_object.controllable[index] or controllable:
             self.control(tex_object)
