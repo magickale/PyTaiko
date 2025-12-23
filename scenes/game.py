@@ -443,8 +443,13 @@ class Player:
         self.bpm = 120
         if self.timeline and hasattr(self.timeline[self.timeline_index], 'bpm'):
             self.bpm = self.timeline[self.timeline_index].bpm
+        last_note = self.draw_note_list[0]
         for note in chain(self.draw_note_list, self.draw_bar_list):
             self.get_load_time(note)
+            if note.type == NoteType.TAIL:
+                note.load_ms = last_note.load_ms
+                note.unload_ms = last_note.unload_ms
+            last_note = note
 
         self.draw_note_list = deque(sorted(self.draw_note_list, key=lambda n: n.load_ms))
 
