@@ -9,12 +9,6 @@ permissions:
   pull-requests: write
   issues: write
   repository-projects: write
-
-# Prevent concurrent releases
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 jobs:
   build:
     strategy:
@@ -139,17 +133,6 @@ jobs:
           fi
         shell: bash
 
-      - name: Verify Zip Created
-        run: |
-          if [ -f "PyTaiko-${{ runner.os }}-${{ runner.arch }}.zip" ]; then
-            echo "✅ Zip file created successfully"
-            ls -lh PyTaiko-${{ runner.os }}-${{ runner.arch }}.zip
-          else
-            echo "❌ Zip file not found!"
-            exit 1
-          fi
-        shell: bash
-
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -168,36 +151,12 @@ jobs:
           pattern: pytaiko-*
           merge-multiple: true
 
-      - name: List Downloaded Files
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Searching for zip files:"
-          find . -name "*.zip" -type f -ls
-
-      - name: Delete Existing Release
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete latest --yes --repo ${{ github.repository }} || echo "Release doesn't exist yet"
-
-      - name: Wait for Release Deletion
-        run: sleep 5
-
-      - name: Create New Release
+      - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            *.zip
-            **/*.zip
+          files: PyTaiko-*.zip
           name: "PyTaiko [Rolling Release]"
           tag_name: "latest"
           make_latest: true
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
