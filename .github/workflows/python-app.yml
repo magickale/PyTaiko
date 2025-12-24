@@ -133,11 +133,28 @@ jobs:
           fi
         shell: bash
 
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytaiko-${{ runner.os }}-${{ runner.arch }}
+          path: PyTaiko-${{ runner.os }}-${{ runner.arch }}.zip
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pytaiko-*
+          merge-multiple: true
+
       - name: Upload Release
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         with:
-          files: PyTaiko-${{ runner.os }}-${{ runner.arch }}.zip
+          files: PyTaiko-*.zip
           name: "PyTaiko [Rolling Release]"
           tag_name: "latest"
           make_latest: true
