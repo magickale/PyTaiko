@@ -200,7 +200,7 @@ class OutlinedText:
         if reload_font:
             codepoint_count = ray.ffi.new('int *', 0)
             codepoints = ray.load_codepoints(''.join(global_data.font_codepoints), codepoint_count)
-            global_data.font = ray.load_font_ex(str(Path(f'Skins/{global_data.config["paths"]["skin"]}/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, len(global_data.font_codepoints))
+            global_data.font = ray.load_font_ex(str(Path(f'Skins/{global_data.config["paths"]["skin"]}/Graphics/Modified-DFPKanteiryu-XB.ttf')), 40, codepoints, len(global_data.font_codepoints))
             logger.info(f"Reloaded font with {len(global_data.font_codepoints)} codepoints")
         return global_data.font
 
