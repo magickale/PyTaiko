@@ -77,7 +77,7 @@ class TextureWrapper:
         if not (self.graphics_path / "skin_config.json").exists():
             raise Exception("skin is missing a skin_config.json")
 
-        data = json.loads((self.graphics_path / "skin_config.json").read_text())
+        data = json.loads((self.graphics_path / "skin_config.json").read_text(encoding='utf-8'))
         self.skin_config: dict[str, SkinInfo] = {
             k: SkinInfo(v.get('x', 0), v.get('y', 0), v.get('font_size', 0), v.get('width', 0), v.get('height', 0), v.get('text', dict())) for k, v in data.items()
         }
@@ -87,7 +87,7 @@ class TextureWrapper:
         if "parent" in data["screen"]:
             parent = data["screen"]["parent"]
             self.parent_graphics_path = Path("Skins") / parent
-            parent_data = json.loads((self.parent_graphics_path / "skin_config.json").read_text())
+            parent_data = json.loads((self.parent_graphics_path / "skin_config.json").read_text(encoding='utf-8'))
             for k, v in parent_data.items():
                 self.skin_config[k] = SkinInfo(v.get('x', 0) * self.screen_scale, v.get('y', 0) * self.screen_scale, v.get('font_size', 0) * self.screen_scale, v.get('width', 0) * self.screen_scale, v.get('height', 0) * self.screen_scale, v.get('text', dict()))
 
