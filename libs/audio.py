@@ -1,10 +1,10 @@
-import cffi
-import platform
 import logging
+import platform
 from pathlib import Path
 
-from libs.config import VolumeConfig
-from libs.config import get_config
+import cffi
+
+from libs.config import VolumeConfig, get_config
 
 ffi = cffi.FFI()
 

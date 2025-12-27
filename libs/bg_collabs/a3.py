@@ -1,4 +1,5 @@
 import random
+
 from libs.animation import Animation
 from libs.bg_objects.bg_fever import BGFever4
 from libs.bg_objects.bg_normal import BGNormal2
@@ -8,6 +9,7 @@ from libs.bg_objects.don_bg import DonBGBase
 from libs.bg_objects.renda import RendaController
 from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
+
 
 class Background:
     def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):

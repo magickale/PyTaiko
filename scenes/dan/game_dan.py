@@ -1,18 +1,33 @@
 import copy
-from typing import Optional, override
-import pyray as ray
 import logging
+from typing import Optional, override
+
+import pyray as ray
+
 from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.file_navigator import Exam
-from libs.global_data import DanResultExam, DanResultSong, PlayerNum, global_data
+from libs.global_data import (
+    DanResultExam,
+    DanResultSong,
+    PlayerNum,
+    global_data,
+)
 from libs.global_objects import AllNetIcon
+from libs.texture import tex
 from libs.tja import TJAParser
 from libs.transition import Transition
 from libs.utils import OutlinedText, get_current_ms
-from libs.texture import tex
-from scenes.game import ClearAnimation, FCAnimation, FailAnimation, GameScreen, Gauge, ResultTransition, SongInfo
+from scenes.game import (
+    ClearAnimation,
+    FailAnimation,
+    FCAnimation,
+    GameScreen,
+    Gauge,
+    ResultTransition,
+    SongInfo,
+)
 
 logger = logging.getLogger(__name__)
 

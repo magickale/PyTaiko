@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 import raylib as ray
-from pyray import Vector2, Rectangle, Color
+from pyray import Color, Rectangle, Vector2
 
 from libs.animation import BaseAnimation, parse_animations
-
 from libs.config import get_config
 
 logger = logging.getLogger(__name__)

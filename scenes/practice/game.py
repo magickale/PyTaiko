@@ -1,20 +1,41 @@
+import copy
+import logging
 import math
 from collections import deque
-import logging
 from pathlib import Path
 from typing import Optional
 
 import pyray as ray
-import copy
 
 from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.global_data import Modifiers, PlayerNum, global_data
-from libs.tja import Balloon, Drumroll, NoteType, TJAParser, TimelineObject, apply_modifiers
-from libs.utils import get_current_ms, is_l_don_pressed, is_l_kat_pressed, is_r_don_pressed, is_r_kat_pressed
 from libs.texture import tex
-from scenes.game import DrumHitEffect, DrumType, GameScreen, JudgeCounter, LaneHitEffect, Player, Side
+from libs.tja import (
+    Balloon,
+    Drumroll,
+    NoteType,
+    TimelineObject,
+    TJAParser,
+    apply_modifiers,
+)
+from libs.utils import (
+    get_current_ms,
+    is_l_don_pressed,
+    is_l_kat_pressed,
+    is_r_don_pressed,
+    is_r_kat_pressed,
+)
+from scenes.game import (
+    DrumHitEffect,
+    DrumType,
+    GameScreen,
+    JudgeCounter,
+    LaneHitEffect,
+    Player,
+    Side,
+)
 
 logger = logging.getLogger(__name__)
 

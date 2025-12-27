@@ -1,10 +1,16 @@
 import logging
+
+from libs.audio import audio
 from libs.file_navigator import SongBox, SongFile
 from libs.global_data import PlayerNum
 from libs.transition import Transition
-from scenes.song_select import DiffSortSelect, SongSelectPlayer, SongSelectScreen, State
 from libs.utils import get_current_ms, global_data
-from libs.audio import audio
+from scenes.song_select import (
+    DiffSortSelect,
+    SongSelectPlayer,
+    SongSelectScreen,
+    State,
+)
 
 logger = logging.getLogger(__name__)
 

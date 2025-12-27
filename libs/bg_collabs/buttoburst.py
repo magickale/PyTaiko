@@ -1,13 +1,14 @@
 import random
+
 from libs.bg_objects.bg_fever import BGFeverBase
 from libs.bg_objects.bg_normal import BGNormalBase
 from libs.bg_objects.chibi import ChibiController
 from libs.bg_objects.dancer import BaseDancer, BaseDancerGroup
+from libs.bg_objects.don_bg import DonBG4
 from libs.bg_objects.fever import Fever3
 from libs.bg_objects.renda import RendaController
 from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
-from libs.bg_objects.don_bg import DonBG4
 
 
 class Background:

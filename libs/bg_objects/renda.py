@@ -1,8 +1,10 @@
 import random
+
+import pyray as ray
+
 from libs.animation import Animation
 from libs.texture import TextureWrapper
 
-import pyray as ray
 
 class Renda:
 

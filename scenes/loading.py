@@ -1,17 +1,16 @@
 import logging
-from pathlib import Path
 import threading
+from pathlib import Path
 
 import pyray as ray
 
 from libs.animation import Animation
+from libs.file_navigator import navigator
 from libs.global_objects import AllNetIcon
 from libs.screen import Screen
 from libs.song_hash import build_song_hashes
 from libs.texture import tex
 from libs.utils import get_current_ms, global_data
-from libs.file_navigator import navigator
-
 
 logger = logging.getLogger(__name__)
 

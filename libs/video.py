@@ -1,12 +1,12 @@
-from pathlib import Path
 import logging
+from pathlib import Path
 
-import raylib as ray
 import av
+import raylib as ray
 
 from libs.audio import audio
-from libs.utils import get_current_ms
 from libs.texture import tex
+from libs.utils import get_current_ms
 
 logger = logging.getLogger(__name__)
 

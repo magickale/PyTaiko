@@ -1,14 +1,15 @@
 from libs.animation import Animation
-from libs.bg_objects.fever import Fever3
 from libs.bg_objects.bg_fever import BGFeverBase
 from libs.bg_objects.bg_normal import BGNormalBase
 from libs.bg_objects.chibi import ChibiController
 from libs.bg_objects.dancer import BaseDancer, BaseDancerGroup
 from libs.bg_objects.don_bg import DonBGBase
+from libs.bg_objects.fever import Fever3
 from libs.bg_objects.footer import Footer
 from libs.bg_objects.renda import RendaController
 from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
+
 
 class Background:
     def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):

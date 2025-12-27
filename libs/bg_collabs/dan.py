@@ -6,6 +6,7 @@ from libs.bg_objects.footer import Footer
 from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
 
+
 class Background:
     def __init__(self, tex: TextureWrapper, player_num: PlayerNum, bpm: float, path: str, max_dancers: int):
         self.tex_wrapper = tex

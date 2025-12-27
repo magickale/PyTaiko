@@ -2,8 +2,11 @@ import logging
 import random
 from pathlib import Path
 
+import pyray as ray
+
 from libs.audio import audio
 from libs.global_objects import AllNetIcon, CoinOverlay, EntryOverlay
+from libs.screen import Screen
 from libs.texture import tex
 from libs.utils import (
     OutlinedText,
@@ -13,9 +16,7 @@ from libs.utils import (
     is_l_don_pressed,
     is_r_don_pressed,
 )
-import pyray as ray
 from libs.video import VideoPlayer
-from libs.screen import Screen
 
 logger = logging.getLogger(__name__)
 

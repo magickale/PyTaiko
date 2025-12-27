@@ -7,6 +7,7 @@ import pyray as ray
 
 from libs.config import Config
 
+
 class PlayerNum(IntEnum):
     ALL = 0
     P1 = 1

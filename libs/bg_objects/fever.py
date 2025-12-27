@@ -1,6 +1,7 @@
 from libs.animation import Animation
 from libs.texture import TextureWrapper
 
+
 class Fever:
 
     @staticmethod

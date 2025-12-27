@@ -1,21 +1,22 @@
-from dataclasses import dataclass
-from enum import IntEnum
 import json
 import logging
-from pathlib import Path
 import random
+import sqlite3
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from enum import IntEnum
+from pathlib import Path
 from typing import Optional, Union
 
-from raylib import SHADER_UNIFORM_VEC3
-from libs.audio import audio
-from libs.animation import Animation, MoveAnimation
-from libs.global_data import Crown, Difficulty, ScoreMethod
-from libs.tja import TJAParser, test_encodings
-from libs.texture import tex
-from libs.utils import OutlinedText, get_current_ms, global_data
-from datetime import datetime, timedelta
-import sqlite3
 import pyray as ray
+from raylib import SHADER_UNIFORM_VEC3
+
+from libs.animation import Animation, MoveAnimation
+from libs.audio import audio
+from libs.global_data import Crown, Difficulty, ScoreMethod
+from libs.texture import tex
+from libs.tja import TJAParser, test_encodings
+from libs.utils import OutlinedText, get_current_ms, global_data
 
 BOX_CENTER = 594 * tex.screen_scale
 

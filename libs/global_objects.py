@@ -1,12 +1,12 @@
 from enum import Enum
 from typing import Callable
+
 import pyray as ray
 
-from libs.global_data import PlayerNum
-from libs.global_data import global_data
-from libs.utils import OutlinedText, global_tex
-from libs.config import get_config
 from libs.audio import audio
+from libs.config import get_config
+from libs.global_data import PlayerNum, global_data
+from libs.utils import OutlinedText, global_tex
 
 
 class Nameplate:

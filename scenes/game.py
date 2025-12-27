@@ -1,12 +1,12 @@
 import bisect
-from enum import IntEnum
-import math
 import logging
+import math
 import sqlite3
 from collections import deque
+from enum import IntEnum
+from itertools import chain
 from pathlib import Path
 from typing import Optional
-from itertools import chain
 
 import pyray as ray
 
@@ -14,7 +14,13 @@ from libs.animation import Animation
 from libs.audio import audio
 from libs.background import Background
 from libs.chara_2d import Chara2D
-from libs.global_data import Crown, Difficulty, Modifiers, PlayerNum, ScoreMethod
+from libs.global_data import (
+    Crown,
+    Difficulty,
+    Modifiers,
+    PlayerNum,
+    ScoreMethod,
+)
 from libs.global_objects import AllNetIcon, Nameplate
 from libs.screen import Screen
 from libs.texture import tex
@@ -24,8 +30,8 @@ from libs.tja import (
     Note,
     NoteList,
     NoteType,
-    TJAParser,
     TimelineObject,
+    TJAParser,
     apply_modifiers,
     calculate_base_score,
 )

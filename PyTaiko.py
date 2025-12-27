@@ -1,12 +1,12 @@
+import argparse
 import logging
 import os
-from pathlib import Path
-import sys
-import argparse
-
 import sqlite3
+import sys
+from pathlib import Path
 
 import pyray as ray
+from pypresence.presence import Presence
 from raylib.defines import (
     RL_FUNC_ADD,
     RL_ONE,
@@ -15,6 +15,7 @@ from raylib.defines import (
 )
 
 from libs.audio import audio
+from libs.config import get_config
 from libs.global_data import PlayerNum, ScoreMethod
 from libs.screen import Screen
 from libs.song_hash import DB_VERSION
@@ -23,27 +24,24 @@ from libs.utils import (
     force_dedicated_gpu,
     get_current_ms,
     global_data,
-    global_tex
+    global_tex,
 )
-from libs.config import get_config
+from scenes.dan.dan_result import DanResultScreen
+from scenes.dan.dan_select import DanSelectScreen
+from scenes.dan.game_dan import DanGameScreen
 from scenes.devtest import DevScreen
 from scenes.entry import EntryScreen
 from scenes.game import GameScreen
-from scenes.dan.game_dan import DanGameScreen
+from scenes.loading import LoadScreen
 from scenes.practice.game import PracticeGameScreen
 from scenes.practice.song_select import PracticeSongSelectScreen
-from scenes.two_player.game import TwoPlayerGameScreen
-from scenes.two_player.result import TwoPlayerResultScreen
-from scenes.loading import LoadScreen
 from scenes.result import ResultScreen
 from scenes.settings import SettingsScreen
 from scenes.song_select import SongSelectScreen
 from scenes.title import TitleScreen
+from scenes.two_player.game import TwoPlayerGameScreen
+from scenes.two_player.result import TwoPlayerResultScreen
 from scenes.two_player.song_select import TwoPlayerSongSelectScreen
-from scenes.dan.dan_select import DanSelectScreen
-from scenes.dan.dan_result import DanResultScreen
-
-from pypresence.presence import Presence
 
 logger = logging.getLogger(__name__)
 DISCORD_APP_ID = '1451423960401973353'

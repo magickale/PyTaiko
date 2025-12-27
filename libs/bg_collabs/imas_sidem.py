@@ -4,11 +4,11 @@ from libs.bg_objects.bg_fever import BGFeverBase
 from libs.bg_objects.bg_normal import BGNormalBase
 from libs.bg_objects.chibi import ChibiController
 from libs.bg_objects.dancer import BaseDancerGroup
+from libs.bg_objects.don_bg import DonBGBase
 from libs.bg_objects.footer import Footer
 from libs.bg_objects.renda import RendaController
 from libs.global_data import PlayerNum
 from libs.texture import TextureWrapper
-from libs.bg_objects.don_bg import DonBGBase
 
 
 class Background:

@@ -1,7 +1,9 @@
 import logging
+
 import pyray as ray
 
 from libs.audio import audio
+from libs.config import save_config
 from libs.screen import Screen
 from libs.texture import tex
 from libs.utils import (
@@ -11,7 +13,6 @@ from libs.utils import (
     is_r_don_pressed,
     is_r_kat_pressed,
 )
-from libs.config import save_config
 
 logger = logging.getLogger(__name__)
 

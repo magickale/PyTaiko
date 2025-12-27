@@ -1,9 +1,10 @@
-from pathlib import Path
-import tomlkit
 import json
+from pathlib import Path
 from typing import TypedDict
 
 import pyray as ray
+import tomlkit
+
 
 class GeneralConfig(TypedDict):
     fps_counter: bool

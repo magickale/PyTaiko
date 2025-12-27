@@ -1,14 +1,23 @@
-import logging
 import copy
+import logging
 from pathlib import Path
+
+import pyray as ray
+
+from libs.audio import audio
 from libs.global_data import PlayerNum
 from libs.tja import TJAParser
-from libs.utils import get_current_ms
-from libs.audio import audio
-from libs.utils import global_data
+from libs.utils import get_current_ms, global_data
 from libs.video import VideoPlayer
-import pyray as ray
-from scenes.game import ClearAnimation, FCAnimation, FailAnimation, GameScreen, Player, Background, ResultTransition
+from scenes.game import (
+    Background,
+    ClearAnimation,
+    FailAnimation,
+    FCAnimation,
+    GameScreen,
+    Player,
+    ResultTransition,
+)
 
 logger = logging.getLogger(__name__)
 

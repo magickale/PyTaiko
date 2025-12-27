@@ -1,10 +1,11 @@
 import logging
+
 import pyray as ray
 
 from libs.animation import Animation
+from libs.audio import audio
 from libs.chara_2d import Chara2D
 from libs.global_data import PlayerNum, reset_session
-from libs.audio import audio
 from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate
 from libs.screen import Screen
 from libs.texture import tex
@@ -13,7 +14,7 @@ from libs.utils import (
     get_current_ms,
     global_data,
     is_l_don_pressed,
-    is_r_don_pressed
+    is_r_don_pressed,
 )
 from scenes.game import Gauge
 from scenes.result import Background

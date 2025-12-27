@@ -1,16 +1,28 @@
-
 import logging
+
 import pyray as ray
 
 from libs.audio import audio
-from libs.global_data import PlayerNum, global_data
-from libs.texture import tex
 from libs.chara_2d import Chara2D
-from libs.global_objects import AllNetIcon, CoinOverlay, Indicator, Nameplate, Timer
-from libs.screen import Screen
 from libs.file_navigator import BackBox, DanCourse, navigator
+from libs.global_data import PlayerNum, global_data
+from libs.global_objects import (
+    AllNetIcon,
+    CoinOverlay,
+    Indicator,
+    Nameplate,
+    Timer,
+)
+from libs.screen import Screen
+from libs.texture import tex
 from libs.transition import Transition
-from libs.utils import get_current_ms, is_l_don_pressed, is_l_kat_pressed, is_r_don_pressed, is_r_kat_pressed
+from libs.utils import (
+    get_current_ms,
+    is_l_don_pressed,
+    is_l_kat_pressed,
+    is_r_don_pressed,
+    is_r_kat_pressed,
+)
 from scenes.song_select import State
 
 logger = logging.getLogger(__name__)

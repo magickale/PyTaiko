@@ -1,18 +1,31 @@
+import logging
 import random
 from dataclasses import fields
 from pathlib import Path
 
 import pyray as ray
-import logging
-
 from raylib import SHADER_UNIFORM_VEC3
 
-from libs.file_navigator import DEFAULT_COLORS, BackBox, DanCourse, GenreIndex, navigator
 from libs.audio import audio
 from libs.chara_2d import Chara2D
-from libs.file_navigator import Directory, SongBox, SongFile
+from libs.file_navigator import (
+    DEFAULT_COLORS,
+    BackBox,
+    DanCourse,
+    Directory,
+    GenreIndex,
+    SongBox,
+    SongFile,
+    navigator,
+)
 from libs.global_data import Difficulty, Modifiers, PlayerNum
-from libs.global_objects import AllNetIcon, CoinOverlay, Nameplate, Indicator, Timer
+from libs.global_objects import (
+    AllNetIcon,
+    CoinOverlay,
+    Indicator,
+    Nameplate,
+    Timer,
+)
 from libs.screen import Screen
 from libs.texture import tex
 from libs.transition import Transition

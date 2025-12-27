@@ -1,5 +1,6 @@
 from libs.texture import TextureWrapper
 
+
 class Footer:
     def __init__(self, tex: TextureWrapper, index: int, path: str = 'background'):
         self.index = index

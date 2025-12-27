@@ -1,15 +1,15 @@
 import configparser
-import logging
+import csv
 import json
+import logging
 import sqlite3
 import time
-import csv
 from pathlib import Path
 
+from libs.config import get_config
 from libs.global_data import Crown
 from libs.tja import NoteList, TJAParser, test_encodings
 from libs.utils import global_data
-from libs.config import get_config
 
 logger = logging.getLogger(__name__)
 DB_VERSION = 1
