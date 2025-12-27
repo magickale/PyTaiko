@@ -5,8 +5,8 @@ cache
 dev-config.toml
 libaudio.so
 latest.log
-libaudio.dll
 libaudio.dylib
 scores.db
 scores_gen3.db
 ./libs/audio/audio.o
+*.dll

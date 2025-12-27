@@ -109,11 +109,12 @@ class BaseBox():
         else:
             self.fore_color = ray.Color(101, 0, 82, 255)
         self.position = float('inf')
-        self.start_position = -1.0
-        self.target_position = -1.0
+        self.start_position = float('inf')
+        self.target_position = float('inf')
         self.open_anim = Animation.create_move(233, total_distance=150*tex.screen_scale, delay=50)
         self.open_fade = Animation.create_fade(200, initial_opacity=0, final_opacity=1.0)
-        self.move = None
+        self.move = Animation.create_move(133, total_distance=100 * tex.screen_scale, ease_out='cubic')
+        self.move.start()
         self.shader = None
         self.is_open = False
         self.text_loaded = False
@@ -135,30 +136,22 @@ class BaseBox():
             ray.set_shader_value(self.shader, source_loc, source_color, SHADER_UNIFORM_VEC3)
             ray.set_shader_value(self.shader, target_loc, target_color, SHADER_UNIFORM_VEC3)
 
-    def move_box(self, current_time: float):
-        if self.position != self.target_position and self.move is None:
-            if self.position < self.target_position:
-                direction = 1
-            else:
-                direction = -1
-            if abs(self.target_position - self.position) > 250 * tex.screen_scale:
-                direction *= -1
-            self.move = Animation.create_move(133, total_distance=100 * direction * tex.screen_scale, ease_out='cubic')
-            self.move.start()
-            if self.is_open or self.target_position == BOX_CENTER:
-                self.move.total_distance = int(250 * direction * tex.screen_scale)
+    def move_box(self, direction: int):
+        if self.position != self.target_position:
+            distance = abs(self.target_position - self.position)
+            self.move = Animation.create_move(133, total_distance=distance * tex.screen_scale * direction, ease_out='cubic')
             self.start_position = self.position
-        if self.move is not None:
-            self.move.update(current_time)
-            self.position = self.start_position + int(self.move.attribute)
-            if self.move.is_finished:
-                self.position = self.target_position
-                self.move = None
+            self.move.start()
 
     def update(self, current_time: float, is_diff_select: bool):
         self.is_diff_select = is_diff_select
         self.open_anim.update(current_time)
         self.open_fade.update(current_time)
+        self.move.update(current_time)
+        if not self.move.is_finished:
+            self.position = self.start_position + int(self.move.attribute)
+        else:
+            self.position = self.target_position
 
     def _draw_closed(self, x: float, y: float, outer_fade_override: float):
         if self.shader is not None and self.texture_index == TextureIndex.BLANK:
@@ -195,7 +188,6 @@ class BackBox(BaseBox):
     def update(self, current_time: float, is_diff_select: bool):
         super().update(current_time, is_diff_select)
         is_open_prev = self.is_open
-        self.move_box(current_time)
         self.is_open = self.position == BOX_CENTER
 
         if self.yellow_box is not None:
@@ -256,7 +248,6 @@ class SongBox(BaseBox):
     def update(self, current_time: float, is_diff_select: bool):
         super().update(current_time, is_diff_select)
         is_open_prev = self.is_open
-        self.move_box(current_time)
         self.is_open = self.position == BOX_CENTER
 
         if self.yellow_box is not None:
@@ -327,7 +318,6 @@ class FolderBox(BaseBox):
     def update(self, current_time: float, is_diff_select: bool):
         super().update(current_time, is_diff_select)
         is_open_prev = self.is_open
-        self.move_box(current_time)
         self.is_open = self.position == BOX_CENTER
 
         if not is_open_prev and self.is_open:
@@ -655,7 +645,6 @@ class DanBox(BaseBox):
     def update(self, current_time: float, is_diff_select: bool):
         super().update(current_time, is_diff_select)
         is_open_prev = self.is_open
-        self.move_box(current_time)
         self.is_open = self.position == BOX_CENTER
         if not is_open_prev and self.is_open:
             self.yellow_box = YellowBox(False, is_dan=True)
@@ -784,7 +773,8 @@ class GenreBG:
         if self.shader is not None and self.end_box.texture_index == TextureIndex.BLANK:
             ray.begin_shader_mode(self.shader)
         offset = (tex.skin_config["genre_bg_offset"].x * -1) if self.start_box.is_open else 0
-
+        if (344 * tex.screen_scale < self.start_box.position < 594 * tex.screen_scale):
+            offset = -self.start_position + 444 * tex.screen_scale
         tex.draw_texture('box', 'folder_background_edge', frame=self.end_box.texture_index, x=self.start_position+offset, y=y, mirror="horizontal", fade=self.fade_in.attribute)
 
 
@@ -806,6 +796,8 @@ class GenreBG:
             tex.draw_texture('box', 'folder_background', x=tex.skin_config["genre_bg_folder_background"].x, y=y, x2=x2, frame=self.end_box.texture_index)
 
 
+        if (594 * tex.screen_scale < self.end_box.position < 844 * tex.screen_scale):
+            offset = -self.end_position + 674 * tex.screen_scale
         offset = tex.skin_config["genre_bg_offset"].x if self.end_box.is_open else 0
         tex.draw_texture('box', 'folder_background_edge', x=self.end_position+tex.skin_config["genre_bg_folder_edge"].x+offset, y=y, fade=self.fade_in.attribute, frame=self.end_box.texture_index)
 
@@ -1351,6 +1343,54 @@ class FileNavigator:
         """Check if currently at the virtual root"""
         return self.current_dir == Path()
 
+    def load_new_items(self, selected_item, dir_key: str):
+        return self.new_items
+
+    def load_recent_items(self, selected_item, dir_key: str):
+        if self.recent_folder is None:
+            raise Exception("tried to enter recent folder without recents")
+        self._generate_objects_recursive(self.recent_folder.path)
+        if not isinstance(selected_item.box, BackBox):
+            selected_item.box.tja_count = self._count_tja_files(self.recent_folder.path)
+        return self.directory_contents[dir_key]
+
+    def load_favorite_items(self, selected_item, dir_key: str):
+        if self.favorite_folder is None:
+            raise Exception("tried to enter favorite folder without favorites")
+        self._generate_objects_recursive(self.favorite_folder.path)
+        tja_files = self._get_tja_files_for_directory(self.favorite_folder.path)
+        self._calculate_directory_crowns(dir_key, tja_files)
+        if not isinstance(selected_item.box, BackBox):
+            selected_item.box.tja_count = self._count_tja_files(self.favorite_folder.path)
+        self.in_favorites = True
+        return self.directory_contents[dir_key]
+
+    def load_diff_sort_items(self, selected_item, dir_key: str):
+        content_items = []
+        parent_dir = selected_item.path.parent
+        for sibling_path in parent_dir.iterdir():
+            if sibling_path.is_dir() and sibling_path != selected_item.path:
+                sibling_key = str(sibling_path)
+                if sibling_key in self.directory_contents:
+                    for item in self.directory_contents[sibling_key]:
+                        if isinstance(item, SongFile) and item:
+                            if self.diff_sort_diff in item.tja.metadata.course_data and item.tja.metadata.course_data[self.diff_sort_diff].level == self.diff_sort_level:
+                                if item not in content_items:
+                                    content_items.append(item)
+        return content_items
+
+    def load_recommended_items(self, selected_item, dir_key: str):
+        parent_dir = selected_item.path.parent
+        temp_items = []
+        for sibling_path in parent_dir.iterdir():
+            if sibling_path.is_dir() and sibling_path != selected_item.path:
+                sibling_key = str(sibling_path)
+                if sibling_key in self.directory_contents:
+                    for item in self.directory_contents[sibling_key]:
+                        if not isinstance(item, Directory) and isinstance(item, SongFile):
+                            temp_items.append(item)
+        return random.sample(temp_items, min(10, len(temp_items)))
+
     def load_current_directory(self, selected_item: Optional[Directory] = None):
         """Load pre-generated items for the current directory (unified for root and subdirs)"""
         dir_key = str(self.current_dir)
@@ -1388,47 +1428,15 @@ class FileNavigator:
             # Handle special collections (same logic as before)
             if isinstance(selected_item, Directory):
                 if selected_item.collection == Directory.COLLECTIONS[0]:
-                    content_items = self.new_items
+                    content_items = self.load_new_items(selected_item, dir_key)
                 elif selected_item.collection == Directory.COLLECTIONS[1]:
-                    if self.recent_folder is None:
-                        raise Exception("tried to enter recent folder without recents")
-                    self._generate_objects_recursive(self.recent_folder.path)
-                    if not isinstance(selected_item.box, BackBox):
-                        selected_item.box.tja_count = self._count_tja_files(self.recent_folder.path)
-                    content_items = self.directory_contents[dir_key]
+                    content_items = self.load_recent_items(selected_item, dir_key)
                 elif selected_item.collection == Directory.COLLECTIONS[2]:
-                    if self.favorite_folder is None:
-                        raise Exception("tried to enter favorite folder without favorites")
-                    self._generate_objects_recursive(self.favorite_folder.path)
-                    tja_files = self._get_tja_files_for_directory(self.favorite_folder.path)
-                    self._calculate_directory_crowns(dir_key, tja_files)
-                    if not isinstance(selected_item.box, BackBox):
-                        selected_item.box.tja_count = self._count_tja_files(self.favorite_folder.path)
-                    content_items = self.directory_contents[dir_key]
-                    self.in_favorites = True
+                    content_items = self.load_favorite_items(selected_item, dir_key)
                 elif selected_item.collection == Directory.COLLECTIONS[3]:
-                    content_items = []
-                    parent_dir = selected_item.path.parent
-                    for sibling_path in parent_dir.iterdir():
-                        if sibling_path.is_dir() and sibling_path != selected_item.path:
-                            sibling_key = str(sibling_path)
-                            if sibling_key in self.directory_contents:
-                                for item in self.directory_contents[sibling_key]:
-                                    if isinstance(item, SongFile) and item:
-                                        if self.diff_sort_diff in item.tja.metadata.course_data and item.tja.metadata.course_data[self.diff_sort_diff].level == self.diff_sort_level:
-                                            if item not in content_items:
-                                                content_items.append(item)
+                    content_items = self.load_diff_sort_items(selected_item, dir_key)
                 elif selected_item.collection == Directory.COLLECTIONS[4]:
-                    parent_dir = selected_item.path.parent
-                    temp_items = []
-                    for sibling_path in parent_dir.iterdir():
-                        if sibling_path.is_dir() and sibling_path != selected_item.path:
-                            sibling_key = str(sibling_path)
-                            if sibling_key in self.directory_contents:
-                                for item in self.directory_contents[sibling_key]:
-                                    if not isinstance(item, Directory) and isinstance(item, SongFile):
-                                        temp_items.append(item)
-                    content_items = random.sample(temp_items, min(10, len(temp_items)))
+                    content_items = self.load_recommended_items(selected_item, dir_key)
 
             if content_items == []:
                 self.go_back()
@@ -1499,7 +1507,7 @@ class FileNavigator:
                 # Save current state to history
                 self.history.append((self.current_dir, self.selected_index))
                 self.current_dir = selected_item.path
-                logger.info(f"Entered Directory {selected_item.path}")
+                logger.info(f"Entered Directory {selected_item.path} at index {self.selected_index}")
 
             self.load_current_directory(selected_item=selected_item)
 
@@ -1749,19 +1757,19 @@ class FileNavigator:
     def navigate_left(self):
         """Move selection left with wrap-around"""
         if self.items:
-            if self.items[0].box.move is not None and not self.items[0].box.move.is_finished:
-                return
             self.selected_index = (self.selected_index - 1) % len(self.items)
             self.calculate_box_positions()
+            for item in self.items:
+                item.box.move_box(1)
             logger.info(f"Moved Left to {self.items[self.selected_index].path}")
 
     def navigate_right(self):
         """Move selection right with wrap-around"""
         if self.items:
-            if self.items[0].box.move is not None and not self.items[0].box.move.is_finished:
-                return
             self.selected_index = (self.selected_index + 1) % len(self.items)
             self.calculate_box_positions()
+            for item in self.items:
+                item.box.move_box(-1)
             logger.info(f"Moved Right to {self.items[self.selected_index].path}")
 
     def skip_left(self):
